@@ -2,16 +2,17 @@
 
 > **Generated -- do not edit.** Written by `python -m tools_py.changelog` from `git log` (R272): every merge commit on the first-parent line of the history it was rendered from, and on the first-parent line of each branch those merges brought in, grouped by the oldest `v*` tag that contains it. `python -m tools_py.changelog --check` exits 1 when this file is stale; regenerate at every merge to a sprint branch (in the merge's follow-up commit) and at the close. The rules are the module's docstring. The reasoning behind a merge is its commit message and the sprint plan's Log; the hand-written log this page replaced is `docs/archive/STATUS-log-to-2026-09-26.md`.
 
-417 merges (54 on the first-parent line, 363 from the branches they merged) in 13 sections: 12 tags and the merges since the newest. Each line: the date, the merge commit, the head of its subject, [the branch it merged]. An indented line came in on the branch the line above it merged.
+427 merges (63 on the first-parent line, 364 from the branches they merged) in 13 sections: 12 tags and the merges since the newest. Each line: the date, the merge commit, the head of its subject, [the branch it merged]. An indented line came in on the branch the line above it merged.
 
 ## Since v0.16.0
 
-192 merges.
+202 merges.
 
-- 2026-10-02 `967fb9db` the mission music plays whole and in order [fix-vpk-stream-offsets]
-- 2026-10-02 `865cfd61` the flush-reason counter, the frame-drop breakdown, batch-by-value adopted [perf-step1-flush-reasons]
-- 2026-10-01 `9312769f` SOCOM II natively on macOS arm64, phase 1 (offline, boot to a mission) [macos-port]
-- 2026-10-01 `be557831` Merge pull request #130: the web teaser as a local demo replaces web/ on main (the owner's word) [branch not named]
+- 2026-10-02 `c6f7ce2e` a stale-mutex breaker retries the mkdir at once (the smoke flake); slow suite green [agent/s17-lock-smoke-flake]
+- 2026-10-02 `60a2f175` run_gate clears a stage's old captures, a reused stamp mixes no runs (S17) [agent/s17-gate-stale-stamp]
+- 2026-10-01 `d2693750` the CI changes step prints a long file list without a pipe that can close (PR #130's 679) [agent/s17-ci-head-pipe]
+- 2026-10-01 `a6b68564` merge origin/main into sprint-17: the web teaser as a local demo replaces web/ (#130, the owner's word) [origin/main, main merged in]
+  - 2026-10-01 `be557831` Merge pull request #130: the web teaser as a local demo replaces web/ on main (the owner's word) [branch not named]
   - 2026-10-01 `05480b90` merge main into the redotcom teaser (local demo) [branch not named]
   - 2026-09-30 `dc3df54c` Merge branch 'agent/web-hotfix-look' into claude/web-viewer-playtest-fixes [agent/web-hotfix-look]
   - 2026-09-30 `e5406330` Merge branch 'agent/web-fix-mpoff' into claude/web-viewer-playtest-fixes [agent/web-fix-mpoff]
@@ -123,6 +124,15 @@
   - 2026-09-28 `edf101cf` Merge branch 'claude/web-look' into claude/web-viewer-playtest-fixes [claude/web-look]
   - 2026-09-28 `79e7d4ed` Merge branch 'claude/web-ui' into claude/web-viewer-playtest-fixes [claude/web-ui]
   - 2026-09-28 `105b408f` merge origin/main into the cloud sprint 2: one player [origin/main, main merged in]
+- 2026-10-01 `8a5b8b87` no warning clock on a matched image, the native lookup cached, entry-0 split by path [agent/s17-vu1-dispatch]
+- 2026-10-01 `9083afd0` research/83 the entry-0 swarm and 0x3e; the entry-0 shape scorer (Sprint 17 F) [agent/s17-entry0-swarm]
+- 2026-10-01 `4912bcff` build.sh, the chain and run_detached refuse while the launcher runs (three reds) [agent/s17-launcher-busy]
+- 2026-10-01 `65a1cda0` PS2X_VU1_NATIVE_33C8 defaults to 1, N1c adopted (Sprint 17 F, R345) [agent/s17-n1c-default]
+- 2026-09-30 `88b5f818` N2, the native 0x52 skinning pass behind PS2X_VU1_NATIVE_SKIN (Sprint 17 F) [agent/s17-n2-skin]
+- 2026-09-30 `07a2f64a` the 0x33c8 entry admits the walk's two last-bone shapes, A and the 0x02 loop (S17 F) [agent/s17-n1c-shapes]
+- 2026-09-30 `f630d5f1` the 0x33c8 entry admits 0x54 and 0x10 with their stores proven (Sprint 17 F, N1c) [agent/s17-n1c-linear]
+- 2026-09-30 `f739d873` PS2X_VU1_DUMP_REFUSED dumps the programs native refused; the picker (S17 F) [agent/s17-n1c-dump-refused]
+- 2026-09-30 `4a4cf5b4` N1b, the 0x33c8 entry admits 0x06 (the cull) with its stores proven (Sprint 17 F) [agent/s17-n1b-cull]
 - 2026-09-30 `8248809e` Merge pull request #119: Sprint 17 to main (1) -- batches 4 and 5 proved, C1 adopted [sprint-17]
   - 2026-09-30 `e4dbc152` the attach tests patch the host platform (Linux CI red on 32e265b4, issue #118) [agent/s17-i118-linux]
   - 2026-09-30 `263b941d` drive.py finds the game by pid then exe name, never a browser tab (issue #118) [agent/s17-i118-window]
