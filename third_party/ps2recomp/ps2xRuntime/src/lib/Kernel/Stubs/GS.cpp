@@ -1,3 +1,4 @@
+#include "runtime/vu1_domain.h"          // macOS fork: VU1 worker Part 2
 #include "runtime/vu1_domain_apply.h"   // macOS fork: VU1 worker Part 2
 #include <iostream>
 #include "Common.h"
@@ -758,6 +759,8 @@ namespace ps2_stubs
         mem.processPendingTransfers();
 
         ps2TraceGuestRangeWrite(rdram, dstAddr, totalImageBytes, "sceGsExecStoreImage", ctx);
+        if (vu1domain::shouldPost())   // macOS fork, the VU1 worker: a GS readback needs every posted item first
+            vu1domain::drain(vu1overlap::SyncKind::GsPriv);
         runtime->gs().consumeLocalToHostBytes(dst, totalImageBytes);
         runtime->guestFree(pktAddr);
 
