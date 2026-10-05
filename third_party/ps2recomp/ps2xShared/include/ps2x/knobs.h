@@ -199,6 +199,7 @@
     X("PS2X_VU1_FAST", Dev, Int, "1", "0 selects the cycle-exact VU1 scheduler.") \
     X("PS2X_VU1_FMAC_CHECK", Dev, Flag, "0", "Cross-check the SIMD MAC-flag classifier against the long double path.") \
     X("PS2X_VU1_FMAC_ZERO_FAST", Dev, Flag, "1", "C1 adopted (R337): 1 = exact-zero product-sum lanes take the fast path (bit-exact); 0 = the old slow path.") \
+    X("PS2X_VU1_FRAME_LOG", Dev, Path, "", "macOS fork: with PS2X_VU1_WORKER_STATS, a CSV of every game frame and input-latency sample.") \
     X("PS2X_VU1_GEN", Dev, Int, "1", "0 disables the generated VU1 programs.") \
     X("PS2X_VU1_HOST_DRAW", Dev, Int, "0", "1 draws the native dispatcher triangles in host space instead of kicking GIF packets.") \
     X("PS2X_VU1_NATIVE", Dev, Int, "1", "0 reverts the hand-written native VU1 programs to the generated/interpreted path.") \

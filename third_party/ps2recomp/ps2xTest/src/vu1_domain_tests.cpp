@@ -386,4 +386,42 @@ void register_vu1_domain_tests()
             t.Equals(n, size_t(0), "no sample for a frame without a pad read");
         });
     });
+
+    MiniTest::Case("Vu1DomainFrameLog", [](TestCase &tc)
+    {
+        tc.Run("the frame log has one F row per game frame and one L row per latency sample", [](TestCase &t)
+        {
+            const std::string path = "vu1_frame_log_test.csv";
+            std::remove(path.c_str());
+            vu1domain::Config c;
+            c.stats = true;
+            c.frameLogPath = path;
+            vu1domain::start(c, recordApply, nullptr);
+            vu1domain::resetFrameStats();
+            for (int i = 0; i < 3; ++i)
+            {
+                vu1domain::notePadRead();
+                vu1domain::frameBoundary();
+                vu1domain::notePresent();
+            }
+            vu1domain::stop();   // closes the file
+            std::ifstream in(path);
+            std::string line;
+            int f = 0, l = 0;
+            bool header = false;
+            while (std::getline(in, line))
+            {
+                if (line.rfind("#", 0) == 0)
+                    header = true;
+                else if (line.rfind("F,", 0) == 0)
+                    ++f;
+                else if (line.rfind("L,", 0) == 0)
+                    ++l;
+            }
+            std::remove(path.c_str());
+            t.IsTrue(header, "a header line");
+            t.Equals(f, 2, "frames 2 and 3 have an interval (the first boundary only starts the clock)");
+            t.Equals(l, 3, "three presents of three completed frames");
+        });
+    });
 }

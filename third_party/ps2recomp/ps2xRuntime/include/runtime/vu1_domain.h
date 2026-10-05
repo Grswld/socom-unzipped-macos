@@ -13,6 +13,7 @@
 #include <cmath>
 #include <cstddef>
 #include <cstdint>
+#include <string>
 #include <vector>
 
 namespace vu1domain
@@ -23,6 +24,9 @@ namespace vu1domain
         unsigned queueFrames = 1;      // PS2X_VU1_QUEUE_FRAMES: game frames the worker may still hold at a boundary (0-4)
         const char *recordPath = nullptr;   // PS2X_VU1_QUEUE_RECORD: every posted item, in order (Task 4)
         bool stats = false;            // PS2X_VU1_WORKER_STATS
+        // PS2X_VU1_FRAME_LOG (needs the stats): a CSV, one "F" row per game frame (interval, backpressure wait,
+        // readbacks, cumulative VU1 programs while PS2X_VU_STATS is on) and one "L" row per input-latency sample.
+        std::string frameLogPath;
         bool inlineApply = false;      // PS2X_VU1_THREAD_INLINE: the same items, applied at post on the game thread (a bisect)
     };
     Config configFrom(const char *(*knob)(const char *));

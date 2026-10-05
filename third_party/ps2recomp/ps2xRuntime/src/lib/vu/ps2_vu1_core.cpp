@@ -2149,6 +2149,7 @@ uint64_t VU1Interpreter::fastReadyCycle(const DecodedInstructionPair &decoded) c
 std::atomic<uint64_t> g_gsSwapDBuffCount{0};
 std::atomic<uint64_t> g_gsSyncVCount{0};
 std::atomic<uint64_t> g_vu0Programs{0};
+std::atomic<uint64_t> g_vu1ProgramsTotal{0};   // macOS fork: cumulative, for PS2X_VU1_FRAME_LOG
 
 namespace
 {
@@ -3028,6 +3029,7 @@ void VU1Interpreter::run(uint8_t *vuCode, uint32_t codeSize,
             static auto s_last = std::chrono::steady_clock::now();
             static auto s_runStart = std::chrono::steady_clock::now();
             ++s_programs;
+            g_vu1ProgramsTotal.fetch_add(1, std::memory_order_relaxed);
             s_cycles += m_cycle - runStartCycle;
             const auto now = std::chrono::steady_clock::now();
             s_hostMs += std::chrono::duration<double, std::milli>(now - runStart).count();

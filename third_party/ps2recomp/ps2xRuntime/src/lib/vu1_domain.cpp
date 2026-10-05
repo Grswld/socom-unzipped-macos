@@ -18,6 +18,8 @@
 #include <thread>
 #include <vector>
 
+extern std::atomic<uint64_t> g_vu1ProgramsTotal;   // ps2_vu1_core.cpp, counted while PS2X_VU_STATS is on
+
 namespace vu1domain
 {
     namespace detail
@@ -44,6 +46,8 @@ namespace vu1domain
             std::unique_ptr<vu1work::SpscRing> queue;
             std::thread worker;
             std::FILE *record = nullptr;
+            std::mutex frameLogMutex;
+            std::FILE *frameLog = nullptr;   // PS2X_VU1_FRAME_LOG; written by the game thread (F) and the main thread (L)
             std::vector<uint8_t> recordBuf;
             std::atomic<uint64_t> drains[int(vu1overlap::SyncKind::Count)] = {};
             // Stats (game thread, except the two atomics the worker writes).
@@ -146,6 +150,8 @@ namespace vu1domain
                 c.queueFrames = static_cast<unsigned>(n);
         }
         c.recordPath = knob("PS2X_VU1_QUEUE_RECORD");
+        if (const char *v = knob("PS2X_VU1_FRAME_LOG"))
+            c.frameLogPath = v;
         c.stats = knob("PS2X_VU1_WORKER_STATS") != nullptr;
         if (const char *v = knob("PS2X_VU1_THREAD_INLINE"))
             c.inlineApply = std::strcmp(v, "0") != 0 && *v;
@@ -158,6 +164,15 @@ namespace vu1domain
         if (enabled())
             return;
         s.cfg = cfg;   // kept with the worker off too: the frame stats are the A/B baseline
+        if (cfg.stats && !cfg.frameLogPath.empty())
+        {
+            std::lock_guard<std::mutex> lock(s.frameLogMutex);
+            if ((s.frameLog = std::fopen(cfg.frameLogPath.c_str(), "w")))
+                std::fprintf(s.frameLog, "# vu1 frame log: worker=%d queue_frames=%u\n"
+                                         "# F,frame,t_ms,interval_ms,backpressure_ms,readbacks,vu1_programs\n"
+                                         "# L,t_ms,input_latency_ms\n",
+                             cfg.enabled ? 1 : 0, cfg.queueFrames);
+        }
         if (!cfg.enabled || !apply)
             return;
         s.apply = apply;
@@ -180,6 +195,12 @@ namespace vu1domain
         s.drainHook = nullptr;
         s.drainHookCtx = nullptr;
         setFbrstProbe(nullptr, nullptr);
+        {
+            std::lock_guard<std::mutex> lock(s.frameLogMutex);
+            if (s.frameLog)
+                std::fclose(s.frameLog);
+            s.frameLog = nullptr;
+        }
         if (!enabled())
         {
             s.cfg = Config{};
@@ -280,6 +301,12 @@ namespace vu1domain
                 const double interval = double(now - s.lastBoundaryNs) / 1e6;
                 s.frames.add(interval);
                 ++s.slow[int(classifySlow(interval, s.prevBoundaryBpNs, readbacks - s.readbacksAtBoundary))];
+                std::lock_guard<std::mutex> lock(s.frameLogMutex);
+                if (s.frameLog)
+                    std::fprintf(s.frameLog, "F,%llu,%.3f,%.3f,%.3f,%llu,%llu\n", (unsigned long long)s.frameIndex,
+                                 double(now) / 1e6, interval, double(s.prevBoundaryBpNs) / 1e6,
+                                 (unsigned long long)(readbacks - s.readbacksAtBoundary),
+                                 (unsigned long long)g_vu1ProgramsTotal.load(std::memory_order_relaxed));
                 if (readbacks != s.readbacksAtBoundary)
                 {
                     s.withReadbackMs += interval;
@@ -387,8 +414,14 @@ namespace vu1domain
         const int64_t pad = s.padTime[done % 64].load(std::memory_order_acquire);
         if (pad == 0)
             return;
-        std::lock_guard<std::mutex> lock(s.latencyMutex);
-        s.latency.push_back(double(nowNs() - pad) / 1e6);
+        const int64_t now = nowNs();
+        {
+            std::lock_guard<std::mutex> lock(s.latencyMutex);
+            s.latency.push_back(double(now - pad) / 1e6);
+        }
+        std::lock_guard<std::mutex> lock(s.frameLogMutex);
+        if (s.frameLog)
+            std::fprintf(s.frameLog, "L,%.3f,%.3f\n", double(now) / 1e6, double(now - pad) / 1e6);
     }
 
     std::vector<double> latencySamples()
