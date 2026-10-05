@@ -71,6 +71,7 @@ namespace vu1domain
     // boundary.
     void noteVpuStop(uint32_t bits);
     uint32_t pendingVpuStop();
+    void setStatsExtra(void (*fn)());   // a diagnostic line printed after the stats line
     using DrainHookFn = void (*)(void *ctx);
     void setDrainHook(DrainHookFn fn, void *ctx);
 

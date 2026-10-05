@@ -715,6 +715,10 @@ ps2x::iop::DebugSnapshot PS2Runtime::iopDebugSnapshot() const
     return m_iopSubsystem->debugSnapshot();
 }
 
+void ps2xVif1ScannerReset();       // ps2_memory.cpp (macOS fork: the VU1 worker's i-bit scanner)
+uint64_t ps2xVif1ScannerIbits();
+uint64_t ps2xVif1WorkerIbits();    // ps2_vif1_interpreter.cpp
+
 namespace
 {
     // macOS fork, the VU1 worker (plan Part 2 Task 6): start it on the bound memory, GS and arbiter, with the probes
@@ -740,6 +744,14 @@ namespace
             if (c)
                 c->vu0_vpu_stat = (c->vu0_vpu_stat & ~0x0600u) | vu1domain::pendingVpuStop();
         }, rt);
+        ps2xVif1ScannerReset();   // VIF1 starts from reset with the worker (boot, or after a restart's reset)
+        vu1domain::setStatsExtra([] {
+            std::fprintf(stderr, "[vu1-worker] ibit stalled_items=%llu foreign=%llu scanner=%llu worker=%llu (cumulative)\n",
+                         static_cast<unsigned long long>(vu1domain::ibitStalledItems()),
+                         static_cast<unsigned long long>(vu1domain::ibitForeignItems()),
+                         static_cast<unsigned long long>(ps2xVif1ScannerIbits()),
+                         static_cast<unsigned long long>(ps2xVif1WorkerIbits()));
+        });
         vu1domain::start(cfg, vu1domain::applyItem, &g_vu1ApplyTarget);
     }
 }

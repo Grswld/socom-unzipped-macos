@@ -10,6 +10,7 @@ extern std::atomic<uint64_t> g_vif1BytesCount;
 #include "runtime/ps2_memory.h"
 #include "ps2x/knobs.h"
 #include "runtime/vu1_overlap_stats.h"   // macOS fork: VU1 worker Task 0
+#include "runtime/vu1_domain.h"          // macOS fork: VU1 worker
 #include <cstring>
 #include <vector>
 
@@ -35,6 +36,10 @@ static bool vif1TraceFifo()    // was a getenv at each of the four stall and res
 }
 
 bool ps2xVif1IsStalled() { return g_vif1Stalled; }
+
+// macOS fork, the VU1 worker: i-bits decoded on the worker (the scanner raised their INTC5 on the game thread).
+static std::atomic<uint64_t> g_workerIbits{0};
+uint64_t ps2xVif1WorkerIbits() { return g_workerIbits.load(); }
 
 void ps2xVif1Reset()
 {
@@ -387,8 +392,13 @@ void PS2Memory::processVIF1Data(const uint8_t *data, uint32_t sizeBytes)
         if (irq)
         {
             vif1_regs.stat |= (1u << 11); // INT
-            queueIntcCause(5u);           // EE INTC VIF1 -> game's render-thread waker
-            vu1overlap::ibit();           // macOS fork: VU1 worker Task 0
+            if (!vu1domain::onWorker())   // macOS fork: with the worker on, the game thread's scanner raised it at the kick
+            {
+                queueIntcCause(5u);       // EE INTC VIF1 -> game's render-thread waker
+                vu1overlap::ibit();       // macOS fork: VU1 worker Task 0
+            }
+            else
+                g_workerIbits.fetch_add(1, std::memory_order_relaxed);   // the self-check against the scanner
             if (!vif1NoIrqStall())
                 g_vif1IrqPending = true;  // stall after this command completes (hardware behaviour)
             if (vif1TraceFifo()) std::fprintf(stderr, "[fifo] VIF1 interrupt VIFcode %08x (op %02x) -> INTC5\n", cmd, opcode);

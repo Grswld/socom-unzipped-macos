@@ -8,15 +8,31 @@
 #include "runtime/ps2_memory.h"
 #include "runtime/vu1_domain.h"
 
+#include <atomic>
+
+bool ps2xVif1IsStalled();   // ps2_vif1_interpreter.cpp
+
 namespace vu1domain
 {
     thread_local uint64_t t_currentItemFbrst = 0;
+    // Diagnostic (Task 7 bisect): items other than the i-bit handler's own (PATH3, the arbiter drain, VIF1 register
+    // writes) applied while VIF1 is stalled at an i-bit. In the console's order there are none.
+    std::atomic<uint64_t> g_ibitForeignItems{0}, g_ibitStalledItems{0};
+    uint64_t ibitForeignItems() { return g_ibitForeignItems.load(); }
+    uint64_t ibitStalledItems() { return g_ibitStalledItems.load(); }
 
     uint64_t currentItemFbrst() { return t_currentItemFbrst; }
 
     void applyItem(const vu1work::WorkItem &item, void *ctx)
     {
         auto *target = static_cast<ApplyTarget *>(ctx);
+        if (ps2xVif1IsStalled())
+        {
+            g_ibitStalledItems.fetch_add(1, std::memory_order_relaxed);
+            if (item.kind != vu1work::Kind::GifPath3 && item.kind != vu1work::Kind::ArbiterDrain &&
+                item.kind != vu1work::Kind::Vif1Reg)
+                g_ibitForeignItems.fetch_add(1, std::memory_order_relaxed);
+        }
         const uint32_t n = static_cast<uint32_t>(item.bytes.size());
         switch (item.kind)
         {

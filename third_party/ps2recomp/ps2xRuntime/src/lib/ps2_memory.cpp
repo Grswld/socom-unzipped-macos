@@ -5,6 +5,7 @@
 #include "ps2x/knobs.h"
 #include "runtime/vu1_overlap_stats.h"   // macOS fork: VU1 worker Task 0
 #include "runtime/vu1_domain.h"          // macOS fork: VU1 worker Part 2
+#include "runtime/vif1_scanner.h"        // macOS fork: VU1 worker, the i-bit scanner
 #include <atomic>
 #include <cstring>
 extern std::atomic<uint64_t> g_vif1EnqCount;
@@ -22,6 +23,26 @@ static bool traceFifo()   // on first use: a namespace-scope read ran before mai
 #include <algorithm>
 #include <string>
 #include <vector>
+
+// macOS fork, the VU1 worker (Task 7 fix): with the worker on, INTC5 for a VIF1 i-bit is raised here on the game
+// thread, at the kick and at FBRST.STC -- the calls where the inline interpreter raises it -- from a scanner that walks
+// the posted VIF1 bytes as the interpreter will. The worker's interpreter then does not raise it (vu1domain::onWorker).
+namespace
+{
+    Vif1Scanner &vif1Scanner()
+    {
+        static Vif1Scanner s_scanner;
+        static const bool s_init = [] {
+            s_scanner.setNoIrqStall(ps2x::knobOn("PS2X_VIF1_NO_IRQ_STALL"));
+            return true;
+        }();
+        (void)s_init;
+        return s_scanner;
+    }
+    std::atomic<uint64_t> g_scannerIbits{0};
+}
+void ps2xVif1ScannerReset() { vif1Scanner().reset(); }
+uint64_t ps2xVif1ScannerIbits() { return g_scannerIbits.load(); }
 
 // VIF1 i-bit stall state (ps2_vif1_interpreter.cpp).
 void ps2xVif1Reset();
@@ -1213,6 +1234,18 @@ bool PS2Memory::writeIORegister(uint32_t address, uint32_t value)
     if (vu1domain::shouldPost() &&
         ((address >= 0x10003C00u && address < 0x10003E00u) || (address >= 0x10005000u && address < 0x10006000u)))
     {
+        if (address == 0x10003C10u)   // FBRST: the scanner follows RST and STC as the interpreter will
+        {
+            if (value & 0x1u)
+                vif1Scanner().reset();
+            if (value & 0x8u)
+                for (unsigned irq = vif1Scanner().stc(); irq > 0; --irq)
+                {
+                    queueIntcCause(5u);   // an i-bit held behind the stall, raised at STC as inline
+                    vu1overlap::ibit();
+                    g_scannerIbits.fetch_add(1, std::memory_order_relaxed);
+                }
+        }
         vu1work::WorkItem it;
         it.kind = vu1work::Kind::Vif1Reg;
         it.a = address;
@@ -1792,6 +1825,12 @@ void PS2Memory::processPendingTransfers()
         {
             processVIF1Data(d, n);
             return;
+        }
+        for (unsigned irq = vif1Scanner().scan(d, n); irq > 0; --irq)
+        {
+            queueIntcCause(5u);   // EE INTC VIF1, at the kick as the inline interpreter raises it
+            vu1overlap::ibit();
+            g_scannerIbits.fetch_add(1, std::memory_order_relaxed);
         }
         vu1work::WorkItem it;
         it.kind = vu1work::Kind::Vif1Data;

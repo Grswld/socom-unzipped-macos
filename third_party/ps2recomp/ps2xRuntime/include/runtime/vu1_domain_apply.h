@@ -27,5 +27,7 @@ namespace vu1domain
     // A GS privileged display register (PMODE, SMODE2, DISPFB, DISPLAY, BGCOLOR) written by a stub: in place with the
     // worker off (today's behaviour), posted in order with the GS work while it is on -- the display must not switch
     // to a buffer the worker has not finished drawing (Task 7: flicker and colour distortion with the worker on).
+    uint64_t ibitForeignItems();   // diagnostic: see vu1_domain_apply.cpp
+    uint64_t ibitStalledItems();
     void gsPrivWrite64(uint64_t &field, uint32_t address, uint64_t value);   // on the worker: the EE's vu0_fbrst captured with the Vif1Data item being applied
 }

@@ -35,6 +35,7 @@ namespace
     // A normal-mode VIF1 DMA of one DIRECT QW at kSrc: the GIF callback sees 16 bytes 0x11.. .
     void kickDirect(PS2Memory &mem, uint32_t src)
     {
+        mem.writeIORegister(0x10003C10u, 0x1u);   // VIF1 RST first: its stall state is process-global
         uint8_t *rdram = mem.getRDRAM();
         std::memset(rdram + src, 0, 32u);
         const uint32_t cmd = vifCmd(0x50u, 0u, 1u);
@@ -109,6 +110,7 @@ void register_vu1_domain_guard_tests()
             std::memcpy(rdram + kTag + 12u, &directCmd, sizeof(directCmd));
             for (uint32_t i = 0; i < 16u; ++i)
                 rdram[kTag + 16u + i] = static_cast<uint8_t>(0x70u + i);
+            mem.writeIORegister(0x10003C10u, 0x1u);   // VIF1 RST (process-global stall state)
             vu1domain::ApplyTarget target{&mem, nullptr, nullptr};
             vu1domain::start(on(), vu1domain::applyItem, &target);
             mem.writeIORegister(kVif1Ch + 0x30u, kTag);

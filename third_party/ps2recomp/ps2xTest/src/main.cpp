@@ -64,7 +64,8 @@ void register_host_thread_qos_tests();   // macOS fork
 void register_vu1_overlap_stats_tests();   // macOS fork: VU1 worker Task 0
 void register_vu1_work_queue_tests();   // macOS fork: VU1 worker Part 2
 void register_vu1_domain_tests();   // macOS fork: VU1 worker Part 2
-void register_vu1_domain_guard_tests();   // macOS fork: VU1 worker Part 2     // runtime/socom2_msg_bounds.h
+void register_vu1_domain_guard_tests();   // macOS fork: VU1 worker Part 2
+void register_vif1_scanner_tests();   // macOS fork: VU1 worker     // runtime/socom2_msg_bounds.h
 void reset_ps2_test_function_table();
 
 namespace
@@ -168,6 +169,7 @@ int main()
     register_vu1_work_queue_tests();
     register_vu1_domain_tests();
     register_vu1_domain_guard_tests();
+    register_vif1_scanner_tests();
     int res = MiniTest::Run();
     std::cout.flush();
     std::cerr.flush();

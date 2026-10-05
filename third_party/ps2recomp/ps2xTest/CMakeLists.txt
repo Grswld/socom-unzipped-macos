@@ -61,6 +61,7 @@ add_library(ps2_test_lib STATIC
     src/vu1_work_queue_tests.cpp   # macOS fork: VU1 worker Part 2
     src/vu1_domain_tests.cpp   # macOS fork: VU1 worker Part 2
     src/vu1_domain_guard_tests.cpp   # macOS fork: VU1 worker Part 2
+    src/vif1_scanner_tests.cpp   # macOS fork: VU1 worker, the i-bit scanner
     src/ps2_vu_tests.cpp
     src/ps2_gs_tests.cpp
     src/gs_frame_backpressure_tests.cpp

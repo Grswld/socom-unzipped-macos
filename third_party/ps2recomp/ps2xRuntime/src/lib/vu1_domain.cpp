@@ -53,6 +53,7 @@ namespace vu1domain
             std::atomic<uint64_t> latencyCount{0};
             std::atomic<uint32_t> vpuStop{0};
             std::atomic<uint64_t> dtStops{0};
+            void (*statsExtra)() = nullptr;
             DrainHookFn drainHook = nullptr;
             void *drainHookCtx = nullptr;
         };
@@ -242,6 +243,8 @@ namespace vu1domain
                              double(s.drainWaitNs) / 1e6 / secs, double(s.backpressureWaitNs) / 1e6 / secs, s.aheadMax,
                              lc ? double(lt) / double(lc) / 1e6 : 0.0, double(lm) / 1e6,
                              static_cast<unsigned long long>(s.dtStops.load()));
+                if (s.statsExtra)
+                    s.statsExtra();
                 s.frames.clear();
                 s.windowStartNs = now;
                 s.items = 0;
@@ -306,4 +309,5 @@ namespace vu1domain
         g_fbrstCtx = ctx;
     }
     uint64_t eeFbrst() { return g_fbrstFn ? g_fbrstFn(g_fbrstCtx) : 0u; }
+    void setStatsExtra(void (*fn)()) { state().statsExtra = fn; }
 }
