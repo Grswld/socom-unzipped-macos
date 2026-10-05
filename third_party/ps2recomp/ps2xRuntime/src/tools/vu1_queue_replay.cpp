@@ -44,7 +44,7 @@ namespace
     Replay *g_replay = nullptr;
 
     // The executor plus the frame hash: applied wherever the item is applied (inline here, or on the worker).
-    void applyAndHash(const vu1work::WorkItem &item, void *ctx)
+    void applyAndHash(const vu1work::ItemView &item, void *ctx)
     {
         vu1domain::applyItem(item, ctx);
         if (item.kind == vu1work::Kind::FrameMark && g_replay->frameHashes.size() < g_replay->maxFrames)
@@ -122,7 +122,7 @@ int main(int argc, char **argv)
         if (threaded)
             vu1domain::post(std::move(item));
         else
-            applyAndHash(item, &r.target);
+            applyAndHash(vu1work::viewOf(item), &r.target);
         item = vu1work::WorkItem{};
     }
     if (threaded)

@@ -1,5 +1,6 @@
 #pragma once
 // macOS fork, the VU1 worker: the executor's interface (vu1_domain_apply.cpp).
+#include "runtime/vu1_spsc_ring.h"
 #include "runtime/vu1_work_queue.h"
 
 #include <cstdint>
@@ -16,7 +17,7 @@ namespace vu1domain
         GS *gs = nullptr;
         GifArbiter *arbiter = nullptr;
     };
-    void applyItem(const vu1work::WorkItem &item, void *ctx);   // ctx: ApplyTarget*
+    void applyItem(const vu1work::ItemView &item, void *ctx);   // ctx: ApplyTarget*
     uint64_t currentItemFbrst();
 
     // The stubs' direct GS calls (GS.cpp, Support.h): posted while the worker is on, called through otherwise.

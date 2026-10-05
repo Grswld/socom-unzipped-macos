@@ -39,6 +39,20 @@ namespace vu1work
                         static_cast<uint32_t>(item.bytes.size())};
     }
 
+    // The recording format (vu1_work_queue.h) written straight from a view.
+    inline void serialize(const ItemView &v, std::vector<uint8_t> &out)
+    {
+        const size_t at = out.size();
+        out.resize(at + 17 + v.size);
+        uint8_t *p = out.data() + at;
+        *p++ = static_cast<uint8_t>(v.kind);
+        std::memcpy(p, &v.a, 4); p += 4;
+        std::memcpy(p, &v.b, 8); p += 8;
+        std::memcpy(p, &v.size, 4); p += 4;
+        if (v.size)
+            std::memcpy(p, v.data, v.size);
+    }
+
     class SpscRing
     {
     public:

@@ -28,7 +28,7 @@ namespace
     };
     Recorder g_rec;
 
-    void recordApply(const WorkItem &item, void *)
+    void recordApply(const ItemView &item, void *)
     {
         if (g_rec.sleepMsOnEach)
             std::this_thread::sleep_for(std::chrono::milliseconds(g_rec.sleepMsOnEach));

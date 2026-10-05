@@ -1821,16 +1821,14 @@ void PS2Memory::processPendingTransfers()
     // chunks, then the arbiter's drain -- each item owning a copy of its bytes, because the game may free a packet
     // right after the kick (GS.cpp's sceGs* stubs do). Off, every call below goes straight through as before.
     const bool vu1Post = vu1domain::shouldPost();
+    vu1domain::BatchScope vu1Batch;   // the transfer's items are published together, at the end of this function
     auto gifOut = [&](const uint8_t *d, uint32_t n) {
         if (!vu1Post)
         {
             submitGifPacket(GifPathId::Path3, d, n, false);
             return;
         }
-        vu1work::WorkItem it;
-        it.kind = vu1work::Kind::GifPath3;
-        it.bytes.assign(d, d + n);
-        vu1domain::post(std::move(it));
+        vu1domain::post(vu1work::Kind::GifPath3, 0, 0, d, n);   // copied once, into the ring's arena
     };
     auto vif1Out = [&](const uint8_t *d, uint32_t n) {
         if (!vu1Post)
@@ -1845,12 +1843,8 @@ void PS2Memory::processPendingTransfers()
             vu1overlap::ibit();
             g_scannerIbits.fetch_add(1, std::memory_order_relaxed);
         }
-        vu1work::WorkItem it;
-        it.kind = vu1work::Kind::Vif1Data;
-        it.a = irqs;   // the scanner's i-bits in this item: the worker checks it decodes the same (self-check)
-        it.b = vu1domain::eeFbrst();
-        it.bytes.assign(d, d + n);
-        vu1domain::post(std::move(it));
+        // a: the scanner's i-bits in this item (the worker checks it decodes the same); b: the EE's vu0_fbrst
+        vu1domain::post(vu1work::Kind::Vif1Data, irqs, vu1domain::eeFbrst(), d, n);
     };
 
     const bool hadGif = !m_pendingGifTransfers.empty();
@@ -2042,14 +2036,11 @@ void PS2Memory::processPendingTransfers()
     if (m_gifArbiter)
     {
         if (vu1Post)
-        {
-            vu1work::WorkItem it;
-            it.kind = vu1work::Kind::ArbiterDrain;
-            vu1domain::post(std::move(it));
-        }
+            vu1domain::post(vu1work::Kind::ArbiterDrain, 0, 0, nullptr, 0);
         else
             m_gifArbiter->drain();
     }
+
 
     static constexpr uint32_t GIF_CHANNEL = 0x1000A000;
     static constexpr uint32_t VIF0_CHANNEL = 0x10008000;

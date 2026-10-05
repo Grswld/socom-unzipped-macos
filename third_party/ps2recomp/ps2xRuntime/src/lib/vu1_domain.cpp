@@ -38,7 +38,7 @@ namespace vu1domain
             Config cfg;
             ApplyFn apply = nullptr;
             void *ctx = nullptr;
-            std::unique_ptr<vu1work::WorkQueue> queue;
+            std::unique_ptr<vu1work::SpscRing> queue;
             std::thread worker;
             std::FILE *record = nullptr;
             std::vector<uint8_t> recordBuf;
@@ -54,6 +54,7 @@ namespace vu1domain
             std::atomic<uint32_t> vpuStop{0};
             std::atomic<uint64_t> dtStops{0};
             void (*statsExtra)() = nullptr;
+            int batchDepth = 0;   // game thread only
             DrainHookFn drainHook = nullptr;
             void *drainHookCtx = nullptr;
         };
@@ -81,7 +82,7 @@ namespace vu1domain
             State &s = state();
             detail::onWorkerFlag() = true;
             hostThreadSetInteractive();
-            vu1work::WorkItem item;
+            vu1work::ItemView item;
             uint64_t seq = 0;
             while (s.queue->pop(item, seq))
             {
@@ -96,7 +97,7 @@ namespace vu1domain
                     {
                     }
                 }
-                s.queue->markDone(seq, item.kind == vu1work::Kind::FrameMark);
+                s.queue->release(seq, item.kind == vu1work::Kind::FrameMark);
             }
         }
     }
@@ -130,7 +131,7 @@ namespace vu1domain
             return;
         s.apply = apply;
         s.ctx = ctx;
-        s.queue = std::make_unique<vu1work::WorkQueue>();
+        s.queue = std::make_unique<vu1work::SpscRing>();
         if (cfg.recordPath && *cfg.recordPath)
             s.record = std::fopen(cfg.recordPath, "wb");
         if (!cfg.inlineApply)
@@ -170,12 +171,13 @@ namespace vu1domain
         s.cfg = Config{};
     }
 
-    void post(vu1work::WorkItem &&item)
+    void post(vu1work::Kind kind, uint32_t a, uint64_t b, const uint8_t *data, uint32_t size)
     {
         State &s = state();
+        const vu1work::ItemView view{kind, a, b, data, size};
         if (s.record)
         {
-            vu1work::serialize(item, s.recordBuf);
+            vu1work::serialize(view, s.recordBuf);
             if (s.recordBuf.size() >= (8u << 20))
             {
                 std::fwrite(s.recordBuf.data(), 1, s.recordBuf.size(), s.record);
@@ -186,11 +188,33 @@ namespace vu1domain
         if (s.cfg.inlineApply)
         {
             detail::onWorkerFlag() = true;   // the guards execute, exactly as on the worker
-            s.apply(item, s.ctx);
+            s.apply(view, s.ctx);
             detail::onWorkerFlag() = false;
             return;
         }
-        s.queue->push(std::move(item));
+        s.queue->push(kind, a, b, data, size);
+        if (s.batchDepth == 0 || s.queue->unpublished() >= 64u || s.queue->consumerSleeping())
+            s.queue->publish();
+    }
+
+    BatchScope::BatchScope() { ++state().batchDepth; }
+    BatchScope::~BatchScope()
+    {
+        if (--state().batchDepth == 0)
+            flush();
+    }
+
+    void post(vu1work::WorkItem &&item)
+    {
+        post(item.kind, item.a, item.b, item.bytes.empty() ? nullptr : item.bytes.data(),
+             static_cast<uint32_t>(item.bytes.size()));
+    }
+
+    void flush()
+    {
+        State &s = state();
+        if (s.queue && !s.cfg.inlineApply)
+            s.queue->publish();
     }
 
     void drain(vu1overlap::SyncKind why)

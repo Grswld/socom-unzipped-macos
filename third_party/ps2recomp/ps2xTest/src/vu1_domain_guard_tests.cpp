@@ -157,12 +157,12 @@ void register_vu1_domain_guard_tests()
 
         tc.Run("a VIF1 register write is posted, and applied it lands", [](TestCase &t)
         {
-            static std::vector<vu1work::WorkItem> s_seen;
+            static std::vector<vu1work::ItemView> s_seen;   // kind, a and b only: payloads are not kept
             s_seen.clear();
             PS2Memory mem;
             t.IsTrue(mem.initialize(), "initialize");
             vu1domain::ApplyTarget target{&mem, nullptr, nullptr};
-            vu1domain::start(on(), [](const vu1work::WorkItem &it, void *ctx) {
+            vu1domain::start(on(), [](const vu1work::ItemView &it, void *ctx) {
                 s_seen.push_back(it);
                 vu1domain::applyItem(it, ctx);
             }, &target);
@@ -179,10 +179,10 @@ void register_vu1_domain_guard_tests()
     {
         tc.Run("GS register writes, clears and the VBlank frame mark are posted while the worker is on", [](TestCase &t)
         {
-            static std::vector<vu1work::WorkItem> s_seen;
+            static std::vector<vu1work::ItemView> s_seen;   // kind, a and b only: payloads are not kept
             static std::mutex s_mutex;
             s_seen.clear();
-            vu1domain::start(on(), [](const vu1work::WorkItem &it, void *) {
+            vu1domain::start(on(), [](const vu1work::ItemView &it, void *) {
                 std::lock_guard<std::mutex> lock(s_mutex);
                 s_seen.push_back(it);
             }, nullptr);
@@ -208,7 +208,7 @@ void register_vu1_domain_guard_tests()
     MiniTest::Case("Vu1DomainDrains", [](TestCase &tc)
     {
         // A slow executor: every item takes 20 ms, so anything that waited for the worker shows it.
-        auto slowApply = [](const vu1work::WorkItem &it, void *ctx) {
+        auto slowApply = [](const vu1work::ItemView &it, void *ctx) {
             std::this_thread::sleep_for(std::chrono::milliseconds(20));
             vu1domain::applyItem(it, ctx);
         };
@@ -282,11 +282,11 @@ void register_vu1_domain_guard_tests()
             PS2Memory mem;
             t.IsTrue(mem.initialize(), "initialize");
             const uint64_t before = mem.gs().dispfb1;
-            static std::vector<vu1work::WorkItem> s_seen;
+            static std::vector<vu1work::ItemView> s_seen;   // kind, a and b only: payloads are not kept
             static std::mutex s_m;
             s_seen.clear();
             vu1domain::ApplyTarget target{&mem, nullptr, nullptr};
-            vu1domain::start(on(), [](const vu1work::WorkItem &it, void *ctx) {
+            vu1domain::start(on(), [](const vu1work::ItemView &it, void *ctx) {
                 std::this_thread::sleep_for(std::chrono::milliseconds(10));
                 { std::lock_guard<std::mutex> lock(s_m); s_seen.push_back(it); }
                 vu1domain::applyItem(it, ctx);

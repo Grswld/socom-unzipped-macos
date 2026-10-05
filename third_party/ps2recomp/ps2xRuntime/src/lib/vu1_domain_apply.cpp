@@ -29,18 +29,18 @@ namespace vu1domain
     // Self-check (Task 7): the i-bits the worker decodes in one item must be the scanner's count for it.
     std::atomic<uint64_t> g_ibitItemMismatches{0};
     uint64_t ibitItemMismatches() { return g_ibitItemMismatches.load(); }
-    void checkIbits(const vu1work::WorkItem &item, uint64_t decoded, uint64_t expected)
+    void checkIbits(const vu1work::ItemView &item, uint64_t decoded, uint64_t expected)
     {
         if (!onWorker() || decoded == expected)   // only where the worker decodes (not the replay tool's inline pass)
             return;
         if (g_ibitItemMismatches.fetch_add(1) < 20)
             std::fprintf(stderr, "[vu1-worker] IBIT MISMATCH kind=%d a=0x%x bytes=%zu worker=%llu scanner=%llu first=%08x\n",
-                         int(item.kind), item.a, item.bytes.size(), static_cast<unsigned long long>(decoded),
+                         int(item.kind), item.a, size_t(item.size), static_cast<unsigned long long>(decoded),
                          static_cast<unsigned long long>(expected),
-                         item.bytes.size() >= 4 ? *reinterpret_cast<const uint32_t *>(item.bytes.data()) : 0u);
+                         item.size >= 4 ? *reinterpret_cast<const uint32_t *>(item.data) : 0u);
     }
 
-    void applyItem(const vu1work::WorkItem &item, void *ctx)
+    void applyItem(const vu1work::ItemView &item, void *ctx)
     {
         auto *target = static_cast<ApplyTarget *>(ctx);
         if (ps2xVif1IsStalled())
@@ -55,23 +55,23 @@ namespace vu1domain
                 g_ibitForeignByKind[int(item.kind)].fetch_add(1, std::memory_order_relaxed);
                 static std::atomic<int> s_logged{0};
                 if (s_logged.fetch_add(1) < 40)   // the first 40, with the item, for classification
-                    std::fprintf(stderr, "[vu1-worker] foreign kind=%d a=0x%x b=0x%llx bytes=%zu\n", int(item.kind), item.a,
-                                 static_cast<unsigned long long>(item.b), item.bytes.size());
+                    std::fprintf(stderr, "[vu1-worker] foreign kind=%d a=0x%x b=0x%llx bytes=%u\n", int(item.kind), item.a,
+                                 static_cast<unsigned long long>(item.b), item.size);
             }
         }
-        const uint32_t n = static_cast<uint32_t>(item.bytes.size());
+        const uint32_t n = item.size;
         switch (item.kind)
         {
         case vu1work::Kind::Vif1Data:
         {
             t_currentItemFbrst = item.b;
             const uint64_t before = ps2xVif1WorkerIbits();
-            target->memory->processVIF1Data(item.bytes.data(), n);
+            target->memory->processVIF1Data(item.data, n);
             checkIbits(item, ps2xVif1WorkerIbits() - before, item.a);
             break;
         }
         case vu1work::Kind::GifPath3:
-            target->memory->submitGifPacket(GifPathId::Path3, item.bytes.data(), n, false);
+            target->memory->submitGifPacket(GifPathId::Path3, item.data, n, false);
             break;
         case vu1work::Kind::ArbiterDrain:
             if (target->arbiter)

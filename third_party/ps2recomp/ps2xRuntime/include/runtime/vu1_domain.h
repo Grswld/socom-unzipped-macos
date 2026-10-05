@@ -5,6 +5,7 @@
 // worker's state (research/84: about four a frame), and bounds how far it runs ahead at every frame boundary
 // (sceGsSyncV). Every wait is subtracted from guest time as VU1's own time was. Off, nothing here runs.
 #include "runtime/vu1_overlap_stats.h"
+#include "runtime/vu1_spsc_ring.h"
 #include "runtime/vu1_work_queue.h"
 
 #include <algorithm>
@@ -26,7 +27,7 @@ namespace vu1domain
     };
     Config configFrom(const char *(*knob)(const char *));
 
-    using ApplyFn = void (*)(const vu1work::WorkItem &item, void *ctx);
+    using ApplyFn = void (*)(const vu1work::ItemView &item, void *ctx);   // the payload is valid during the call
 
     void start(const Config &cfg, ApplyFn apply, void *ctx);   // spawns the worker when enabled; idempotent per stop
     void stop();                                               // drains, closes, joins; idempotent
@@ -40,7 +41,22 @@ namespace vu1domain
     inline bool onWorker() { return detail::onWorkerFlag(); }
     inline bool shouldPost() { return enabled() && !onWorker(); }
 
+    // Copy one item into the ring (payload once, into the preallocated arena); published every 64 items, at once when the
+    // worker sleeps, and at flush(). The WorkItem form is for sites with no payload and for tests.
+    void post(vu1work::Kind kind, uint32_t a, uint64_t b, const uint8_t *data, uint32_t size);
     void post(vu1work::WorkItem &&item);
+    void flush();   // publish everything posted
+
+    // Items posted inside a batch scope are published every 64 and when the scope ends; outside one, at once. A
+    // transfer batch (processPendingTransfers) is one scope: the worker sees a kick's items together, and nothing posted
+    // elsewhere (an STC, a register write) can wait unpublished behind a worker that has gone to sleep.
+    struct BatchScope
+    {
+        BatchScope();
+        ~BatchScope();
+        BatchScope(const BatchScope &) = delete;
+        BatchScope &operator=(const BatchScope &) = delete;
+    };
     void drain(vu1overlap::SyncKind why);   // waits for every posted item; counted by kind; excluded from guest time
     void frameBoundary();                   // posts a FrameMark, then waits while more than queueFrames are in flight
 
