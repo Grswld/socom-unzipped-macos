@@ -13,6 +13,7 @@
 #include "runtime/vu1_domain_apply.h"
 #include "ps2x/knobs.h"
 
+#include <cfenv>
 #include <cstdio>
 #include <cstdlib>
 #include <cstring>
@@ -60,6 +61,11 @@ int main(int argc, char **argv)
         return 2;
     }
     ps2x::knobs::setDevMode(true);
+    {   // the game thread's rounding, as the runtime sets it (the worker adopts the same: vu1_domain.cpp)
+        const char *round = ps2x::knob("PS2X_EE_ROUND");
+        if (!round || std::strcmp(round, "nearest") != 0)
+            std::fesetround(FE_TOWARDZERO);
+    }
     bool threaded = false;
     size_t maxFrames = SIZE_MAX;
     for (int i = 2; i < argc; ++i)

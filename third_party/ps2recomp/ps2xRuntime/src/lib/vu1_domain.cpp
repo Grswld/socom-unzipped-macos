@@ -3,8 +3,10 @@
 
 #include "runtime/host_thread_qos.h"
 #include "runtime/ps2_guest_clock.h"
+#include "ps2x/knobs.h"
 
 #include <algorithm>
+#include <cfenv>
 #include <chrono>
 #include <iterator>
 #include <cstdio>
@@ -79,6 +81,15 @@ namespace vu1domain
             return s;
         }
 
+        // The game thread's FPU rounding (ps2_runtime.cpp: toward zero, PCSX2's "Chop", unless PS2X_EE_ROUND=nearest),
+        // applied to the worker: the GS front end's float math ran under it inline and must run under it here.
+        void setGuestRounding()
+        {
+            const char *round = ps2x::knob("PS2X_EE_ROUND");
+            if (!round || std::strcmp(round, "nearest") != 0)
+                std::fesetround(FE_TOWARDZERO);
+        }
+
         int64_t nowNs()
         {
             return std::chrono::duration_cast<std::chrono::nanoseconds>(
@@ -99,6 +110,7 @@ namespace vu1domain
             State &s = state();
             detail::onWorkerFlag() = true;
             hostThreadSetInteractive();
+            setGuestRounding();   // the GS front end and VU1 round as they did on the game thread
             vu1work::ItemView item;
             uint64_t seq = 0;
             while (s.queue->pop(item, seq))

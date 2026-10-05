@@ -2156,10 +2156,14 @@ namespace
     // (x87 RC = 11b at bits 10-11, MXCSR RC = 11b at bits 13-14) and restores them on request.
     // arm64 (macOS port): there is no x87; long double is double, and sse2neon's _mm_setcsr sets FPCR's
     // rounding mode, which governs scalar and NEON math alike -- so the MXCSR half alone is the whole scope.
+    // macOS fork (VU1 worker Part 3 Task 3.5): on arm64 the FPCR is written only when the thread does not already round
+    // toward zero -- the game thread does from boot and the VU1 worker from its start, so a VU run no longer pays two
+    // FPCR writes. arm64's FPCR holds no sticky exception flags (those are FPSR's), so skipping is the same state.
     struct VuRoundingScope
     {
         uint16_t x87 = 0;
         uint32_t mxcsr = 0;
+        bool changed = true;
         VuRoundingScope()
         {
 #if defined(__x86_64__) || defined(__i386__)
@@ -2168,14 +2172,19 @@ namespace
             __asm__ __volatile__("fldcw %0" : : "m"(x87Tz));
 #endif
             mxcsr = _mm_getcsr();
-            _mm_setcsr(mxcsr | 0x6000u);
+#if defined(__aarch64__)
+            changed = (mxcsr & 0x6000u) != 0x6000u;
+#endif
+            if (changed)
+                _mm_setcsr(mxcsr | 0x6000u);
         }
         void restore() const
         {
 #if defined(__x86_64__) || defined(__i386__)
             __asm__ __volatile__("fldcw %0" : : "m"(x87));
 #endif
-            _mm_setcsr(mxcsr);
+            if (changed)
+                _mm_setcsr(mxcsr);
         }
     };
 }
