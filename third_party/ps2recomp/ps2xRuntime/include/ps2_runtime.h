@@ -521,6 +521,7 @@ private:
     uint32_t clampGuestHeapBase(uint32_t guestBase) const;
     uint32_t clampGuestHeapLimit(uint32_t guestLimit) const;
     void resetGuestHeapLocked(uint32_t guestBase, uint32_t guestLimit);
+    void coalesceGuestHeapAroundLocked(size_t index);   // macOS fork: Part 3 Task 3.4
     void ensureGuestHeapInitializedLocked();
     int32_t findGuestHeapBlockIndexLocked(uint32_t guestAddr) const;
     uint32_t allocateGuestBlockLocked(uint32_t size, uint32_t alignment);

@@ -1952,16 +1952,40 @@ void PS2Runtime::ensureGuestHeapInitializedLocked()
 
 int32_t PS2Runtime::findGuestHeapBlockIndexLocked(uint32_t guestAddr) const
 {
+    // macOS fork (VU1 worker Part 3 Task 3.4): the blocks partition the heap in address order with no empty block, so
+    // their addresses are strictly increasing and a binary search finds the one block the linear scan found.
     const uint32_t normalizedAddr = guestAddr & PS2_RAM_MASK;
-    for (size_t i = 0; i < m_guestHeapBlocks.size(); ++i)
+    const auto it = std::lower_bound(m_guestHeapBlocks.begin(), m_guestHeapBlocks.end(), normalizedAddr,
+                                     [](const GuestHeapBlock &b, uint32_t a) { return b.addr < a; });
+    if (it == m_guestHeapBlocks.end() || it->addr != normalizedAddr || it->free)
+        return -1;
+    return static_cast<int32_t>(it - m_guestHeapBlocks.begin());
+}
+
+// macOS fork (Task 3.4): merge block i with its free neighbours. Every operation leaves no two adjacent free blocks
+// (the original's full coalesce pass ran after each free), so merging around the one block that changed is the same.
+void PS2Runtime::coalesceGuestHeapAroundLocked(size_t i)
+{
+    if (i + 1 < m_guestHeapBlocks.size())
     {
-        const GuestHeapBlock &block = m_guestHeapBlocks[i];
-        if (!block.free && block.addr == normalizedAddr)
+        GuestHeapBlock &cur = m_guestHeapBlocks[i];
+        const GuestHeapBlock &next = m_guestHeapBlocks[i + 1];
+        if (cur.free && next.free && static_cast<uint64_t>(cur.addr) + cur.size == next.addr)
         {
-            return static_cast<int32_t>(i);
+            cur.size += next.size;
+            m_guestHeapBlocks.erase(m_guestHeapBlocks.begin() + static_cast<std::ptrdiff_t>(i + 1));
         }
     }
-    return -1;
+    if (i > 0)
+    {
+        GuestHeapBlock &prev = m_guestHeapBlocks[i - 1];
+        const GuestHeapBlock &cur = m_guestHeapBlocks[i];
+        if (prev.free && cur.free && static_cast<uint64_t>(prev.addr) + prev.size == cur.addr)
+        {
+            prev.size += cur.size;
+            m_guestHeapBlocks.erase(m_guestHeapBlocks.begin() + static_cast<std::ptrdiff_t>(i));
+        }
+    }
 }
 
 uint32_t PS2Runtime::allocateGuestBlockLocked(uint32_t size, uint32_t alignment)
@@ -2014,22 +2038,28 @@ uint32_t PS2Runtime::allocateGuestBlockLocked(uint32_t size, uint32_t alignment)
         const uint32_t prefixSize = static_cast<uint32_t>(alignedStart - blockStart);
         const uint32_t suffixSize = static_cast<uint32_t>(blockEnd - allocEnd);
 
-        std::vector<GuestHeapBlock> replacement;
-        replacement.reserve(3);
+        // macOS fork (Task 3.4): the same prefix / allocation / suffix, split in place with one insert at most (was a
+        // temporary vector, an erase and an insert: two moves of the tail per allocation).
+        const GuestHeapBlock allocated{alignedAddr, allocSize, false};
+        const GuestHeapBlock suffix{static_cast<uint32_t>(allocEnd), suffixSize, true};
+        const auto at = m_guestHeapBlocks.begin() + static_cast<std::ptrdiff_t>(i);
         if (prefixSize > 0u)
         {
-            replacement.push_back({block.addr, prefixSize, true});
+            m_guestHeapBlocks[i] = GuestHeapBlock{block.addr, prefixSize, true};
+            if (suffixSize > 0u)
+            {
+                const GuestHeapBlock both[2] = {allocated, suffix};
+                m_guestHeapBlocks.insert(at + 1, both, both + 2);
+            }
+            else
+                m_guestHeapBlocks.insert(at + 1, allocated);
         }
-        replacement.push_back({alignedAddr, allocSize, false});
-        if (suffixSize > 0u)
+        else
         {
-            replacement.push_back({static_cast<uint32_t>(allocEnd), suffixSize, true});
+            m_guestHeapBlocks[i] = allocated;
+            if (suffixSize > 0u)
+                m_guestHeapBlocks.insert(at + 1, suffix);
         }
-
-        m_guestHeapBlocks.erase(m_guestHeapBlocks.begin() + static_cast<std::ptrdiff_t>(i));
-        m_guestHeapBlocks.insert(m_guestHeapBlocks.begin() + static_cast<std::ptrdiff_t>(i),
-                                 replacement.begin(),
-                                 replacement.end());
 
         m_guestHeapEnd = std::max(m_guestHeapEnd, static_cast<uint32_t>(allocEnd));
         return alignedAddr;
@@ -2070,7 +2100,7 @@ void PS2Runtime::freeGuestBlockLocked(uint32_t guestAddr)
     }
 
     m_guestHeapBlocks[static_cast<size_t>(index)].free = true;
-    coalesceGuestHeapLocked();
+    coalesceGuestHeapAroundLocked(static_cast<size_t>(index));
 }
 
 // Where a loaded image ends decides where the runtime's own guest allocations start -- never where
@@ -2202,7 +2232,7 @@ uint32_t PS2Runtime::guestRealloc(uint32_t guestAddr, uint32_t newSize, uint32_t
             m_guestHeapBlocks[blockIndex].size = requestedSize;
             m_guestHeapBlocks.insert(m_guestHeapBlocks.begin() + static_cast<std::ptrdiff_t>(blockIndex + 1u),
                                      GuestHeapBlock{tailAddr, tailSize, true});
-            coalesceGuestHeapLocked();
+            coalesceGuestHeapAroundLocked(blockIndex + 1u);
         }
         return oldAddr;
     }
