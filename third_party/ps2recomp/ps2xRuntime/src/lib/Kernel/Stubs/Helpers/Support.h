@@ -1967,13 +1967,14 @@ namespace
         if (!runtime || !runtime->syncCoreSubsystems())
             return;
         auto &regs = runtime->memory().gs();
-        regs.pmode = env.pmode;
-        regs.smode2 = env.smode2;
-        regs.dispfb1 = env.dispfb;
-        regs.display1 = env.display;
-        regs.dispfb2 = env.dispfb;
-        regs.display2 = env.display;
-        regs.bgcolor = env.bgcolor;
+        // macOS fork, the VU1 worker: in order with the GS work (vu1domain::gsPrivWrite64); in place when it is off.
+        vu1domain::gsPrivWrite64(regs.pmode, 0x12000000u, env.pmode);
+        vu1domain::gsPrivWrite64(regs.smode2, 0x12000020u, env.smode2);
+        vu1domain::gsPrivWrite64(regs.dispfb1, 0x12000070u, env.dispfb);
+        vu1domain::gsPrivWrite64(regs.display1, 0x12000080u, env.display);
+        vu1domain::gsPrivWrite64(regs.dispfb2, 0x12000090u, env.dispfb);
+        vu1domain::gsPrivWrite64(regs.display2, 0x120000A0u, env.display);
+        vu1domain::gsPrivWrite64(regs.bgcolor, 0x120000E0u, env.bgcolor);
     }
 
     static void applyGsRegPairs(PS2Runtime *runtime, const GsRegPairMem *pairs, size_t pairCount)

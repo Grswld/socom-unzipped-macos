@@ -23,5 +23,9 @@ namespace vu1domain
     void gsWriteRegister(GS &gs, uint8_t reg, uint64_t value);
     bool gsClearFramebufferContext(GS &gs, uint32_t context, uint32_t rgba);
     // EeScheduler's VBlank frame mark: true when it was posted (the caller then skips its own call and its wait).
-    bool postGuestFrameBoundary();   // on the worker: the EE's vu0_fbrst captured with the Vif1Data item being applied
+    bool postGuestFrameBoundary();
+    // A GS privileged display register (PMODE, SMODE2, DISPFB, DISPLAY, BGCOLOR) written by a stub: in place with the
+    // worker off (today's behaviour), posted in order with the GS work while it is on -- the display must not switch
+    // to a buffer the worker has not finished drawing (Task 7: flicker and colour distortion with the worker on).
+    void gsPrivWrite64(uint64_t &field, uint32_t address, uint64_t value);   // on the worker: the EE's vu0_fbrst captured with the Vif1Data item being applied
 }

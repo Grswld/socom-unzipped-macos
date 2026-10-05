@@ -255,4 +255,40 @@ void register_vu1_domain_guard_tests()
             t.Equals(vu1domain::drainCount(vu1overlap::SyncKind::GifReg), g0 + 1, "GIF drained");
         });
     });
+
+    MiniTest::Case("Vu1DomainDisplayRegs", [](TestCase &tc)
+    {
+        tc.Run("off: a display register is written in place", [](TestCase &t)
+        {
+            PS2Memory mem;
+            t.IsTrue(mem.initialize(), "initialize");
+            vu1domain::gsPrivWrite64(mem.gs().dispfb1, 0x12000070u, 0xABCDull);
+            t.Equals(mem.gs().dispfb1, uint64_t(0xABCDull), "DISPFB1 written");
+        });
+
+        tc.Run("on: a display register write is posted in order and lands on the worker", [](TestCase &t)
+        {
+            PS2Memory mem;
+            t.IsTrue(mem.initialize(), "initialize");
+            const uint64_t before = mem.gs().dispfb1;
+            static std::vector<vu1work::WorkItem> s_seen;
+            static std::mutex s_m;
+            s_seen.clear();
+            vu1domain::ApplyTarget target{&mem, nullptr, nullptr};
+            vu1domain::start(on(), [](const vu1work::WorkItem &it, void *ctx) {
+                std::this_thread::sleep_for(std::chrono::milliseconds(10));
+                { std::lock_guard<std::mutex> lock(s_m); s_seen.push_back(it); }
+                vu1domain::applyItem(it, ctx);
+            }, &target);
+            vu1domain::gsPrivWrite64(mem.gs().dispfb1, 0x12000070u, 0x1234ull);
+            const uint64_t immediately = mem.gs().dispfb1;
+            vu1domain::drain(vu1overlap::SyncKind::GsPriv);
+            vu1domain::stop();
+            t.Equals(immediately, before, "not written by the game thread");
+            t.Equals(mem.gs().dispfb1, uint64_t(0x1234ull), "written by the worker");
+            std::lock_guard<std::mutex> lock(s_m);
+            t.IsTrue(s_seen.size() == 1 && s_seen[0].kind == vu1work::Kind::GsPriv64 && s_seen[0].a == 0x12000070u,
+                     "one GsPriv64 item for DISPFB1");
+        });
+    });
 }

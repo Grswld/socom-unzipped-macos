@@ -1,3 +1,5 @@
+#include "runtime/vu1_domain.h"          // macOS fork: VU1 worker Part 2
+#include "runtime/vu1_domain_apply.h"
 #include "Common.h"
 #include <cstring>
 #include <mutex>
@@ -19,12 +21,16 @@ namespace ps2_syscalls
                 (static_cast<uint64_t>(interlaced) & 0x1ull) |
                 ((static_cast<uint64_t>(frameMode) & 0x1ull) << 1);
 
-            gs.smode2 = smode2;
+            // macOS fork, the VU1 worker: PMODE is read below, so the worker's display writes land first; both writes
+            // then go in order with the GS work (in place with the worker off, as before).
+            if (vu1domain::shouldPost())
+                vu1domain::drain(vu1overlap::SyncKind::GsPriv);
+            vu1domain::gsPrivWrite64(gs.smode2, 0x12000020u, smode2);
 
             // Keep CRT1 enabled after the BIOS syscall selects a display mode.
             if ((gs.pmode & 0x3ull) == 0ull)
             {
-                gs.pmode |= 0x1ull;
+                vu1domain::gsPrivWrite64(gs.pmode, 0x12000000u, gs.pmode | 0x1ull);
             }
         }
 

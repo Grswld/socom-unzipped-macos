@@ -89,4 +89,18 @@ namespace vu1domain
         post(std::move(it));
         return true;
     }
+
+    void gsPrivWrite64(uint64_t &field, uint32_t address, uint64_t value)
+    {
+        if (!shouldPost())
+        {
+            field = value;
+            return;
+        }
+        vu1work::WorkItem it;
+        it.kind = vu1work::Kind::GsPriv64;
+        it.a = address;
+        it.b = value;
+        post(std::move(it));
+    }
 }
