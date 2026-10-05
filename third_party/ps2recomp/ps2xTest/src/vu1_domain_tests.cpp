@@ -291,4 +291,29 @@ void register_vu1_domain_tests()
             t.Equals(s_hookCalls, 0, "the old hook is never called");
         });
     });
+
+    MiniTest::Case("Vu1DomainInline", [](TestCase &tc)
+    {
+        tc.Run("inline (the bisect mode): post applies at once, on the calling thread, as the worker would", [](TestCase &t)
+        {
+            resetRecorder();
+            vu1domain::Config c = on();
+            c.inlineApply = true;
+            vu1domain::start(c, recordApply, nullptr);
+            t.IsTrue(vu1domain::shouldPost(), "the guards post");
+            vu1domain::post(item(Kind::GsReg, 42));
+            {
+                std::lock_guard<std::mutex> lock(g_rec.mutex);
+                t.Equals(g_rec.applied.size(), size_t(1), "applied before post returned");
+                t.IsTrue(g_rec.thread == std::this_thread::get_id(), "on the calling thread");
+                t.IsTrue(g_rec.onWorkerInside, "onWorker inside apply, so guards execute");
+            }
+            t.IsFalse(vu1domain::onWorker(), "and false again after");
+            vu1domain::drain(vu1overlap::SyncKind::Vif1Reg);   // a no-op
+            vu1domain::frameBoundary();                        // applies its frame mark inline
+            vu1domain::stop();
+            std::lock_guard<std::mutex> lock(g_rec.mutex);
+            t.Equals(g_rec.applied.size(), size_t(2), "the frame mark applied too");
+        });
+    });
 }

@@ -211,6 +211,7 @@
     X("PS2X_VU1_QUEUE_FRAMES", Dev, Int, "1", "macOS fork: game frames the VU1 worker may still hold at sceGsSyncV (0-4); 0 overlaps within a frame only.") \
     X("PS2X_VU1_QUEUE_RECORD", Dev, Path, "", "macOS fork: record every item posted to the VU1 worker, for vu1_queue_replay.") \
     X("PS2X_VU1_THREAD", Dev, Flag, "0", "macOS fork: 1 runs VIF1, VU1 and the GS front end on a worker core fed by one ordered queue.") \
+    X("PS2X_VU1_THREAD_INLINE", Dev, Flag, "0", "macOS fork, a bisect: with PS2X_VU1_THREAD, apply each item at post on the game thread.") \
     X("PS2X_VU1_WORKER_STATS", Dev, Presence, "", "macOS fork: [vu1-worker] every 5 s: game-frame p50/p95/p99, drains, waits, latency (worker on or off).") \
     X("PS2X_VU1_XGKICK_CYCLE_EXACT", Dev, Flag, "0", "Restore the per-cycle XGKICK transfer model (drops SOCOM II object geometry).") \
     X("PS2X_VU_STATS", Dev, Presence, "", "Once a second: VU1 programs, cycles and host time.") \

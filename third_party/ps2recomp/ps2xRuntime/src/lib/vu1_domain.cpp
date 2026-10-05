@@ -114,6 +114,8 @@ namespace vu1domain
         }
         c.recordPath = knob("PS2X_VU1_QUEUE_RECORD");
         c.stats = knob("PS2X_VU1_WORKER_STATS") != nullptr;
+        if (const char *v = knob("PS2X_VU1_THREAD_INLINE"))
+            c.inlineApply = std::strcmp(v, "0") != 0 && *v;
         return c;
     }
 
@@ -130,9 +132,11 @@ namespace vu1domain
         s.queue = std::make_unique<vu1work::WorkQueue>();
         if (cfg.recordPath && *cfg.recordPath)
             s.record = std::fopen(cfg.recordPath, "wb");
-        s.worker = std::thread(workerLoop);
+        if (!cfg.inlineApply)
+            s.worker = std::thread(workerLoop);
         detail::enabledFlag().store(true, std::memory_order_release);
-        std::fprintf(stderr, "[vu1-worker] on: queue frames %u%s\n", cfg.queueFrames, s.record ? ", recording" : "");
+        std::fprintf(stderr, "[vu1-worker] on: queue frames %u%s%s\n", cfg.queueFrames, s.record ? ", recording" : "",
+                     cfg.inlineApply ? ", INLINE (items applied at post on the game thread)" : "");
     }
 
     void stop()
@@ -178,12 +182,25 @@ namespace vu1domain
             }
         }
         ++s.items;
+        if (s.cfg.inlineApply)
+        {
+            detail::onWorkerFlag() = true;   // the guards execute, exactly as on the worker
+            s.apply(item, s.ctx);
+            detail::onWorkerFlag() = false;
+            return;
+        }
         s.queue->push(std::move(item));
     }
 
     void drain(vu1overlap::SyncKind why)
     {
         State &s = state();
+        if (s.cfg.inlineApply)
+        {
+            s.drains[int(why)].fetch_add(1, std::memory_order_relaxed);
+            ++s.windowDrains[int(why)];
+            return;
+        }
         const int64_t t0 = nowNs();
         s.queue->waitDone(s.queue->lastPushed());
         const int64_t waited = nowNs() - t0;
@@ -239,6 +256,8 @@ namespace vu1domain
         mark.kind = vu1work::Kind::FrameMark;
         mark.b = static_cast<uint64_t>(now);   // the latency's start (applied: the worker's loop)
         post(std::move(mark));
+        if (s.cfg.inlineApply)
+            return;
         s.aheadMax = std::max(s.aheadMax, s.queue->framesAhead());
         const int64_t t0 = nowNs();
         s.queue->waitFramesAhead(s.cfg.queueFrames);
