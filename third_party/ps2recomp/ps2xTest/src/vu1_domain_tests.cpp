@@ -367,4 +367,23 @@ void register_vu1_domain_tests()
             t.IsTrue(!lat.empty() && lat[0] >= 20.0, "at least the worker's 20 ms");
         });
     });
+
+    MiniTest::Case("Vu1DomainLatencyStale", [](TestCase &tc)
+    {
+        tc.Run("a frame with no pad read gives no latency sample (no stale time from 64 frames before)", [](TestCase &t)
+        {
+            vu1domain::Config c;
+            c.stats = true;
+            vu1domain::start(c, recordApply, nullptr);
+            vu1domain::resetFrameStats();
+            vu1domain::notePadRead();
+            for (int i = 0; i < 64; ++i)
+                vu1domain::frameBoundary();   // frame 0 had a read; frames 1..63 none
+            vu1domain::frameBoundary();       // frame 64 (same slot as frame 0) completes, without a read
+            vu1domain::notePresent();
+            const size_t n = vu1domain::latencySamples().size();
+            vu1domain::stop();
+            t.Equals(n, size_t(0), "no sample for a frame without a pad read");
+        });
+    });
 }

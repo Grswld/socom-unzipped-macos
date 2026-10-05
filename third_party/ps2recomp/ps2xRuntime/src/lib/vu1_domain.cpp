@@ -68,6 +68,8 @@ namespace vu1domain
             uint64_t readbacksAtBoundary = 0;
             unsigned slow[5] = {};
             unsigned aheadAfterMax = 0;
+            double withReadbackMs = 0, withoutReadbackMs = 0;   // the readback tag's evidence: mean frame time each way
+            unsigned withReadback = 0, withoutReadback = 0;
             DrainHookFn drainHook = nullptr;
             void *drainHookCtx = nullptr;
         };
@@ -266,6 +268,16 @@ namespace vu1domain
                 const double interval = double(now - s.lastBoundaryNs) / 1e6;
                 s.frames.add(interval);
                 ++s.slow[int(classifySlow(interval, s.prevBoundaryBpNs, readbacks - s.readbacksAtBoundary))];
+                if (readbacks != s.readbacksAtBoundary)
+                {
+                    s.withReadbackMs += interval;
+                    ++s.withReadback;
+                }
+                else
+                {
+                    s.withoutReadbackMs += interval;
+                    ++s.withoutReadback;
+                }
             }
             s.readbacksAtBoundary = readbacks;
             s.lastBoundaryNs = now;
@@ -283,7 +295,7 @@ namespace vu1domain
                              "[vu1-worker] on=%d frames=%zu frame_ms p50=%.1f p95=%.1f p99=%.1f items=%.0f/s drains "
                              "vif1=%.2f dmactl=%.2f gif=%.2f other=%.2f /frame drain_wait=%.1f backpressure_wait=%.1f ms/s "
                              "ahead_max=%u after_wait=%u latency mean=%.1f max=%.1f ms dt_stops=%llu slow worker=%u readback=%u "
-                             "both=%u game=%u input_lat p50=%.1f p95=%.1f ms\n",
+                             "both=%u game=%u input_lat p50=%.1f p95=%.1f ms frame_mean readback=%.1f (%u) none=%.1f (%u)\n",
                              enabled() ? 1 : 0, s.frames.ms.size(), s.frames.percentile(50), s.frames.percentile(95),
                              s.frames.percentile(99), double(s.items) / secs, double(s.windowDrains[int(K::Vif1Reg)]) / n,
                              double(s.windowDrains[int(K::DmaCtl)]) / n, double(s.windowDrains[int(K::GifReg)]) / n,
@@ -291,7 +303,11 @@ namespace vu1domain
                              double(s.drainWaitNs) / 1e6 / secs, double(s.backpressureWaitNs) / 1e6 / secs, s.aheadMax,
                              s.aheadAfterMax, lc ? double(lt) / double(lc) / 1e6 : 0.0, double(lm) / 1e6,
                              static_cast<unsigned long long>(s.dtStops.load()), s.slow[1], s.slow[2], s.slow[3], s.slow[4],
-                             latencyPercentile(50.0), latencyPercentile(95.0));
+                             latencyPercentile(50.0), latencyPercentile(95.0),
+                             s.withReadback ? s.withReadbackMs / s.withReadback : 0.0, s.withReadback,
+                             s.withoutReadback ? s.withoutReadbackMs / s.withoutReadback : 0.0, s.withoutReadback);
+                s.withReadbackMs = s.withoutReadbackMs = 0;
+                s.withReadback = s.withoutReadback = 0;
                 std::fill(std::begin(s.slow), std::end(s.slow), 0u);
                 s.aheadAfterMax = 0;
                 {
@@ -309,6 +325,7 @@ namespace vu1domain
             }
         }
         const uint64_t frame = s.frameIndex++;
+        s.padTime[s.frameIndex % 64].store(0, std::memory_order_release);   // a frame with no pad read gives no sample
         if (!shouldPost())
         {
             s.completedFrame.store(frame, std::memory_order_release);   // worker off: complete at sceGsSyncV
