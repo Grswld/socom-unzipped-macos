@@ -9,6 +9,7 @@
 #include "runtime/vu1_domain.h"
 
 #include <atomic>
+#include <cstdio>
 
 bool ps2xVif1IsStalled();   // ps2_vif1_interpreter.cpp
 
@@ -18,6 +19,7 @@ namespace vu1domain
     // Diagnostic (Task 7 bisect): items other than the i-bit handler's own (PATH3, the arbiter drain, VIF1 register
     // writes) applied while VIF1 is stalled at an i-bit. In the console's order there are none.
     std::atomic<uint64_t> g_ibitForeignItems{0}, g_ibitStalledItems{0};
+    std::atomic<uint64_t> g_ibitForeignByKind[16] = {};
     uint64_t ibitForeignItems() { return g_ibitForeignItems.load(); }
     uint64_t ibitStalledItems() { return g_ibitStalledItems.load(); }
 
@@ -29,9 +31,18 @@ namespace vu1domain
         if (ps2xVif1IsStalled())
         {
             g_ibitStalledItems.fetch_add(1, std::memory_order_relaxed);
+            // GuestFrameBoundary is the VBlank frame mark, posted from the game thread's VBlank handling at the same
+            // program point as in the inline path (and carrying no drawing): correctly ordered by construction.
             if (item.kind != vu1work::Kind::GifPath3 && item.kind != vu1work::Kind::ArbiterDrain &&
-                item.kind != vu1work::Kind::Vif1Reg)
+                item.kind != vu1work::Kind::Vif1Reg && item.kind != vu1work::Kind::GuestFrameBoundary)
+            {
                 g_ibitForeignItems.fetch_add(1, std::memory_order_relaxed);
+                g_ibitForeignByKind[int(item.kind)].fetch_add(1, std::memory_order_relaxed);
+                static std::atomic<int> s_logged{0};
+                if (s_logged.fetch_add(1) < 40)   // the first 40, with the item, for classification
+                    std::fprintf(stderr, "[vu1-worker] foreign kind=%d a=0x%x b=0x%llx bytes=%zu\n", int(item.kind), item.a,
+                                 static_cast<unsigned long long>(item.b), item.bytes.size());
+            }
         }
         const uint32_t n = static_cast<uint32_t>(item.bytes.size());
         switch (item.kind)

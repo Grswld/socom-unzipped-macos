@@ -165,6 +165,8 @@ public:
         m_held.clear();
     }
 
+    // An EE write to VIF1_CYCLE (0x10003C40): the interpreter's vif1_regs.cycle, which sizes UNPACK.
+    void setCycle(uint16_t cycle) { m_cycle = cycle; }
     void setNoIrqStall(bool on) { m_noIrqStall = on; }
     bool stalled() const { return m_stalled; }
 

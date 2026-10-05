@@ -130,6 +130,12 @@ void register_vif1_scanner_tests()
                     };
                     check("scan");
                     ++step;
+                    if (mismatches == 0 && rng() % 5 == 0)   // the EE writes CYCLE directly (0x10003C40)
+                    {
+                        const uint32_t cyc = (1 + rng() % 4) | ((1 + rng() % 4) << 8);
+                        mem.writeIORegister(0x10003C40u, cyc);
+                        sc.setCycle(uint16_t(cyc));
+                    }
                     if (mismatches == 0 && sc.stalled() && rng() % 2 == 0)
                     {
                         mem.writeIORegister(0x10003C10u, 0x8u);   // STC

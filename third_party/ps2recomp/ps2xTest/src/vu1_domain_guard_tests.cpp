@@ -207,54 +207,63 @@ void register_vu1_domain_guard_tests()
 
     MiniTest::Case("Vu1DomainDrains", [](TestCase &tc)
     {
-        // A slow executor: every item takes 20 ms, so a read that does not drain sees the old state.
-        static vu1domain::ApplyTarget *s_target = nullptr;
+        // A slow executor: every item takes 20 ms, so anything that waited for the worker shows it.
         auto slowApply = [](const vu1work::WorkItem &it, void *ctx) {
             std::this_thread::sleep_for(std::chrono::milliseconds(20));
             vu1domain::applyItem(it, ctx);
         };
 
-        tc.Run("a VIF1 register read drains first", [=](TestCase &t)
+        tc.Run("a VIF1 register read sees a just-posted write at once, without draining", [=](TestCase &t)
         {
             PS2Memory mem;
             t.IsTrue(mem.initialize(), "initialize");
             vu1domain::ApplyTarget target{&mem, nullptr, nullptr};
-            s_target = &target;
             vu1domain::start(on(), slowApply, &target);
             const uint64_t before = vu1domain::drainCount(vu1overlap::SyncKind::Vif1Reg);
             mem.writeIORegister(0x10003C30u, 0x4321u);   // VIF1 MARK, posted
             const uint32_t mark = mem.readIORegister(0x10003C30u) & 0xFFFFu;
+            t.Equals(vu1domain::drainCount(vu1overlap::SyncKind::Vif1Reg), before, "no drain");
             vu1domain::stop();
-            t.Equals(mark, 0x4321u, "the read saw the posted write");
-            t.Equals(vu1domain::drainCount(vu1overlap::SyncKind::Vif1Reg), before + 1, "one VIF1 drain");
+            t.Equals(mark, 0x4321u, "the stored value, as the inline path returns it");
         });
 
-        tc.Run("a DMA-1 register read does not drain", [=](TestCase &t)
+        tc.Run("the worker's VIF1 register apply never stores into the register map (a later game write wins)", [=](TestCase &t)
         {
             PS2Memory mem;
             t.IsTrue(mem.initialize(), "initialize");
             vu1domain::ApplyTarget target{&mem, nullptr, nullptr};
             vu1domain::start(on(), slowApply, &target);
-            mem.writeIORegister(0x10003C30u, 0x1111u);   // pending on the slow worker
-            const uint64_t drains = vu1domain::drainCount(vu1overlap::SyncKind::Dma1Reg);
-            (void)mem.readIORegister(0x10009000u);       // D1 CHCR
-            t.Equals(vu1domain::drainCount(vu1overlap::SyncKind::Dma1Reg), drains, "no DMA-1 drain");
+            mem.writeIORegister(0x10003C30u, 0x1111u);   // applied 20 ms later on the worker
+            mem.writeIORegister(0x10003C30u, 0x2222u);   // stored now; the worker applies it after the first
+            vu1domain::drain(vu1overlap::SyncKind::None);
             vu1domain::stop();
+            t.Equals(mem.readIORegister(0x10003C30u) & 0xFFFFu, 0x2222u, "the game thread's last store stands");
         });
 
-        tc.Run("a D_STAT read and a GIF register read drain", [=](TestCase &t)
+        tc.Run("VIF1_STAT, GIF_STAT, D_CTRL and DMA-1 reads never wait for the worker", [=](TestCase &t)
         {
             PS2Memory mem;
             t.IsTrue(mem.initialize(), "initialize");
             vu1domain::ApplyTarget target{&mem, nullptr, nullptr};
             vu1domain::start(on(), slowApply, &target);
-            const uint64_t d0 = vu1domain::drainCount(vu1overlap::SyncKind::DmaCtl);
-            const uint64_t g0 = vu1domain::drainCount(vu1overlap::SyncKind::GifReg);
-            (void)mem.readIORegister(0x1000E010u);   // D_STAT
-            (void)mem.readIORegister(0x10003020u);   // GIF STAT
+            mem.writeIORegister(0x10003C30u, 0x1u);   // pending on the slow worker
+            uint64_t before = 0;
+            for (auto k : {vu1overlap::SyncKind::Vif1Reg, vu1overlap::SyncKind::GifReg, vu1overlap::SyncKind::DmaCtl,
+                           vu1overlap::SyncKind::Dma1Reg})
+                before += vu1domain::drainCount(k);
+            const auto t0 = std::chrono::steady_clock::now();
+            (void)mem.readIORegister(0x10003C00u);   // VIF1_STAT
+            (void)mem.readIORegister(0x10003020u);   // GIF_STAT
+            (void)mem.readIORegister(0x1000E000u);   // D_CTRL
+            (void)mem.readIORegister(0x10009000u);   // D1_CHCR
+            const auto waited = std::chrono::steady_clock::now() - t0;
+            uint64_t after = 0;
+            for (auto k : {vu1overlap::SyncKind::Vif1Reg, vu1overlap::SyncKind::GifReg, vu1overlap::SyncKind::DmaCtl,
+                           vu1overlap::SyncKind::Dma1Reg})
+                after += vu1domain::drainCount(k);
             vu1domain::stop();
-            t.Equals(vu1domain::drainCount(vu1overlap::SyncKind::DmaCtl), d0 + 1, "D_STAT drained");
-            t.Equals(vu1domain::drainCount(vu1overlap::SyncKind::GifReg), g0 + 1, "GIF drained");
+            t.Equals(after, before, "no drains");
+            t.IsTrue(waited < std::chrono::milliseconds(10), "no wait");
         });
     });
 

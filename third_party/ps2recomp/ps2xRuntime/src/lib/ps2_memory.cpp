@@ -7,6 +7,7 @@
 #include "runtime/vu1_domain.h"          // macOS fork: VU1 worker Part 2
 #include "runtime/vif1_scanner.h"        // macOS fork: VU1 worker, the i-bit scanner
 #include <atomic>
+#include <map>
 #include <cstring>
 extern std::atomic<uint64_t> g_vif1EnqCount;
 extern std::atomic<uint64_t> g_vif1EnqQwc;
@@ -1234,6 +1235,12 @@ bool PS2Memory::writeIORegister(uint32_t address, uint32_t value)
     if (vu1domain::shouldPost() &&
         ((address >= 0x10003C00u && address < 0x10003E00u) || (address >= 0x10005000u && address < 0x10006000u)))
     {
+        // The register store happens here, on the game thread, as the inline path makes it: VIF1_STAT and the other
+        // VIF1 register reads return this stored value, so they need no drain, and the worker never touches the map
+        // (it applies only the VIF1 side effects below). The scanner follows CYCLE, RST and STC.
+        m_ioRegisters[address] = value;
+        if (address == 0x10003C40u)
+            vif1Scanner().setCycle(static_cast<uint16_t>(value & 0xFFFFu));
         if (address == 0x10003C10u)   // FBRST: the scanner follows RST and STC as the interpreter will
         {
             if (value & 0x1u)
@@ -1345,7 +1352,11 @@ bool PS2Memory::writeIORegister(uint32_t address, uint32_t value)
         return true;
     }
 
-    m_ioRegisters[address] = value;
+    // macOS fork, the VU1 worker: applying a posted VIF1 register write, the worker skips the store (the game thread
+    // made it at post time) and runs only the VIF1 side effects -- no thread but the game thread writes the map.
+    if (!(vu1domain::onWorker() &&
+          ((address >= 0x10003C00u && address < 0x10003E00u) || (address >= 0x10005000u && address < 0x10006000u))))
+        m_ioRegisters[address] = value;
 
     if (address >= 0x10003C00u && address < 0x10003E00u)
     {
@@ -2606,13 +2617,8 @@ int PS2Memory::pollDmaRegisters()
 uint32_t PS2Memory::readIORegister(uint32_t address)
 {
     vu1overlap::sync(vu1overlap::syncKindOfIo(address));   // macOS fork: VU1 worker Task 0d
-    if (vu1domain::shouldPost())   // macOS fork, the VU1 worker (Part 2 Task 5): research/84's real waits
-    {
-        const vu1overlap::SyncKind kind = vu1overlap::syncKindOfIo(address);
-        if (kind == vu1overlap::SyncKind::Vif1Reg || kind == vu1overlap::SyncKind::DmaCtl ||
-            kind == vu1overlap::SyncKind::GifReg)
-            vu1domain::drain(kind);
-    }
+    // macOS fork, the VU1 worker: VIF1_STAT, GIF_STAT and D_CTRL reads return game-thread-owned stored values (Task 7
+    // read histogram: 0x10003C00, 0x10003020, 0x1000E000); nothing here waits for the worker.
     size_t timerIndex = 0u;
     uint32_t timerOffset = 0u;
     if (decodeEeTimerRegister(address, timerIndex, timerOffset))
