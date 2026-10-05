@@ -684,6 +684,9 @@ install(DIRECTORY include/
 # Offline VU1 program replay (tools_py/vu1dis.py + PS2X_VU1_DUMP dumps); no generated code needed.
 add_executable(vu1_replay src/tools/vu1_replay.cpp src/tools/vu1_gen.cpp)
 target_link_libraries(vu1_replay PRIVATE ps2_runtime)
+# macOS fork, the VU1 worker's correctness gate: a recorded queue replayed inline and on the worker.
+add_executable(vu1_queue_replay src/tools/vu1_queue_replay.cpp)
+target_link_libraries(vu1_queue_replay PRIVATE ps2_runtime)
 if(NOT MSVC AND (CMAKE_SYSTEM_PROCESSOR MATCHES "x86_64|AMD64"))
     target_compile_options(vu1_replay PRIVATE -msse4.1)
 endif()
