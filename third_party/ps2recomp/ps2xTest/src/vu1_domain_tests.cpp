@@ -316,4 +316,55 @@ void register_vu1_domain_tests()
             t.Equals(g_rec.applied.size(), size_t(2), "the frame mark applied too");
         });
     });
+
+    MiniTest::Case("Vu1DomainTail", [](TestCase &tc)
+    {
+        tc.Run("slow frames are tagged worker, readback, both or game; fast frames are not tagged", [](TestCase &t)
+        {
+            using vu1domain::SlowTag;
+            t.Equals(int(vu1domain::classifySlow(33.0, 0, 0)), int(SlowTag::Fast), "33.0 ms is not slow");
+            t.Equals(int(vu1domain::classifySlow(40.0, 2'000'000, 0)), int(SlowTag::Worker), "a backpressure wait");
+            t.Equals(int(vu1domain::classifySlow(40.0, 100'000, 1)), int(SlowTag::Readback), "a readback, no real wait");
+            t.Equals(int(vu1domain::classifySlow(40.0, 2'000'000, 3)), int(SlowTag::Both), "both");
+            t.Equals(int(vu1domain::classifySlow(40.0, 0, 0)), int(SlowTag::Game), "neither");
+        });
+
+        tc.Run("input-to-display latency: the completed frame's first pad read to the next present", [](TestCase &t)
+        {
+            vu1domain::Config c;
+            c.stats = true;
+            vu1domain::start(c, recordApply, nullptr);   // worker off: the frame completes at sceGsSyncV
+            vu1domain::resetFrameStats();
+            vu1domain::notePadRead();
+            std::this_thread::sleep_for(std::chrono::milliseconds(12));
+            vu1domain::notePadRead();   // a second read in the same frame does not move the frame's input time
+            vu1domain::frameBoundary();
+            std::this_thread::sleep_for(std::chrono::milliseconds(5));
+            vu1domain::notePresent();
+            vu1domain::notePresent();   // the same completed frame presented again: no second sample
+            const std::vector<double> lat = vu1domain::latencySamples();
+            vu1domain::stop();
+            t.Equals(lat.size(), size_t(1), "one sample");
+            t.IsTrue(!lat.empty() && lat[0] >= 15.0 && lat[0] < 80.0, "about 17 ms, from the first read");
+        });
+
+        tc.Run("with the worker on, the frame completes when the worker applies its frame mark", [](TestCase &t)
+        {
+            resetRecorder();
+            g_rec.sleepMsOnFrameMark = 20;
+            vu1domain::Config c = on(1);
+            c.stats = true;
+            vu1domain::start(c, recordApply, nullptr);
+            vu1domain::resetFrameStats();
+            vu1domain::notePadRead();
+            vu1domain::frameBoundary();          // the mark is posted; the worker takes 20 ms with it
+            vu1domain::notePresent();            // nothing completed yet: no sample
+            std::this_thread::sleep_for(std::chrono::milliseconds(40));
+            vu1domain::notePresent();
+            const std::vector<double> lat = vu1domain::latencySamples();
+            vu1domain::stop();
+            t.Equals(lat.size(), size_t(1), "one sample, after the worker applied the mark");
+            t.IsTrue(!lat.empty() && lat[0] >= 20.0, "at least the worker's 20 ms");
+        });
+    });
 }

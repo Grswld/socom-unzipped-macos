@@ -78,6 +78,25 @@ namespace vu1domain
             return sorted[std::min(sorted.size(), std::max<size_t>(rank, 1u)) - 1u];
         }
     };
+    // Part 3 Task 3.3: a game frame over 33.4 ms (the locked-30 budget) is tagged by what it waited on: a backpressure
+    // wait on the worker over 0.5 ms (Worker), a GL render-target / VRAM readback in it (Readback), both, or neither (Game).
+    enum class SlowTag : uint8_t { Fast, Worker, Readback, Both, Game };
+    inline SlowTag classifySlow(double intervalMs, int64_t backpressureNs, uint64_t readbacks)
+    {
+        if (intervalMs <= 33.4)
+            return SlowTag::Fast;
+        const bool worker = backpressureNs > 500'000, readback = readbacks > 0;
+        return worker && readback ? SlowTag::Both : worker ? SlowTag::Worker : readback ? SlowTag::Readback : SlowTag::Game;
+    }
+    std::atomic<uint64_t> &gsReadbackCount();   // the GL backend counts its glReadPixels readbacks here
+
+    // Part 3 Task 3.2: input-to-display latency. The first pad read of each game frame is kept by frame index; a frame
+    // completes at sceGsSyncV (worker off) or when the worker applies its frame mark (worker on); at every host present
+    // the newest completed frame not yet presented gives one sample: now - its first pad read.
+    void notePadRead();                     // game thread (scePad2Read)
+    void notePresent();                     // main thread, after EndDrawing
+    std::vector<double> latencySamples();   // ms, since resetFrameStats
+
     void resetFrameStats();
     size_t frameStatsCount();
     double frameLatencyMaxMs();   // FrameMark post to applied, since the last reset

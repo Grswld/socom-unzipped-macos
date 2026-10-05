@@ -2,6 +2,7 @@
 // Moved out of game_overrides_socom2.cpp by Sprint 13 Task C8 (audit F8) so ps2x_tests compiles and tests the
 // real handlers (pad2_hle_tests.cpp) instead of linking return-to-caller stand-ins. Runner-only like its
 // neighbours: the handlers are bound by name through the runtime's stub table (ps2_call_list.h).
+#include "runtime/vu1_domain.h"   // macOS fork: VU1 worker Part 3
 #include "socom2_pad2_hle.h"
 #include "ps2_runtime.h"
 #include "ps2_runtime_macros.h"
@@ -77,6 +78,7 @@ namespace ps2_stubs
         // Write a standard DualShock2 poll report into the caller's buffer (a1) for any code that
         // reads it raw, and return a positive data length so FUN_002da930 proceeds.
         const uint32_t buf = GPR_U32(ctx, 5) & PS2_RAM_MASK;
+        vu1domain::notePadRead();   // macOS fork: input-to-display latency (PS2X_VU1_WORKER_STATS)
         if (socom2PadEnabled())
             socom2HostInputPoll(g_socom2Pad);
         uint8_t report[32] = {0};

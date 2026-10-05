@@ -3387,6 +3387,7 @@ void PS2Runtime::run()
         {
             EndDrawing();
         }
+        vu1domain::notePresent();   // macOS fork: input-to-display latency (PS2X_VU1_WORKER_STATS)
 
         if (WindowShouldClose())
         {

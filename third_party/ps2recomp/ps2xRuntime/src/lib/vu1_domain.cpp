@@ -10,6 +10,7 @@
 #include <cstdio>
 #include <cstdlib>
 #include <cstring>
+#include <cstdint>
 #include <memory>
 #include <mutex>
 #include <thread>
@@ -55,6 +56,18 @@ namespace vu1domain
             std::atomic<uint64_t> dtStops{0};
             void (*statsExtra)() = nullptr;
             int batchDepth = 0;   // game thread only
+            // Task 3.2 / 3.3
+            uint64_t frameIndex = 0;                         // game thread: the frame being built
+            std::atomic<int64_t> padTime[64] = {};           // first pad read of frame i, at [i % 64]
+            uint64_t padFrame = UINT64_MAX;                  // game thread: the frame padTime was set for
+            std::atomic<uint64_t> completedFrame{UINT64_MAX};
+            uint64_t lastPresented = UINT64_MAX;             // main thread
+            std::mutex latencyMutex;
+            std::vector<double> latency;
+            int64_t prevBoundaryBpNs = 0;                    // the backpressure wait made at the previous boundary
+            uint64_t readbacksAtBoundary = 0;
+            unsigned slow[5] = {};
+            unsigned aheadAfterMax = 0;
             DrainHookFn drainHook = nullptr;
             void *drainHookCtx = nullptr;
         };
@@ -69,6 +82,8 @@ namespace vu1domain
             return std::chrono::duration_cast<std::chrono::nanoseconds>(
                        std::chrono::steady_clock::now().time_since_epoch()).count();
         }
+
+        double latencyPercentile(double p);
 
         // A wait on the worker is not guest time (spec 3.4): VU1's own time was subtracted when it ran inline.
         void excludeFromGuestClock(int64_t ns)
@@ -87,6 +102,8 @@ namespace vu1domain
             while (s.queue->pop(item, seq))
             {
                 s.apply(item, s.ctx);
+                if (item.kind == vu1work::Kind::FrameMark)
+                    s.completedFrame.store(item.a, std::memory_order_release);
                 if (item.kind == vu1work::Kind::FrameMark && item.b != 0)
                 {
                     const int64_t lat = nowNs() - static_cast<int64_t>(item.b);
@@ -243,8 +260,14 @@ namespace vu1domain
         const int64_t now = nowNs();
         if (s.cfg.stats)
         {
+            const uint64_t readbacks = gsReadbackCount().load(std::memory_order_relaxed);
             if (s.lastBoundaryNs != 0)
-                s.frames.add(double(now - s.lastBoundaryNs) / 1e6);
+            {
+                const double interval = double(now - s.lastBoundaryNs) / 1e6;
+                s.frames.add(interval);
+                ++s.slow[int(classifySlow(interval, s.prevBoundaryBpNs, readbacks - s.readbacksAtBoundary))];
+            }
+            s.readbacksAtBoundary = readbacks;
             s.lastBoundaryNs = now;
             if (s.windowStartNs == 0)
                 s.windowStartNs = now;
@@ -259,14 +282,22 @@ namespace vu1domain
                 std::fprintf(stderr,
                              "[vu1-worker] on=%d frames=%zu frame_ms p50=%.1f p95=%.1f p99=%.1f items=%.0f/s drains "
                              "vif1=%.2f dmactl=%.2f gif=%.2f other=%.2f /frame drain_wait=%.1f backpressure_wait=%.1f ms/s "
-                             "ahead_max=%u latency mean=%.1f max=%.1f ms dt_stops=%llu\n",
+                             "ahead_max=%u after_wait=%u latency mean=%.1f max=%.1f ms dt_stops=%llu slow worker=%u readback=%u "
+                             "both=%u game=%u input_lat p50=%.1f p95=%.1f ms\n",
                              enabled() ? 1 : 0, s.frames.ms.size(), s.frames.percentile(50), s.frames.percentile(95),
                              s.frames.percentile(99), double(s.items) / secs, double(s.windowDrains[int(K::Vif1Reg)]) / n,
                              double(s.windowDrains[int(K::DmaCtl)]) / n, double(s.windowDrains[int(K::GifReg)]) / n,
                              double(s.windowDrains[int(K::GsPriv)] + s.windowDrains[int(K::Vu1Mem)]) / n,
                              double(s.drainWaitNs) / 1e6 / secs, double(s.backpressureWaitNs) / 1e6 / secs, s.aheadMax,
-                             lc ? double(lt) / double(lc) / 1e6 : 0.0, double(lm) / 1e6,
-                             static_cast<unsigned long long>(s.dtStops.load()));
+                             s.aheadAfterMax, lc ? double(lt) / double(lc) / 1e6 : 0.0, double(lm) / 1e6,
+                             static_cast<unsigned long long>(s.dtStops.load()), s.slow[1], s.slow[2], s.slow[3], s.slow[4],
+                             latencyPercentile(50.0), latencyPercentile(95.0));
+                std::fill(std::begin(s.slow), std::end(s.slow), 0u);
+                s.aheadAfterMax = 0;
+                {
+                    std::lock_guard<std::mutex> lock(s.latencyMutex);
+                    s.latency.clear();
+                }
                 if (s.statsExtra)
                     s.statsExtra();
                 s.frames.clear();
@@ -277,12 +308,15 @@ namespace vu1domain
                 s.aheadMax = 0;
             }
         }
+        const uint64_t frame = s.frameIndex++;
         if (!shouldPost())
+        {
+            s.completedFrame.store(frame, std::memory_order_release);   // worker off: complete at sceGsSyncV
+            s.prevBoundaryBpNs = 0;
             return;
-        vu1work::WorkItem mark;
-        mark.kind = vu1work::Kind::FrameMark;
-        mark.b = static_cast<uint64_t>(now);   // the latency's start (applied: the worker's loop)
-        post(std::move(mark));
+        }
+        // a: the frame index (the worker marks it complete); b: the post time (the mark's own latency)
+        post(vu1work::Kind::FrameMark, static_cast<uint32_t>(frame), static_cast<uint64_t>(now), nullptr, 0);
         if (s.cfg.inlineApply)
             return;
         s.aheadMax = std::max(s.aheadMax, s.queue->framesAhead());
@@ -291,8 +325,48 @@ namespace vu1domain
         const int64_t waited = nowNs() - t0;
         excludeFromGuestClock(waited);
         s.backpressureWaitNs += waited;
+        s.prevBoundaryBpNs = waited;
+        s.aheadAfterMax = std::max(s.aheadAfterMax, s.queue->framesAhead());   // the bound applies here
         if (s.drainHook)
             s.drainHook(s.drainHookCtx);
+    }
+
+    std::atomic<uint64_t> &gsReadbackCount()
+    {
+        static std::atomic<uint64_t> s_count{0};
+        return s_count;
+    }
+
+    void notePadRead()
+    {
+        State &s = state();
+        if (!s.cfg.stats || s.padFrame == s.frameIndex)
+            return;
+        s.padFrame = s.frameIndex;
+        s.padTime[s.frameIndex % 64].store(nowNs(), std::memory_order_release);
+    }
+
+    void notePresent()
+    {
+        State &s = state();
+        if (!s.cfg.stats)
+            return;
+        const uint64_t done = s.completedFrame.load(std::memory_order_acquire);
+        if (done == UINT64_MAX || done == s.lastPresented)
+            return;
+        s.lastPresented = done;
+        const int64_t pad = s.padTime[done % 64].load(std::memory_order_acquire);
+        if (pad == 0)
+            return;
+        std::lock_guard<std::mutex> lock(s.latencyMutex);
+        s.latency.push_back(double(nowNs() - pad) / 1e6);
+    }
+
+    std::vector<double> latencySamples()
+    {
+        State &s = state();
+        std::lock_guard<std::mutex> lock(s.latencyMutex);
+        return s.latency;
     }
 
     void resetFrameStats()
@@ -300,6 +374,16 @@ namespace vu1domain
         State &s = state();
         s.frames.clear();
         s.lastBoundaryNs = 0;
+        s.frameIndex = 0;
+        s.padFrame = UINT64_MAX;
+        for (auto &p : s.padTime)
+            p.store(0);
+        s.completedFrame.store(UINT64_MAX);
+        s.lastPresented = UINT64_MAX;
+        {
+            std::lock_guard<std::mutex> lock(s.latencyMutex);
+            s.latency.clear();
+        }
         s.latencyMaxNs = 0;
         s.latencyTotalNs = 0;
         s.latencyCount = 0;
@@ -334,4 +418,18 @@ namespace vu1domain
     }
     uint64_t eeFbrst() { return g_fbrstFn ? g_fbrstFn(g_fbrstCtx) : 0u; }
     void setStatsExtra(void (*fn)()) { state().statsExtra = fn; }
+
+    namespace
+    {
+        double latencyPercentile(double p)
+        {
+            State &s = state();
+            FrameTimes ft;
+            {
+                std::lock_guard<std::mutex> lock(s.latencyMutex);
+                ft.ms = s.latency;
+            }
+            return ft.percentile(p);
+        }
+    }
 }

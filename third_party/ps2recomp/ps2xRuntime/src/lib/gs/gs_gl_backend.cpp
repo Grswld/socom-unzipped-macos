@@ -1,3 +1,4 @@
+#include "runtime/vu1_domain.h"   // macOS fork: VU1 worker Part 3 (readback counter)
 #include "runtime/gs/gs_gl_backend.h"
 #include "runtime/gs/ps2_gs_common.h"
 #include "runtime/gs/ps2_gs_memory.h"
@@ -3326,6 +3327,7 @@ void GSGlBackend::resolveToMirror(RenderTarget &rt)
 // Download a render target (GPU) into the shadow VRAM so texture decoding sees the drawn pixels.
 void GSGlBackend::downloadRenderTargetToShadow(RenderTarget &rt)
 {
+    vu1domain::gsReadbackCount().fetch_add(1, std::memory_order_relaxed);   // macOS fork: slow-frame tags
     // Sprint 16 F2: this call is the read-back the [gs-submit] line counts (readbacks=,
     // readback_rows=, readback_px=, readback=). The counts are unconditional, the clock is not.
     static const bool s_uploadTrace = ps2x::knob("PS2X_GS_UPLOAD_TRACE") != nullptr;
@@ -3407,6 +3409,7 @@ void GSGlBackend::downloadRenderTargetToShadow(RenderTarget &rt)
 // Download into the game thread's authoritative VRAM (guest reads GS memory).
 void GSGlBackend::downloadRenderTargetToCpu(RenderTarget &rt)
 {
+    vu1domain::gsReadbackCount().fetch_add(1, std::memory_order_relaxed);   // macOS fork: slow-frame tags
     // Native throughout; see downloadRenderTargetToShadow.
     const uint32_t h = std::min<uint32_t>(rt.usedHeight, rt.nativeHeight);
     std::vector<uint32_t> pixels(static_cast<size_t>(rt.nativeWidth) * h);
