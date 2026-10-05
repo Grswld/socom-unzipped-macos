@@ -78,4 +78,14 @@ namespace vu1overlap
             return line;
         }
     };
+
+    // Process-wide (vu1_overlap_stats.cpp): PS2X_VU1_OVERLAP_TRACE, read once. Game thread only.
+    using ProbeFn = Probe (*)(void *ctx);
+    bool on();
+    void setProbe(ProbeFn fn, void *ctx);
+    Probe probe();
+    uint64_t nowNs();
+    void addVif1(uint64_t ns, const Probe &p);   // prints the window once a second
+    void ibit();
+    void stc();
 }

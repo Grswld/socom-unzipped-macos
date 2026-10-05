@@ -6,6 +6,7 @@
 #include "runtime/shot_queue.h"           // Sprint 17 F0 Step 5b
 #include <optional>                       // Sprint 17 Q2: the shot queue re-made across an in-process restart
 #include "socom2_host_input.h"
+#include "runtime/vu1_overlap_stats.h"   // macOS fork: VU1 worker Task 0
 #include "runtime/host_thread_qos.h"   // macOS fork: the game thread on the performance cores
 #include "runtime/ps2_window_size.h"
 #include "ps2_log.h"
@@ -567,7 +568,22 @@ PS2Runtime::PS2Runtime()
     m_iopHost = std::make_unique<PS2IopHostAdapter>(*this);
     m_iopSubsystem = std::make_unique<ps2x::iop::IopSubsystem>(*m_iopHost);
     m_eeScheduler = std::make_unique<EeScheduler>(*this);
-#if defined(PS2X_IOP_ENABLE_PLUGINS) && PS2X_IOP_ENABLE_PLUGINS && \
+    // macOS fork, VU1 worker Task 0: ready guest threads other than the current one, when a VIF1 kick is processed.
+    vu1overlap::setProbe([](void *ctx) {
+        const EeScheduler &s = *static_cast<PS2Runtime *>(ctx)->m_eeScheduler;
+        vu1overlap::Probe p;
+        p.currentTid = s.currentThreadId();
+        int ready = 0;
+        for (int id = 0; id <= EeScheduler::kLastThreadId; ++id)
+        {
+            const GuestThread *t = s.thread(id);
+            if (t && id != p.currentTid && t->status == EeThreadStatus::Ready)
+                ++ready;
+        }
+        p.readyOthers = ready;
+        return p;
+    }, this);
+    #if defined(PS2X_IOP_ENABLE_PLUGINS) && PS2X_IOP_ENABLE_PLUGINS && \
     !defined(PLATFORM_VITA) && (defined(_WIN32) || defined(__linux__))
     if (const char *applicationDirectory = GetApplicationDirectory();
         applicationDirectory && applicationDirectory[0] != '\0')

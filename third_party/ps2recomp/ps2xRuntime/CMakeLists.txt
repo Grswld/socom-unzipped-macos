@@ -362,6 +362,7 @@ add_library(ps2_runtime STATIC
     src/lib/ps2_iop_host.cpp
     src/lib/ps2_fpu_trap.cpp
     src/lib/ps2_memory.cpp
+    src/lib/vu1_overlap_stats.cpp   # macOS fork: VU1 worker Task 0
     src/lib/ps2_pad.cpp
     src/lib/ps2_runtime.cpp
     src/lib/ps2_trace_armed.cpp   # Sprint 13 C8: PS2X_TRIGGER's latch, the runtime's own (was the game file's)

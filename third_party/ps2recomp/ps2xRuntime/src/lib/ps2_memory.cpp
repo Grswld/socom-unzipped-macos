@@ -3,6 +3,7 @@
 #include "runtime/gs/gs_frontend.h"
 #include "ps2_log.h"
 #include "ps2x/knobs.h"
+#include "runtime/vu1_overlap_stats.h"   // macOS fork: VU1 worker Task 0
 #include <atomic>
 #include <cstring>
 extern std::atomic<uint64_t> g_vif1EnqCount;
@@ -1284,6 +1285,7 @@ bool PS2Memory::writeIORegister(uint32_t address, uint32_t value)
             if (value & 0x8u) // STC
             {
                 vif1_regs.stat &= ~((1u << 8) | (1u << 9) | (1u << 10) | (1u << 11) | (1u << 12) | (1u << 13));
+                vu1overlap::stc();   // macOS fork: VU1 worker Task 0
                 ps2xVif1StallCancel(*this);   // resume the data held since the i-bit VIFcode
             }
             break;
@@ -1846,7 +1848,10 @@ void PS2Memory::processPendingTransfers()
     }
     m_pendingVif0Transfers.clear();
 
-    const bool hadVif1 = !m_pendingVif1Transfers.empty();
+        const bool overlapOn = vu1overlap::on() && !m_pendingVif1Transfers.empty();
+        const vu1overlap::Probe overlapProbe = overlapOn ? vu1overlap::probe() : vu1overlap::Probe{};
+        const uint64_t overlapStart = overlapOn ? vu1overlap::nowNs() : 0u;
+        const bool hadVif1 = !m_pendingVif1Transfers.empty();
     for (auto &p : m_pendingVif1Transfers)
     {
         if (!p.chainData.empty())
@@ -1903,7 +1908,9 @@ void PS2Memory::processPendingTransfers()
         }
     }
     m_pendingVif1Transfers.clear();
-
+        if (overlapOn)
+            vu1overlap::addVif1(vu1overlap::nowNs() - overlapStart, overlapProbe);   // VU1 worker Task 0
+    
     if (m_gifArbiter)
         m_gifArbiter->drain();
 

@@ -9,6 +9,7 @@ extern std::atomic<uint64_t> g_vuMpgBytes;
 extern std::atomic<uint64_t> g_vif1BytesCount;
 #include "runtime/ps2_memory.h"
 #include "ps2x/knobs.h"
+#include "runtime/vu1_overlap_stats.h"   // macOS fork: VU1 worker Task 0
 #include <cstring>
 #include <vector>
 
@@ -387,6 +388,7 @@ void PS2Memory::processVIF1Data(const uint8_t *data, uint32_t sizeBytes)
         {
             vif1_regs.stat |= (1u << 11); // INT
             queueIntcCause(5u);           // EE INTC VIF1 -> game's render-thread waker
+            vu1overlap::ibit();           // macOS fork: VU1 worker Task 0
             if (!vif1NoIrqStall())
                 g_vif1IrqPending = true;  // stall after this command completes (hardware behaviour)
             if (vif1TraceFifo()) std::fprintf(stderr, "[fifo] VIF1 interrupt VIFcode %08x (op %02x) -> INTC5\n", cmd, opcode);

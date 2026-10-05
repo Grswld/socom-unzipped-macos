@@ -207,6 +207,7 @@
     X("PS2X_VU1_NATIVE_SKIN", Dev, Flag, "0", "1 runs the VU1 0x52 skinning pass natively: 0x1b50 lists starting with it, 0x33c8 bone passes (with 33C8).") \
     X("PS2X_VU1_NATIVE_TEST_CEILING", Dev, Int, "", "Test hook: lower the native dispatcher vertex and triangle ceilings.") \
     X("PS2X_VU1_NATIVE_TEST_CLIP_CEILING", Dev, Int, "", "Test hook: lower the native dispatcher clipped-vertex ceiling.") \
+    X("PS2X_VU1_OVERLAP_TRACE", Dev, Presence, "", "macOS fork: [vu1-overlap] once a second -- VIF1 time with another guest thread ready, i-bits, the STC latency.") \
     X("PS2X_VU1_XGKICK_CYCLE_EXACT", Dev, Flag, "0", "Restore the per-cycle XGKICK transfer model (drops SOCOM II object geometry).") \
     X("PS2X_VU_STATS", Dev, Presence, "", "Once a second: VU1 programs, cycles and host time.") \
     X("PS2X_WATCH", Dev, Spec, "", "0xADDR[,...]: poll guest words every ~0.5 ms and print each change with pc/ra.") \
