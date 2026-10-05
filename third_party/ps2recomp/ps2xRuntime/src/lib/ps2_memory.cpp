@@ -616,9 +616,13 @@ const uint8_t *PS2Memory::mapVuMemory(uint32_t physAddr, uint32_t size, uint32_t
     }
     if (const uint8_t *ptr = mapRange(PS2_VU1_CODE_BASE, PS2_VU1_CODE_SIZE, m_vu1Code))
     {
+        vu1overlap::sync(vu1overlap::SyncKind::Vu1Mem);   // macOS fork: VU1 worker Task 0d
         return ptr;
     }
-    return mapRange(PS2_VU1_DATA_BASE, PS2_VU1_DATA_SIZE, m_vu1Data);
+    const uint8_t *vu1Data = mapRange(PS2_VU1_DATA_BASE, PS2_VU1_DATA_SIZE, m_vu1Data);
+    if (vu1Data)
+        vu1overlap::sync(vu1overlap::SyncKind::Vu1Mem);   // macOS fork: VU1 worker Task 0d
+    return vu1Data;
 }
 
 uint32_t PS2Memory::translateAddress(uint32_t virtualAddress)
@@ -800,6 +804,7 @@ uint32_t PS2Memory::read32(uint32_t address)
 
     if (isGsPrivReg(address))
     {
+        vu1overlap::sync(vu1overlap::SyncKind::GsPriv);   // macOS fork: VU1 worker Task 0d (a read)
         uint32_t off = address & 7;
         const uint32_t regOff = (address - PS2_GS_PRIV_REG_BASE) & ~0x7u;
         if (regOff == kGsCsrRegOffset)
@@ -848,6 +853,7 @@ uint64_t PS2Memory::read64(uint32_t address)
 
     if (isGsPrivReg(address))
     {
+        vu1overlap::sync(vu1overlap::SyncKind::GsPriv);   // macOS fork: VU1 worker Task 0d (a read)
         const uint32_t regOff = (address - PS2_GS_PRIV_REG_BASE) & ~0x7u;
         if (regOff == kGsCsrRegOffset)
         {
@@ -2478,6 +2484,7 @@ int PS2Memory::pollDmaRegisters()
 
 uint32_t PS2Memory::readIORegister(uint32_t address)
 {
+    vu1overlap::sync(vu1overlap::syncKindOfIo(address));   // macOS fork: VU1 worker Task 0d
     size_t timerIndex = 0u;
     uint32_t timerOffset = 0u;
     if (decodeEeTimerRegister(address, timerIndex, timerOffset))
@@ -2502,6 +2509,7 @@ uint32_t PS2Memory::readIORegister(uint32_t address)
 
     if (isGsPrivReg(address))
     {
+        vu1overlap::sync(vu1overlap::SyncKind::GsPriv);   // macOS fork: VU1 worker Task 0d (a read)
         // NB: unreachable from read8/16/32/64 today, same reasoning as the write
         // path above; kept correct for direct callers.
         const uint32_t off = address & 7u;

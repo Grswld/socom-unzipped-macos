@@ -18,6 +18,22 @@ namespace vu1overlap
         int currentTid = -1;
     };
 
+    // Task 0d: the EE accesses a VU1 worker would have to wait at (spec 3.3), by kind.
+    enum class SyncKind : uint8_t { None, Vif1Reg, Dma1Reg, DmaCtl, GifReg, GsPriv, Vu1Mem, Count };
+
+    inline SyncKind syncKindOfIo(uint32_t phys)
+    {
+        if (phys >= 0x10003C00u && phys < 0x10003E00u)
+            return SyncKind::Vif1Reg;   // VIF1 STAT, FBRST, ERR, MARK, CYCLE, MODE, NUM, MASK, CODE, ITOPS, ...
+        if (phys >= 0x10009000u && phys < 0x10009100u)
+            return SyncKind::Dma1Reg;   // DMA channel 1 (VIF1): CHCR, MADR, QWC, TADR, ASR0/1
+        if ((phys >= 0x1000E000u && phys < 0x1000E100u) || (phys >= 0x1000F520u && phys < 0x1000F5A0u))
+            return SyncKind::DmaCtl;    // D_CTRL, D_STAT, D_PCR, ...; D_ENABLER/W
+        if (phys >= 0x10003000u && phys < 0x10003100u)
+            return SyncKind::GifReg;    // GIF CTRL, MODE, STAT, ...
+        return SyncKind::None;
+    }
+
     struct Window
     {
         uint64_t vif1Ns = 0;            // host time inside processPendingTransfers' VIF1 loop (VU1 and GS inline)
@@ -28,6 +44,13 @@ namespace vu1overlap
         uint64_t stcLatencyNsTotal = 0, stcLatencyNsMax = 0, stcLatencySamples = 0;
         uint64_t lastIbitNs = 0;
         bool ibitOpen = false;
+        uint64_t syncs[int(SyncKind::Count)] = {};
+
+        void noteSync(SyncKind k)
+        {
+            if (k != SyncKind::None)
+                ++syncs[int(k)];
+        }
 
         void addVif1(uint64_t ns, const Probe &p)
         {
@@ -69,6 +92,11 @@ namespace vu1overlap
                           vif1, over, pct, double(kicks) / s, double(ibits) / s, double(stcs) / s, mean,
                           double(stcLatencyNsMax) / 1e6);
             std::string line(buf);
+            std::snprintf(buf, sizeof buf, "syncs vif1=%.1f dma1=%.1f dmactl=%.1f gif=%.1f gspriv=%.1f vu1mem=%.1f /s ",
+                          double(syncs[int(SyncKind::Vif1Reg)]) / s, double(syncs[int(SyncKind::Dma1Reg)]) / s,
+                          double(syncs[int(SyncKind::DmaCtl)]) / s, double(syncs[int(SyncKind::GifReg)]) / s,
+                          double(syncs[int(SyncKind::GsPriv)]) / s, double(syncs[int(SyncKind::Vu1Mem)]) / s);
+            line.insert(line.rfind("by_tid="), buf);
             bool first = true;
             for (const auto &[tid, n] : kicksByTid)
             {
@@ -88,4 +116,5 @@ namespace vu1overlap
     void addVif1(uint64_t ns, const Probe &p);   // prints the window once a second
     void ibit();
     void stc();
+    void sync(SyncKind k);                       // an EE access a worker would have to wait at (Task 0d)
 }

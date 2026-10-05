@@ -70,4 +70,29 @@ void register_vu1_overlap_stats_tests()
             t.IsTrue(Window{}.report(0.0).find("vif1=0 ms/s") != std::string::npos, "zero-length window");
         });
     });
+
+    MiniTest::Case("Vu1OverlapSyncs", [](TestCase &tc)
+    {
+        tc.Run("sync-point accesses are counted by kind and reported per second", [](TestCase &t)
+        {
+            Window w;
+            w.noteSync(SyncKind::Vif1Reg); w.noteSync(SyncKind::Vif1Reg);
+            w.noteSync(SyncKind::Dma1Reg);
+            w.noteSync(SyncKind::GsPriv);
+            w.noteSync(SyncKind::Vu1Mem);
+            t.Equals(w.syncs[int(SyncKind::Vif1Reg)], uint64_t(2), "two VIF1 register reads");
+            const std::string line = w.report(2.0);
+            t.IsTrue(line.find("syncs vif1=1.0 dma1=0.5 dmactl=0.0 gif=0.0 gspriv=0.5 vu1mem=0.5 /s") != std::string::npos, line);
+        });
+
+        tc.Run("an IO address maps to its kind", [](TestCase &t)
+        {
+            t.Equals(int(syncKindOfIo(0x10003C00u)), int(SyncKind::Vif1Reg), "VIF1 STAT");
+            t.Equals(int(syncKindOfIo(0x10003DF0u)), int(SyncKind::Vif1Reg), "VIF1 last");
+            t.Equals(int(syncKindOfIo(0x10009000u)), int(SyncKind::Dma1Reg), "D1 CHCR");
+            t.Equals(int(syncKindOfIo(0x1000E010u)), int(SyncKind::DmaCtl), "D_STAT");
+            t.Equals(int(syncKindOfIo(0x10003000u)), int(SyncKind::GifReg), "GIF CTRL");
+            t.Equals(int(syncKindOfIo(0x10000000u)), int(SyncKind::None), "a timer is not a sync point");
+        });
+    });
 }

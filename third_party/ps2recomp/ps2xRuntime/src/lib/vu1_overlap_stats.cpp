@@ -56,4 +56,9 @@ namespace vu1overlap
         if (on())
             g_window.noteStc(nowNs());
     }
+    void sync(SyncKind k)
+    {
+        if (on())
+            g_window.noteSync(k);
+    }
 }
