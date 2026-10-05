@@ -746,11 +746,12 @@ namespace
         }, rt);
         ps2xVif1ScannerReset();   // VIF1 starts from reset with the worker (boot, or after a restart's reset)
         vu1domain::setStatsExtra([] {
-            std::fprintf(stderr, "[vu1-worker] ibit stalled_items=%llu foreign=%llu scanner=%llu worker=%llu (cumulative)\n",
+            std::fprintf(stderr, "[vu1-worker] ibit stalled_items=%llu foreign=%llu scanner=%llu worker=%llu item_mismatches=%llu (cumulative)\n",
                          static_cast<unsigned long long>(vu1domain::ibitStalledItems()),
                          static_cast<unsigned long long>(vu1domain::ibitForeignItems()),
                          static_cast<unsigned long long>(ps2xVif1ScannerIbits()),
-                         static_cast<unsigned long long>(ps2xVif1WorkerIbits()));
+                         static_cast<unsigned long long>(ps2xVif1WorkerIbits()),
+                         static_cast<unsigned long long>(vu1domain::ibitItemMismatches()));
         });
         vu1domain::start(cfg, vu1domain::applyItem, &g_vu1ApplyTarget);
     }

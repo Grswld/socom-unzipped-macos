@@ -29,5 +29,6 @@ namespace vu1domain
     // to a buffer the worker has not finished drawing (Task 7: flicker and colour distortion with the worker on).
     uint64_t ibitForeignItems();   // diagnostic: see vu1_domain_apply.cpp
     uint64_t ibitStalledItems();
+    uint64_t ibitItemMismatches();   // per-item self-check of the scanner against the worker
     void gsPrivWrite64(uint64_t &field, uint32_t address, uint64_t value);   // on the worker: the EE's vu0_fbrst captured with the Vif1Data item being applied
 }

@@ -1241,12 +1241,13 @@ bool PS2Memory::writeIORegister(uint32_t address, uint32_t value)
         m_ioRegisters[address] = value;
         if (address == 0x10003C40u)
             vif1Scanner().setCycle(static_cast<uint16_t>(value & 0xFFFFu));
+        uint64_t stcIrqs = 0;
         if (address == 0x10003C10u)   // FBRST: the scanner follows RST and STC as the interpreter will
         {
             if (value & 0x1u)
                 vif1Scanner().reset();
             if (value & 0x8u)
-                for (unsigned irq = vif1Scanner().stc(); irq > 0; --irq)
+                for (unsigned irq = (stcIrqs = vif1Scanner().stc()); irq > 0; --irq)
                 {
                     queueIntcCause(5u);   // an i-bit held behind the stall, raised at STC as inline
                     vu1overlap::ibit();
@@ -1256,7 +1257,7 @@ bool PS2Memory::writeIORegister(uint32_t address, uint32_t value)
         vu1work::WorkItem it;
         it.kind = vu1work::Kind::Vif1Reg;
         it.a = address;
-        it.b = value;
+        it.b = uint64_t(value) | (stcIrqs << 32);   // high word: the scanner's i-bits at this STC (self-check)
         vu1domain::post(std::move(it));
         return true;
     }
@@ -1837,7 +1838,8 @@ void PS2Memory::processPendingTransfers()
             processVIF1Data(d, n);
             return;
         }
-        for (unsigned irq = vif1Scanner().scan(d, n); irq > 0; --irq)
+        const unsigned irqs = vif1Scanner().scan(d, n);
+        for (unsigned irq = irqs; irq > 0; --irq)
         {
             queueIntcCause(5u);   // EE INTC VIF1, at the kick as the inline interpreter raises it
             vu1overlap::ibit();
@@ -1845,6 +1847,7 @@ void PS2Memory::processPendingTransfers()
         }
         vu1work::WorkItem it;
         it.kind = vu1work::Kind::Vif1Data;
+        it.a = irqs;   // the scanner's i-bits in this item: the worker checks it decodes the same (self-check)
         it.b = vu1domain::eeFbrst();
         it.bytes.assign(d, d + n);
         vu1domain::post(std::move(it));
