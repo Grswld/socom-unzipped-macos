@@ -8,6 +8,7 @@
 #include "socom2_host_input.h"
 #include "runtime/vu1_overlap_stats.h"   // macOS fork: VU1 worker Task 0
 #include "runtime/vu1_domain.h"          // macOS fork: VU1 worker Part 2
+#include "runtime/gs/gs_readback_stats.h"   // macOS fork: readback attribution
 #include "runtime/vu1_domain_apply.h"
 #include "runtime/host_thread_qos.h"   // macOS fork: the game thread on the performance cores
 #include "runtime/ps2_window_size.h"
@@ -752,6 +753,11 @@ namespace
                          static_cast<unsigned long long>(ps2xVif1ScannerIbits()),
                          static_cast<unsigned long long>(ps2xVif1WorkerIbits()),
                          static_cast<unsigned long long>(vu1domain::ibitItemMismatches()));
+            static auto s_last = std::chrono::steady_clock::now();   // the window this line covers
+            const auto now = std::chrono::steady_clock::now();
+            const double secs = std::chrono::duration<double>(now - s_last).count();
+            s_last = now;
+            std::fprintf(stderr, "[vu1-worker] %s\n", gsreadback::takeLine(secs).c_str());
         });
         vu1domain::start(cfg, vu1domain::applyItem, &g_vu1ApplyTarget);
     }

@@ -64,6 +64,8 @@ add_library(ps2_test_lib STATIC
     src/vif1_scanner_tests.cpp   # macOS fork: VU1 worker, the i-bit scanner
     src/vu1_spsc_ring_tests.cpp   # macOS fork: VU1 worker Part 3
     src/guest_heap_equivalence_tests.cpp   # macOS fork: VU1 worker Part 3, the allocator
+    src/gs_readback_stats_tests.cpp   # macOS fork: VU1 worker Part 3, readback attribution
+    src/gs_cpu_span_write_tests.cpp   # macOS fork: VU1 worker Part 3, the readback cost
     src/ps2_vu_tests.cpp
     src/ps2_gs_tests.cpp
     src/gs_frame_backpressure_tests.cpp

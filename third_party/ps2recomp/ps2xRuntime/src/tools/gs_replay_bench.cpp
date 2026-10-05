@@ -37,6 +37,7 @@
 // Exit 0 with a summary; 2 usage or an unreadable recording (a recorder from another tree reads as layout); 3 no
 // GL (the bench needs a desktop session: a hidden window and OpenGL 3.3, as the console-replay case with
 // PS2X_CONSOLE_REPLAY_GL); 4 a recording shorter than the warm-up.
+#include "runtime/gs/gs_readback_stats.h"   // macOS fork: readback attribution
 #include "raylib.h"
 
 #include "runtime/gs/gs_gl_backend.h"
@@ -272,6 +273,8 @@ int main(int argc, char **argv)
     std::snprintf(buf, sizeof(buf), " longest_ms=%.1f", static_cast<double>(h.longestNs) / 1.0e6);
     line += buf;
     std::printf("%s\n", line.c_str());
+    // macOS fork: the readback attribution over the whole replay (per second of replay time)
+    std::printf("[gs-replay-bench] %s\n", gsreadback::takeLine(t.elapsedMs / 1000.0).c_str());
     std::fflush(stdout);
 
     if (FILE *fp = std::fopen(jsonPath.c_str(), "wb"))

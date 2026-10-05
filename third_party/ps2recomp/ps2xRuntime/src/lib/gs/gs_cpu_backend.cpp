@@ -610,6 +610,17 @@ void GSCpuBackend::WriteVram(uint32_t psm, uint32_t base, uint32_t bw, uint32_t 
     WriteVramUnlocked(psm, base, bw, x, y, value);
 }
 
+void GSCpuBackend::WriteVramRow(uint32_t psm, uint32_t base, uint32_t bw, uint32_t x0, uint32_t y,
+                                const uint32_t *values, uint32_t count)
+{
+    std::lock_guard<std::mutex> lock(m_mutex);
+    if (!m_vram)
+        return;
+    const auto write = m_writeVramFuncs[psm & 0x3Fu];
+    for (uint32_t i = 0; i < count; ++i)
+        write(m_vram, base, bw, x0 + i, y, values[i]);
+}
+
 void GSCpuBackend::WriteVramUnlocked(uint32_t psm, uint32_t base, uint32_t bw, uint32_t x, uint32_t y, uint32_t value)
 {
     if (!m_vram)

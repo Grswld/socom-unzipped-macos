@@ -1,4 +1,5 @@
 #include "runtime/vu1_domain.h"   // macOS fork: VU1 worker Part 3 (readback counter)
+#include "runtime/gs/gs_readback_stats.h"   // macOS fork: readback attribution
 #include "runtime/gs/gs_gl_backend.h"
 #include "runtime/gs/ps2_gs_common.h"
 #include "runtime/gs/ps2_gs_memory.h"
@@ -1076,8 +1077,11 @@ void GSGlBackend::syncDirtyPagesForRead(uint32_t page, uint32_t pageCount) const
     auto *self = const_cast<GSGlBackend *>(this);
     Cmd cmd;
     cmd.type = CmdType::Readback;
+    const auto t0 = std::chrono::steady_clock::now();
     const uint64_t token = self->postAndGetToken(std::move(cmd));
     self->waitForToken(token);
+    gsreadback::noteBlocked(vu1domain::onWorker() ? gsreadback::Waiter::Worker : gsreadback::Waiter::Other,
+                            (std::chrono::steady_clock::now() - t0).count());   // macOS fork: readback attribution
     std::lock_guard<std::mutex> lock(m_dirtyMutex);
     self->m_gpuDirtyPages.fill(0u);
 }
@@ -1277,6 +1281,7 @@ void GSGlBackend::RequestVramReadback()
     Cmd cmd;
     cmd.type = CmdType::Readback;
     record(std::move(cmd));
+    gsreadback::noteAsyncRequest();   // macOS fork: readback attribution
 }
 
 void GSGlBackend::WriteVram(uint32_t psm, uint32_t base, uint32_t bw, uint32_t x, uint32_t y, uint32_t value)
@@ -2470,7 +2475,11 @@ void GSGlBackend::growRenderTarget(RenderTarget &rt, uint32_t nativeWidth, uint3
     if (nw == rt.nativeWidth && nh == rt.nativeHeight)
         return;
     if (rt.gpuDirty)
+    {
+        const auto t0 = std::chrono::steady_clock::now();
         downloadRenderTargetToShadow(rt);
+        gsreadback::noteDownload(gsreadback::Site::Grow, (std::chrono::steady_clock::now() - t0).count());
+    }
     GLint prevFbo = 0, prevTex = 0;
     glGetIntegerv(GL_FRAMEBUFFER_BINDING, &prevFbo);
     glGetIntegerv(GL_TEXTURE_BINDING_2D, &prevTex);
@@ -3446,14 +3455,15 @@ void GSGlBackend::downloadRenderTargetToCpu(RenderTarget &rt)
         // past FBW*64 address the *next* page row's first columns (SOCOM II's movie staging
         // buffer, FBW 10, got its frame rows 96..128 of page columns 0-5 blacked out by the GPU
         // rows 64..96 of the same target — a seam at x=384 on every movie frame).
+        // macOS fork: the row is converted in place and written to the CPU backend under one lock (was one locked
+        // call per pixel: ~1.8 ms of a 2.3 ms readback in the firefight replay), then to the shadow.
+        uint32_t *row = pixels.data() + static_cast<size_t>(y) * rt.nativeWidth;
+        if (rt.psm == GS_PSM_CT16 || rt.psm == GS_PSM_CT16S)
+            for (uint32_t x = 0; x < xEnd; ++x)
+                row[x] = rgba8888To5551(row[x]);
+        m_cpu->WriteVramRow(rt.psm, base, rt.fbw, 0u, y, row, xEnd);
         for (uint32_t x = 0; x < xEnd; ++x)
-        {
-            uint32_t p = pixels[static_cast<size_t>(y) * rt.nativeWidth + x];
-            if (rt.psm == GS_PSM_CT16 || rt.psm == GS_PSM_CT16S)
-                p = rgba8888To5551(p);
-            m_cpu->WriteVram(rt.psm, base, rt.fbw, x, y, p);
-            writeVramRaw(m_shadowMemory.data(), rt.psm, base, rt.fbw, x, y, p);
-        }
+            writeVramRaw(m_shadowMemory.data(), rt.psm, base, rt.fbw, x, y, row[x]);
     }
     if (uploadGateOn())
         m_uploadGate.noteForeignWrite(rt.fbp, pageSpan(rt.psm, rt.fbw, h));   // V2: the shadow took GPU pixels
@@ -3467,7 +3477,11 @@ void GSGlBackend::executeReadback()
 {
     for (RenderTarget &rt : m_renderTargets)
         if (rt.gpuDirty)
+        {
+            const auto t0 = std::chrono::steady_clock::now();
             downloadRenderTargetToCpu(rt);
+            gsreadback::noteDownload(gsreadback::Site::Command, (std::chrono::steady_clock::now() - t0).count());
+        }
 }
 
 void GSGlBackend::executePresent(const GSPresentationRequest &request)
@@ -4220,7 +4234,9 @@ uint32_t GSGlBackend::resolveTexture(const GSDrawState &state, uint32_t &outWidt
         const uint32_t span = pageSpan(rt.psm, rt.fbw, std::min<uint32_t>(rt.usedHeight, 512u));
         if (pageStart + pageCount <= rt.fbp || pageStart >= rt.fbp + span)
             continue;
+        const auto t0 = std::chrono::steady_clock::now();
         downloadRenderTargetToShadow(rt);
+        gsreadback::noteDownload(gsreadback::Site::TexShadow, (std::chrono::steady_clock::now() - t0).count());
         markShadowPages(rt.fbp, span);
     }
 
