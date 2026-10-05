@@ -1,0 +1,219 @@
+// macOS fork, the VU1 worker Part 2 Task 2: the domain (runtime/vu1_domain.h) driven with a recording ApplyFn.
+#include "MiniTest.h"
+#include "runtime/vu1_domain.h"
+
+#include <atomic>
+#include <chrono>
+#include <cstdio>
+#include <filesystem>
+#include <fstream>
+#include <mutex>
+#include <thread>
+#include <vector>
+
+using namespace vu1work;
+
+namespace
+{
+    struct Recorder
+    {
+        std::mutex mutex;
+        std::vector<std::pair<Kind, uint32_t>> applied;
+        std::thread::id thread;
+        bool onWorkerInside = false;
+        int sleepMsOnFrameMark = 0;
+        int sleepMsOnEach = 0;
+    };
+    Recorder g_rec;
+
+    void recordApply(const WorkItem &item, void *)
+    {
+        if (g_rec.sleepMsOnEach)
+            std::this_thread::sleep_for(std::chrono::milliseconds(g_rec.sleepMsOnEach));
+        if (item.kind == Kind::FrameMark && g_rec.sleepMsOnFrameMark)
+            std::this_thread::sleep_for(std::chrono::milliseconds(g_rec.sleepMsOnFrameMark));
+        std::lock_guard<std::mutex> lock(g_rec.mutex);
+        g_rec.applied.emplace_back(item.kind, item.a);
+        g_rec.thread = std::this_thread::get_id();
+        g_rec.onWorkerInside = vu1domain::onWorker();
+    }
+
+    void resetRecorder()
+    {
+        std::lock_guard<std::mutex> lock(g_rec.mutex);
+        g_rec.applied.clear();
+        g_rec.onWorkerInside = false;
+        g_rec.sleepMsOnFrameMark = 0;
+        g_rec.sleepMsOnEach = 0;
+    }
+
+    WorkItem item(Kind k, uint32_t a = 0)
+    {
+        WorkItem it;
+        it.kind = k;
+        it.a = a;
+        return it;
+    }
+
+    vu1domain::Config on(unsigned frames = 1)
+    {
+        vu1domain::Config c;
+        c.enabled = true;
+        c.queueFrames = frames;
+        return c;
+    }
+}
+
+void register_vu1_domain_tests()
+{
+    MiniTest::Case("Vu1Domain", [](TestCase &tc)
+    {
+        tc.Run("off: no worker, shouldPost is false", [](TestCase &t)
+        {
+            resetRecorder();
+            vu1domain::start(vu1domain::Config{}, recordApply, nullptr);
+            t.IsFalse(vu1domain::enabled(), "not enabled");
+            t.IsFalse(vu1domain::shouldPost(), "nothing is posted");
+            vu1domain::stop();
+        });
+
+        tc.Run("on: items apply on another thread, in order", [](TestCase &t)
+        {
+            resetRecorder();
+            vu1domain::start(on(), recordApply, nullptr);
+            t.IsTrue(vu1domain::shouldPost(), "posting");
+            for (uint32_t i = 0; i < 500; ++i)
+                vu1domain::post(item(Kind::GsReg, i));
+            vu1domain::drain(vu1overlap::SyncKind::Vif1Reg);
+            std::lock_guard<std::mutex> lock(g_rec.mutex);
+            bool ordered = g_rec.applied.size() == 500;
+            for (uint32_t i = 0; ordered && i < 500; ++i)
+                ordered = g_rec.applied[i].second == i;
+            t.IsTrue(ordered, "500 in order");
+            t.IsFalse(g_rec.thread == std::this_thread::get_id(), "applied on the worker");
+            vu1domain::stop();
+        });
+
+        tc.Run("onWorker is true inside apply and false outside", [](TestCase &t)
+        {
+            resetRecorder();
+            vu1domain::start(on(), recordApply, nullptr);
+            vu1domain::post(item(Kind::GsReg));
+            vu1domain::drain(vu1overlap::SyncKind::Vif1Reg);
+            t.IsTrue(g_rec.onWorkerInside, "inside");
+            t.IsFalse(vu1domain::onWorker(), "outside");
+            vu1domain::stop();
+        });
+
+        tc.Run("drain returns after every posted item applied, and counts its kind", [](TestCase &t)
+        {
+            resetRecorder();
+            g_rec.sleepMsOnEach = 2;
+            vu1domain::start(on(), recordApply, nullptr);
+            const uint64_t before = vu1domain::drainCount(vu1overlap::SyncKind::GifReg);
+            for (int i = 0; i < 10; ++i)
+                vu1domain::post(item(Kind::GsReg));
+            vu1domain::drain(vu1overlap::SyncKind::GifReg);
+            {
+                std::lock_guard<std::mutex> lock(g_rec.mutex);
+                t.Equals(g_rec.applied.size(), size_t(10), "all ten applied");
+            }
+            t.Equals(vu1domain::drainCount(vu1overlap::SyncKind::GifReg), before + 1, "one GIF drain counted");
+            vu1domain::stop();
+        });
+
+        tc.Run("frameBoundary with queueFrames 0 returns only after the worker applied that frame", [](TestCase &t)
+        {
+            resetRecorder();
+            g_rec.sleepMsOnFrameMark = 10;
+            vu1domain::start(on(0), recordApply, nullptr);
+            vu1domain::post(item(Kind::GsReg, 1));
+            vu1domain::frameBoundary();
+            {
+                std::lock_guard<std::mutex> lock(g_rec.mutex);
+                t.Equals(g_rec.applied.size(), size_t(2), "the item and the frame mark both applied");
+            }
+            vu1domain::stop();
+        });
+
+        tc.Run("frameBoundary with queueFrames 1 lets one frame run ahead", [](TestCase &t)
+        {
+            resetRecorder();
+            g_rec.sleepMsOnFrameMark = 30;
+            vu1domain::start(on(1), recordApply, nullptr);
+            const auto t0 = std::chrono::steady_clock::now();
+            vu1domain::frameBoundary();   // frame 1 in flight: returns at once
+            const auto t1 = std::chrono::steady_clock::now();
+            vu1domain::frameBoundary();   // frame 2: waits for frame 1
+            const auto t2 = std::chrono::steady_clock::now();
+            t.IsTrue(t1 - t0 < std::chrono::milliseconds(15), "the first boundary does not wait");
+            t.IsTrue(t2 - t1 >= std::chrono::milliseconds(15), "the second waits for the first frame");
+            vu1domain::stop();
+        });
+
+        tc.Run("stop drains before it returns", [](TestCase &t)
+        {
+            resetRecorder();
+            g_rec.sleepMsOnEach = 1;
+            vu1domain::start(on(), recordApply, nullptr);
+            for (int i = 0; i < 20; ++i)
+                vu1domain::post(item(Kind::GsReg));
+            vu1domain::stop();
+            std::lock_guard<std::mutex> lock(g_rec.mutex);
+            t.Equals(g_rec.applied.size(), size_t(20), "every item applied");
+            t.IsFalse(vu1domain::enabled(), "stopped");
+        });
+
+        tc.Run("items apply in order across a VIF1 stall (data, STC, PATH3)", [](TestCase &t)
+        {
+            resetRecorder();
+            vu1domain::start(on(), recordApply, nullptr);
+            vu1domain::post(item(Kind::Vif1Data, 1));
+            vu1domain::post(item(Kind::Vif1Reg, 0x10003C10u));   // FBRST (STC)
+            vu1domain::post(item(Kind::GifPath3, 3));
+            vu1domain::drain(vu1overlap::SyncKind::Vif1Reg);
+            std::lock_guard<std::mutex> lock(g_rec.mutex);
+            t.IsTrue(g_rec.applied.size() == 3 && g_rec.applied[0].first == Kind::Vif1Data &&
+                         g_rec.applied[1].first == Kind::Vif1Reg && g_rec.applied[2].first == Kind::GifPath3,
+                     "data, STC, PATH3");
+            vu1domain::stop();
+        });
+
+        tc.Run("the recorder writes what was posted", [](TestCase &t)
+        {
+            resetRecorder();
+            const std::string path = (std::filesystem::temp_directory_path() / "vu1q_test.vq").string();
+            std::filesystem::remove(path);
+            vu1domain::Config c = on();
+            c.recordPath = path.c_str();
+            vu1domain::start(c, recordApply, nullptr);
+            WorkItem d = item(Kind::Vif1Data, 7);
+            d.bytes = {9, 8, 7};
+            vu1domain::post(std::move(d));
+            vu1domain::post(item(Kind::FrameMark));
+            vu1domain::stop();
+            std::ifstream in(path, std::ios::binary);
+            std::vector<uint8_t> buf((std::istreambuf_iterator<char>(in)), std::istreambuf_iterator<char>());
+            const uint8_t *p = buf.data();
+            WorkItem a, b;
+            t.IsTrue(deserialize(p, buf.data() + buf.size(), a) && deserialize(p, buf.data() + buf.size(), b), "two records");
+            t.IsTrue(a.kind == Kind::Vif1Data && a.a == 7 && a.bytes == std::vector<uint8_t>{9, 8, 7}, "the data item");
+            t.IsTrue(b.kind == Kind::FrameMark, "the frame mark");
+            std::filesystem::remove(path);
+        });
+
+        tc.Run("knobs: off by default, queue frames bounded 0-4", [](TestCase &t)
+        {
+            const auto none = vu1domain::configFrom([](const char *) -> const char * { return nullptr; });
+            t.IsFalse(none.enabled, "off by default");
+            t.Equals(none.queueFrames, 1u, "one frame by default");
+            const auto set = vu1domain::configFrom([](const char *n) -> const char * {
+                if (std::string(n) == "PS2X_VU1_THREAD") return "1";
+                if (std::string(n) == "PS2X_VU1_QUEUE_FRAMES") return "9";
+                return nullptr;
+            });
+            t.IsTrue(set.enabled, "on");
+            t.Equals(set.queueFrames, 1u, "out of range: the default");
+        });
+    });
+}

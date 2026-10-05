@@ -59,6 +59,7 @@ add_library(ps2_test_lib STATIC
     src/host_thread_qos_tests.cpp   # macOS fork: the game thread on the performance cores
     src/vu1_overlap_stats_tests.cpp   # macOS fork: VU1 worker Task 0
     src/vu1_work_queue_tests.cpp   # macOS fork: VU1 worker Part 2
+    src/vu1_domain_tests.cpp   # macOS fork: VU1 worker Part 2
     src/ps2_vu_tests.cpp
     src/ps2_gs_tests.cpp
     src/gs_frame_backpressure_tests.cpp
