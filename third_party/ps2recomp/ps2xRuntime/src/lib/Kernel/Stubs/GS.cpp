@@ -1324,6 +1324,7 @@ namespace ps2_stubs
     void sceGsSyncV(uint8_t *rdram, R5900Context *ctx, PS2Runtime *runtime)
     {
         g_gsSyncVCount.fetch_add(1, std::memory_order_relaxed);
+        vu1domain::frameBoundary();   // macOS fork, the VU1 worker: the frame mark, backpressure and frame times
         ps2_syscalls::WaitVSyncTick(rdram,
                                     ctx,
                                     runtime,

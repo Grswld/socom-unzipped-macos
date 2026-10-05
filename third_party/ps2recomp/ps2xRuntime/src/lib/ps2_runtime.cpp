@@ -7,6 +7,8 @@
 #include <optional>                       // Sprint 17 Q2: the shot queue re-made across an in-process restart
 #include "socom2_host_input.h"
 #include "runtime/vu1_overlap_stats.h"   // macOS fork: VU1 worker Task 0
+#include "runtime/vu1_domain.h"          // macOS fork: VU1 worker Part 2
+#include "runtime/vu1_domain_apply.h"
 #include "runtime/host_thread_qos.h"   // macOS fork: the game thread on the performance cores
 #include "runtime/ps2_window_size.h"
 #include "ps2_log.h"
@@ -662,6 +664,7 @@ PS2Runtime::~PS2Runtime()
 
         stopHostMic();
         ps2_stubs::socom2HostInputShutdown();   // review finding F12: the sampler thread, joined before we go
+        vu1domain::stop();                      // macOS fork: the VU1 worker, drained and joined
         if (IsWindowReady())
         {
             CloseWindow();
@@ -712,6 +715,35 @@ ps2x::iop::DebugSnapshot PS2Runtime::iopDebugSnapshot() const
     return m_iopSubsystem->debugSnapshot();
 }
 
+namespace
+{
+    // macOS fork, the VU1 worker (plan Part 2 Task 6): start it on the bound memory, GS and arbiter, with the probes
+    // that let it avoid the live EE context (the kick's vu0_fbrst) and the drain hook that merges the VU1 D/T stop
+    // bits back on the game thread. A no-op unless PS2X_VU1_THREAD=1; idempotent.
+    vu1domain::ApplyTarget g_vu1ApplyTarget;
+
+    void startVu1Worker(PS2Runtime *rt, GifArbiter *arbiter)
+    {
+        const vu1domain::Config cfg = vu1domain::configFrom(ps2x::knob);
+        if (!cfg.enabled)
+        {
+            vu1domain::start(cfg, vu1domain::applyItem, nullptr);   // keeps the frame stats (the A/B baseline)
+            return;
+        }
+        g_vu1ApplyTarget = vu1domain::ApplyTarget{&rt->memory(), &rt->gs(), arbiter};
+        vu1domain::setFbrstProbe([](void *ctx) -> uint64_t {
+            R5900Context *c = static_cast<PS2Runtime *>(ctx)->eeScheduler().currentContext();
+            return c ? c->vu0_fbrst : 0u;
+        }, rt);
+        vu1domain::setDrainHook([](void *ctx) {
+            R5900Context *c = static_cast<PS2Runtime *>(ctx)->eeScheduler().currentContext();
+            if (c)
+                c->vu0_vpu_stat = (c->vu0_vpu_stat & ~0x0600u) | vu1domain::pendingVpuStop();
+        }, rt);
+        vu1domain::start(cfg, vu1domain::applyItem, &g_vu1ApplyTarget);
+    }
+}
+
 bool PS2Runtime::syncCoreSubsystems()
 {
     uint8_t *const rdram = m_memory.getRDRAM();
@@ -726,21 +758,28 @@ bool PS2Runtime::syncCoreSubsystems()
         return true;
     }
 
+    vu1domain::stop();   // macOS fork: the worker never applies an item across a re-bind
     m_gs.init(gsVram, static_cast<uint32_t>(PS2_GS_VRAM_SIZE), &m_memory.gs());
     m_gifArbiter.setProcessPacketFn([this](const uint8_t *data, uint32_t size)
                                     { m_gs.processGIFPacket(data, size); });
     m_memory.setGifArbiter(&m_gifArbiter);
     m_memory.setVu1MscalCallback([this](uint32_t startPC, uint32_t top, uint32_t itop)
                                  {
-                                     R5900Context *cpuContext = m_eeScheduler ? m_eeScheduler->currentContext() : nullptr;
-                                     if (!cpuContext)
+                                     // macOS fork, the VU1 worker (Part 2 Task 6): on the worker the live EE context is
+                                     // not touched -- the D/T enables come from the kick's captured vu0_fbrst, and the
+                                     // stop bits go to the domain, merged into the context on the game thread at a drain.
+                                     const bool onVu1Worker = vu1domain::onWorker();
+                                     R5900Context *cpuContext =
+                                         onVu1Worker ? nullptr : (m_eeScheduler ? m_eeScheduler->currentContext() : nullptr);
+                                     if (!cpuContext && !onVu1Worker)
                                      {
                                          cpuContext = &m_cpuContext;
                                      }
+                                     const uint64_t vu1Fbrst = onVu1Worker ? vu1domain::currentItemFbrst() : cpuContext->vu0_fbrst;
                                      m_vu1.state().dBitEnabled =
-                                         (cpuContext->vu0_fbrst & (1u << 10)) != 0u;
+                                         (vu1Fbrst & (1u << 10)) != 0u;
                                      m_vu1.state().tBitEnabled =
-                                         (cpuContext->vu0_fbrst & (1u << 11)) != 0u;
+                                         (vu1Fbrst & (1u << 11)) != 0u;
                                      static const bool s_traceVu = ps2x::knob("PS2X_TRACE_VU") != nullptr;   // was a getenv on every VU1 microprogram start
                                      if (s_traceVu)
                                      {
@@ -771,34 +810,45 @@ bool PS2Runtime::syncCoreSubsystems()
                                      m_vu1.executeProgram(m_memory.getVU1Code(), PS2_VU1_CODE_SIZE,
                                                           m_memory.getVU1Data(), PS2_VU1_DATA_SIZE,
                                                           m_gs, &m_memory, startPC, top, itop);
-                                     cpuContext->vu0_vpu_stat =
-                                         (cpuContext->vu0_vpu_stat & ~0x0600u) |
-                                         (m_vu1.state().stoppedByD ? 0x0200u : 0u) |
-                                         (m_vu1.state().stoppedByT ? 0x0400u : 0u); });
+                                     const uint32_t vu1Stop = (m_vu1.state().stoppedByD ? 0x0200u : 0u) |
+                                                              (m_vu1.state().stoppedByT ? 0x0400u : 0u);
+                                     if (onVu1Worker)
+                                         vu1domain::noteVpuStop(vu1Stop);
+                                     else
+                                         cpuContext->vu0_vpu_stat = (cpuContext->vu0_vpu_stat & ~0x0600u) | vu1Stop; });
     m_memory.setVu1MscntCallback([this](uint32_t top, uint32_t itop)
                                  {
-                                     R5900Context *cpuContext = m_eeScheduler ? m_eeScheduler->currentContext() : nullptr;
-                                     if (!cpuContext)
+                                     // macOS fork, the VU1 worker (Part 2 Task 6): on the worker the live EE context is
+                                     // not touched -- the D/T enables come from the kick's captured vu0_fbrst, and the
+                                     // stop bits go to the domain, merged into the context on the game thread at a drain.
+                                     const bool onVu1Worker = vu1domain::onWorker();
+                                     R5900Context *cpuContext =
+                                         onVu1Worker ? nullptr : (m_eeScheduler ? m_eeScheduler->currentContext() : nullptr);
+                                     if (!cpuContext && !onVu1Worker)
                                      {
                                          cpuContext = &m_cpuContext;
                                      }
+                                     const uint64_t vu1Fbrst = onVu1Worker ? vu1domain::currentItemFbrst() : cpuContext->vu0_fbrst;
                                      m_vu1.state().dBitEnabled =
-                                         (cpuContext->vu0_fbrst & (1u << 10)) != 0u;
+                                         (vu1Fbrst & (1u << 10)) != 0u;
                                      m_vu1.state().tBitEnabled =
-                                         (cpuContext->vu0_fbrst & (1u << 11)) != 0u;
+                                         (vu1Fbrst & (1u << 11)) != 0u;
                                      m_vu1.continueProgram(m_memory.getVU1Code(), PS2_VU1_CODE_SIZE,
                                                            m_memory.getVU1Data(), PS2_VU1_DATA_SIZE,
                                                            m_gs, &m_memory, top, itop);
-                                     cpuContext->vu0_vpu_stat =
-                                         (cpuContext->vu0_vpu_stat & ~0x0600u) |
-                                         (m_vu1.state().stoppedByD ? 0x0200u : 0u) |
-                                         (m_vu1.state().stoppedByT ? 0x0400u : 0u); });
+                                     const uint32_t vu1Stop = (m_vu1.state().stoppedByD ? 0x0200u : 0u) |
+                                                              (m_vu1.state().stoppedByT ? 0x0400u : 0u);
+                                     if (onVu1Worker)
+                                         vu1domain::noteVpuStop(vu1Stop);
+                                     else
+                                         cpuContext->vu0_vpu_stat = (cpuContext->vu0_vpu_stat & ~0x0600u) | vu1Stop; });
     resetIop();
     m_vu0.reset();
     m_vu1.reset();
 
     m_boundRdram = rdram;
     m_boundGSVram = gsVram;
+    startVu1Worker(this, &m_gifArbiter);   // macOS fork: PS2X_VU1_THREAD (a no-op when off)
     return true;
 }
 
@@ -2810,6 +2860,7 @@ bool PS2Runtime::restartGuest()
     }
     std::cerr << "[LoadExecPS2] restarting the guest in-process: " << request.elfPath << " as \""
               << request.guestPath << "\" argc=" << request.argv.size() << std::endl;
+    vu1domain::stop();   // macOS fork: drained and stopped before the reset (Review Focus 1)
 
     // The caller has joined the game thread, so the scheduler is idle; the stop stays requested until the
     // new game thread's EeScheduler::reset clears it.
@@ -2906,6 +2957,7 @@ bool PS2Runtime::restartGuest()
     m_guestRestartCount.fetch_add(1u, std::memory_order_acq_rel);
     std::cerr << "[LoadExecPS2] guest restarted at 0x" << std::hex << m_cpuContext.pc << std::dec
               << " (restart " << guestRestartCount() << ")" << std::endl;
+    startVu1Worker(this, &m_gifArbiter);   // macOS fork: PS2X_VU1_THREAD again after the reset
     return true;
 }
 
@@ -3357,6 +3409,7 @@ void PS2Runtime::run()
     UnloadTexture(frameTex);
     stopHostMic();
     ps2_stubs::socom2HostInputShutdown();   // review finding F12: the sampler thread, joined before we go
+        vu1domain::stop();                      // macOS fork: the VU1 worker, drained and joined
     CloseWindow();
 
     RUNTIME_LOG("[run] exiting loop");

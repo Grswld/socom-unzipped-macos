@@ -4,7 +4,9 @@
 #include "runtime/host_thread_qos.h"
 #include "runtime/ps2_guest_clock.h"
 
+#include <algorithm>
 #include <chrono>
+#include <iterator>
 #include <cstdio>
 #include <cstdlib>
 #include <cstring>
@@ -41,6 +43,18 @@ namespace vu1domain
             std::FILE *record = nullptr;
             std::vector<uint8_t> recordBuf;
             std::atomic<uint64_t> drains[int(vu1overlap::SyncKind::Count)] = {};
+            // Stats (game thread, except the two atomics the worker writes).
+            FrameTimes frames;
+            int64_t lastBoundaryNs = 0, windowStartNs = 0;
+            uint64_t items = 0, windowDrains[int(vu1overlap::SyncKind::Count)] = {};
+            int64_t drainWaitNs = 0, backpressureWaitNs = 0;
+            unsigned aheadMax = 0;
+            std::atomic<int64_t> latencyMaxNs{0}, latencyTotalNs{0};
+            std::atomic<uint64_t> latencyCount{0};
+            std::atomic<uint32_t> vpuStop{0};
+            std::atomic<uint64_t> dtStops{0};
+            DrainHookFn drainHook = nullptr;
+            void *drainHookCtx = nullptr;
         };
         State &state()
         {
@@ -71,6 +85,16 @@ namespace vu1domain
             while (s.queue->pop(item, seq))
             {
                 s.apply(item, s.ctx);
+                if (item.kind == vu1work::Kind::FrameMark && item.b != 0)
+                {
+                    const int64_t lat = nowNs() - static_cast<int64_t>(item.b);
+                    s.latencyTotalNs.fetch_add(lat, std::memory_order_relaxed);
+                    s.latencyCount.fetch_add(1, std::memory_order_relaxed);
+                    int64_t prev = s.latencyMaxNs.load(std::memory_order_relaxed);
+                    while (lat > prev && !s.latencyMaxNs.compare_exchange_weak(prev, lat, std::memory_order_relaxed))
+                    {
+                    }
+                }
                 s.queue->markDone(seq, item.kind == vu1work::Kind::FrameMark);
             }
         }
@@ -96,9 +120,11 @@ namespace vu1domain
     void start(const Config &cfg, ApplyFn apply, void *ctx)
     {
         State &s = state();
-        if (enabled() || !cfg.enabled || !apply)
+        if (enabled())
             return;
-        s.cfg = cfg;
+        s.cfg = cfg;   // kept with the worker off too: the frame stats are the A/B baseline
+        if (!cfg.enabled || !apply)
+            return;
         s.apply = apply;
         s.ctx = ctx;
         s.queue = std::make_unique<vu1work::WorkQueue>();
@@ -112,8 +138,16 @@ namespace vu1domain
     void stop()
     {
         State &s = state();
+        // Hooks and probes point into the runtime that installed them: none outlives a stop (the crash of
+        // 2026-10-05: a test runtime's drain hook called after the runtime was gone).
+        s.drainHook = nullptr;
+        s.drainHookCtx = nullptr;
+        setFbrstProbe(nullptr, nullptr);
         if (!enabled())
+        {
+            s.cfg = Config{};
             return;
+        }
         s.queue->waitDone(s.queue->lastPushed());
         detail::enabledFlag().store(false, std::memory_order_release);
         s.queue->close();
@@ -128,6 +162,7 @@ namespace vu1domain
             s.recordBuf.clear();
         }
         s.queue.reset();
+        s.cfg = Config{};
     }
 
     void post(vu1work::WorkItem &&item)
@@ -142,6 +177,7 @@ namespace vu1domain
                 s.recordBuf.clear();
             }
         }
+        ++s.items;
         s.queue->push(std::move(item));
     }
 
@@ -150,21 +186,92 @@ namespace vu1domain
         State &s = state();
         const int64_t t0 = nowNs();
         s.queue->waitDone(s.queue->lastPushed());
-        excludeFromGuestClock(nowNs() - t0);
+        const int64_t waited = nowNs() - t0;
+        excludeFromGuestClock(waited);
+        s.drainWaitNs += waited;
         s.drains[int(why)].fetch_add(1, std::memory_order_relaxed);
+        ++s.windowDrains[int(why)];
+        if (s.drainHook)
+            s.drainHook(s.drainHookCtx);
     }
 
     void frameBoundary()
     {
+        State &s = state();
+        const int64_t now = nowNs();
+        if (s.cfg.stats)
+        {
+            if (s.lastBoundaryNs != 0)
+                s.frames.add(double(now - s.lastBoundaryNs) / 1e6);
+            s.lastBoundaryNs = now;
+            if (s.windowStartNs == 0)
+                s.windowStartNs = now;
+            if (now - s.windowStartNs >= 5'000'000'000ll && !s.frames.ms.empty())
+            {
+                const double secs = double(now - s.windowStartNs) / 1e9;
+                const double n = double(s.frames.ms.size());
+                const uint64_t lc = s.latencyCount.exchange(0);
+                const int64_t lt = s.latencyTotalNs.exchange(0);
+                const int64_t lm = s.latencyMaxNs.exchange(0);
+                using K = vu1overlap::SyncKind;
+                std::fprintf(stderr,
+                             "[vu1-worker] on=%d frames=%zu frame_ms p50=%.1f p95=%.1f p99=%.1f items=%.0f/s drains "
+                             "vif1=%.2f dmactl=%.2f gif=%.2f other=%.2f /frame drain_wait=%.1f backpressure_wait=%.1f ms/s "
+                             "ahead_max=%u latency mean=%.1f max=%.1f ms dt_stops=%llu\n",
+                             enabled() ? 1 : 0, s.frames.ms.size(), s.frames.percentile(50), s.frames.percentile(95),
+                             s.frames.percentile(99), double(s.items) / secs, double(s.windowDrains[int(K::Vif1Reg)]) / n,
+                             double(s.windowDrains[int(K::DmaCtl)]) / n, double(s.windowDrains[int(K::GifReg)]) / n,
+                             double(s.windowDrains[int(K::GsPriv)] + s.windowDrains[int(K::Vu1Mem)]) / n,
+                             double(s.drainWaitNs) / 1e6 / secs, double(s.backpressureWaitNs) / 1e6 / secs, s.aheadMax,
+                             lc ? double(lt) / double(lc) / 1e6 : 0.0, double(lm) / 1e6,
+                             static_cast<unsigned long long>(s.dtStops.load()));
+                s.frames.clear();
+                s.windowStartNs = now;
+                s.items = 0;
+                std::fill(std::begin(s.windowDrains), std::end(s.windowDrains), 0u);
+                s.drainWaitNs = s.backpressureWaitNs = 0;
+                s.aheadMax = 0;
+            }
+        }
         if (!shouldPost())
             return;
-        State &s = state();
         vu1work::WorkItem mark;
         mark.kind = vu1work::Kind::FrameMark;
+        mark.b = static_cast<uint64_t>(now);   // the latency's start (applied: the worker's loop)
         post(std::move(mark));
+        s.aheadMax = std::max(s.aheadMax, s.queue->framesAhead());
         const int64_t t0 = nowNs();
         s.queue->waitFramesAhead(s.cfg.queueFrames);
-        excludeFromGuestClock(nowNs() - t0);
+        const int64_t waited = nowNs() - t0;
+        excludeFromGuestClock(waited);
+        s.backpressureWaitNs += waited;
+        if (s.drainHook)
+            s.drainHook(s.drainHookCtx);
+    }
+
+    void resetFrameStats()
+    {
+        State &s = state();
+        s.frames.clear();
+        s.lastBoundaryNs = 0;
+        s.latencyMaxNs = 0;
+        s.latencyTotalNs = 0;
+        s.latencyCount = 0;
+    }
+    size_t frameStatsCount() { return state().frames.ms.size(); }
+    double frameLatencyMaxMs() { return double(state().latencyMaxNs.load()) / 1e6; }
+
+    void noteVpuStop(uint32_t bits)
+    {
+        state().vpuStop.store(bits, std::memory_order_relaxed);
+        if (bits)
+            state().dtStops.fetch_add(1, std::memory_order_relaxed);
+    }
+    uint32_t pendingVpuStop() { return state().vpuStop.load(std::memory_order_relaxed); }
+    void setDrainHook(DrainHookFn fn, void *ctx)
+    {
+        state().drainHook = fn;
+        state().drainHookCtx = ctx;
     }
 
     uint64_t drainCount(vu1overlap::SyncKind why) { return state().drains[int(why)].load(std::memory_order_relaxed); }

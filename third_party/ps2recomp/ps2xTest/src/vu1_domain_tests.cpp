@@ -1,5 +1,6 @@
 // macOS fork, the VU1 worker Part 2 Task 2: the domain (runtime/vu1_domain.h) driven with a recording ApplyFn.
 #include "MiniTest.h"
+#include "runtime/ps2_guest_clock.h"
 #include "runtime/vu1_domain.h"
 
 #include <atomic>
@@ -7,6 +8,7 @@
 #include <cstdio>
 #include <filesystem>
 #include <fstream>
+#include <string>
 #include <mutex>
 #include <thread>
 #include <vector>
@@ -214,6 +216,79 @@ void register_vu1_domain_tests()
             });
             t.IsTrue(set.enabled, "on");
             t.Equals(set.queueFrames, 1u, "out of range: the default");
+        });
+    });
+
+    MiniTest::Case("Vu1DomainStats", [](TestCase &tc)
+    {
+        tc.Run("frame-time percentiles (nearest rank)", [](TestCase &t)
+        {
+            vu1domain::FrameTimes ft;
+            for (int i = 1; i <= 100; ++i)
+                ft.add(double(i));
+            t.Equals(ft.percentile(50.0), 50.0, "p50");
+            t.Equals(ft.percentile(95.0), 95.0, "p95");
+            t.Equals(ft.percentile(99.0), 99.0, "p99");
+            t.Equals(vu1domain::FrameTimes{}.percentile(99.0), 0.0, "empty");
+        });
+
+        tc.Run("a drain's wait is subtracted from guest time", [](TestCase &t)
+        {
+            resetRecorder();
+            g_rec.sleepMsOnEach = 30;
+            vu1domain::start(on(), recordApply, nullptr);
+            vu1domain::post(item(Kind::GsReg));
+            const int64_t before = ps2GuestClockExcludedNs().load();
+            vu1domain::drain(vu1overlap::SyncKind::Vif1Reg);
+            const int64_t added = ps2GuestClockExcludedNs().load() - before;
+            vu1domain::stop();
+            t.IsTrue(added >= 20'000'000, "at least 20 ms excluded, got " + std::to_string(added));
+        });
+
+        tc.Run("frame times are kept with the worker off too (the A/B baseline)", [](TestCase &t)
+        {
+            vu1domain::Config c;
+            c.stats = true;
+            vu1domain::start(c, recordApply, nullptr);
+            vu1domain::resetFrameStats();
+            for (int i = 0; i < 4; ++i)
+            {
+                vu1domain::frameBoundary();
+                std::this_thread::sleep_for(std::chrono::milliseconds(5));
+            }
+            t.Equals(vu1domain::frameStatsCount(), size_t(3), "three intervals between four boundaries");
+            vu1domain::stop();
+        });
+
+        tc.Run("a frame mark's post-to-applied latency is measured", [](TestCase &t)
+        {
+            resetRecorder();
+            g_rec.sleepMsOnFrameMark = 25;
+            vu1domain::Config c = on(0);
+            c.stats = true;
+            vu1domain::start(c, recordApply, nullptr);
+            vu1domain::resetFrameStats();
+            vu1domain::frameBoundary();
+            vu1domain::stop();
+            t.IsTrue(vu1domain::frameLatencyMaxMs() >= 20.0, "latency at least the frame mark's 25 ms");
+        });
+    });
+
+    MiniTest::Case("Vu1DomainHooks", [](TestCase &tc)
+    {
+        tc.Run("stop clears the drain hook and the fbrst probe (no hook outlives its runtime)", [](TestCase &t)
+        {
+            static int s_hookCalls = 0;
+            s_hookCalls = 0;
+            vu1domain::setDrainHook([](void *) { ++s_hookCalls; }, nullptr);
+            vu1domain::setFbrstProbe([](void *) -> uint64_t { return 0x400u; }, nullptr);
+            vu1domain::stop();   // the worker is off: stop must still drop them
+            t.Equals(vu1domain::eeFbrst(), uint64_t(0), "probe cleared");
+            resetRecorder();
+            vu1domain::start(on(), recordApply, nullptr);
+            vu1domain::drain(vu1overlap::SyncKind::Vif1Reg);
+            vu1domain::stop();
+            t.Equals(s_hookCalls, 0, "the old hook is never called");
         });
     });
 }

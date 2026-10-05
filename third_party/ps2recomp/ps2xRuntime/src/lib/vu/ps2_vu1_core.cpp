@@ -1,3 +1,4 @@
+#include "runtime/vu1_domain.h"   // macOS fork: VU1 worker Part 2
 #include <atomic>
 extern std::atomic<uint64_t> g_xgkickCount;
 extern std::atomic<uint64_t> g_vuInsnCount;
@@ -2992,7 +2993,7 @@ void VU1Interpreter::run(uint8_t *vuCode, uint32_t codeSize,
     m_programPending = !programEnded && !m_stopRequested;
     roundingScope.restore();
     // Guest time must not include the host time this interpreter took (see ps2GuestClockExcludedNs).
-    if (m_unit == Unit::VU1)
+    if (m_unit == Unit::VU1 && !vu1domain::onWorker())   // macOS fork: on the worker VU1 does not stall the EE
     {
         const auto runEnd = std::chrono::steady_clock::now();
         ps2GuestClockExcludedNs().fetch_add(
