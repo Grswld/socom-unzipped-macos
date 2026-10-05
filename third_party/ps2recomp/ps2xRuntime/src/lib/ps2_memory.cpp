@@ -4,6 +4,7 @@
 #include "ps2_log.h"
 #include "ps2x/knobs.h"
 #include "runtime/vu1_overlap_stats.h"   // macOS fork: VU1 worker Task 0
+#include "runtime/vu1_domain.h"          // macOS fork: VU1 worker Part 2
 #include <atomic>
 #include <cstring>
 extern std::atomic<uint64_t> g_vif1EnqCount;
@@ -1015,6 +1016,15 @@ void PS2Memory::write32(uint32_t address, uint32_t value)
 
     if (isGsPrivReg(address))
     {
+        if (vu1domain::shouldPost())   // macOS fork, the VU1 worker (Part 2 Task 3): ordered with the GS work
+        {
+            vu1work::WorkItem it;
+            it.kind = vu1work::Kind::GsPriv32;
+            it.a = address;
+            it.b = value;
+            vu1domain::post(std::move(it));
+            return;
+        }
         uint32_t off = address & 7;
         const uint32_t regOff = (address - PS2_GS_PRIV_REG_BASE) & ~0x7u;
         if (regOff == kGsCsrRegOffset)
@@ -1075,6 +1085,15 @@ void PS2Memory::write64(uint32_t address, uint64_t value)
 
     if (isGsPrivReg(address))
     {
+        if (vu1domain::shouldPost())   // macOS fork, the VU1 worker (Part 2 Task 3): ordered with the GS work
+        {
+            vu1work::WorkItem it;
+            it.kind = vu1work::Kind::GsPriv64;
+            it.a = address;
+            it.b = value;
+            vu1domain::post(std::move(it));
+            return;
+        }
         const uint32_t regOff = (address - PS2_GS_PRIV_REG_BASE) & ~0x7u;
         if (regOff == kGsCsrRegOffset)
         {
@@ -1180,6 +1199,17 @@ void PS2Memory::write128(uint32_t address, __m128i value)
 
 bool PS2Memory::writeIORegister(uint32_t address, uint32_t value)
 {
+    // macOS fork, the VU1 worker (Part 2 Task 3): VIF1 registers and the VIF1 FIFO belong to the worker while it is on.
+    if (vu1domain::shouldPost() &&
+        ((address >= 0x10003C00u && address < 0x10003E00u) || (address >= 0x10005000u && address < 0x10006000u)))
+    {
+        vu1work::WorkItem it;
+        it.kind = vu1work::Kind::Vif1Reg;
+        it.a = address;
+        it.b = value;
+        vu1domain::post(std::move(it));
+        return true;
+    }
     size_t timerIndex = 0u;
     uint32_t timerOffset = 0u;
     if (decodeEeTimerRegister(address, timerIndex, timerOffset))
@@ -1731,6 +1761,35 @@ bool PS2Memory::writeIORegister(uint32_t address, uint32_t value)
 
 void PS2Memory::processPendingTransfers()
 {
+    // macOS fork, the VU1 worker (plan Part 2 Task 3): with PS2X_VU1_THREAD on, the GS-bound work below is posted in
+    // the order it would have run -- the PATH3 chunks, then (VIF0 stays inline: it feeds the EE's VU0) the VIF1
+    // chunks, then the arbiter's drain -- each item owning a copy of its bytes, because the game may free a packet
+    // right after the kick (GS.cpp's sceGs* stubs do). Off, every call below goes straight through as before.
+    const bool vu1Post = vu1domain::shouldPost();
+    auto gifOut = [&](const uint8_t *d, uint32_t n) {
+        if (!vu1Post)
+        {
+            submitGifPacket(GifPathId::Path3, d, n, false);
+            return;
+        }
+        vu1work::WorkItem it;
+        it.kind = vu1work::Kind::GifPath3;
+        it.bytes.assign(d, d + n);
+        vu1domain::post(std::move(it));
+    };
+    auto vif1Out = [&](const uint8_t *d, uint32_t n) {
+        if (!vu1Post)
+        {
+            processVIF1Data(d, n);
+            return;
+        }
+        vu1work::WorkItem it;
+        it.kind = vu1work::Kind::Vif1Data;
+        it.b = vu1domain::eeFbrst();
+        it.bytes.assign(d, d + n);
+        vu1domain::post(std::move(it));
+    };
+
     const bool hadGif = !m_pendingGifTransfers.empty();
     for (size_t idx = 0; idx < m_pendingGifTransfers.size(); ++idx)
     {
@@ -1739,7 +1798,7 @@ void PS2Memory::processPendingTransfers()
         {
             m_seenGifCopy = true;
             m_gifCopyCount.fetch_add(1, std::memory_order_relaxed);
-            submitGifPacket(GifPathId::Path3, p.chainData.data(), static_cast<uint32_t>(p.chainData.size()), false);
+            gifOut(p.chainData.data(), static_cast<uint32_t>(p.chainData.size()));
         }
         else if (p.qwc > 0)
         {
@@ -1768,7 +1827,7 @@ void PS2Memory::processPendingTransfers()
                         break;
                     m_seenGifCopy = true;
                     m_gifCopyCount.fetch_add(1, std::memory_order_relaxed);
-                    submitGifPacket(GifPathId::Path3, m_scratchpad + srcPhys, chunk, false);
+                    gifOut(m_scratchpad + srcPhys, chunk);
                     bytesLeft -= chunk;
                     srcPhys += chunk;
                 }
@@ -1787,7 +1846,7 @@ void PS2Memory::processPendingTransfers()
                         break;
                     m_seenGifCopy = true;
                     m_gifCopyCount.fetch_add(1, std::memory_order_relaxed);
-                    submitGifPacket(GifPathId::Path3, m_rdram + srcPhys, chunk, false);
+                    gifOut(m_rdram + srcPhys, chunk);
                     bytesLeft -= chunk;
                     srcPhys += chunk;
                 }
@@ -1862,7 +1921,7 @@ void PS2Memory::processPendingTransfers()
     {
         if (!p.chainData.empty())
         {
-            processVIF1Data(p.chainData.data(), static_cast<uint32_t>(p.chainData.size()));
+            vif1Out(p.chainData.data(), static_cast<uint32_t>(p.chainData.size()));
         }
         else if (p.qwc > 0)
         {
@@ -1889,7 +1948,7 @@ void PS2Memory::processPendingTransfers()
                         chunk = PS2_SCRATCHPAD_SIZE - srcPhys;
                     if (chunk == 0)
                         break;
-                    processVIF1Data(m_scratchpad + srcPhys, chunk);
+                    vif1Out(m_scratchpad + srcPhys, chunk);
                     bytesLeft -= chunk;
                     srcPhys += chunk;
                 }
@@ -1906,7 +1965,7 @@ void PS2Memory::processPendingTransfers()
                         chunk = PS2_RAM_SIZE - srcPhys;
                     if (chunk == 0)
                         break;
-                    processVIF1Data(srcPhys, chunk);
+                    vif1Out(m_rdram + srcPhys, chunk);
                     bytesLeft -= chunk;
                     srcPhys += chunk;
                 }
@@ -1918,7 +1977,16 @@ void PS2Memory::processPendingTransfers()
             vu1overlap::addVif1(vu1overlap::nowNs() - overlapStart, overlapProbe);   // VU1 worker Task 0
     
     if (m_gifArbiter)
-        m_gifArbiter->drain();
+    {
+        if (vu1Post)
+        {
+            vu1work::WorkItem it;
+            it.kind = vu1work::Kind::ArbiterDrain;
+            vu1domain::post(std::move(it));
+        }
+        else
+            m_gifArbiter->drain();
+    }
 
     static constexpr uint32_t GIF_CHANNEL = 0x1000A000;
     static constexpr uint32_t VIF0_CHANNEL = 0x10008000;
@@ -2206,6 +2274,8 @@ void PS2Memory::processGIFPacket(const uint8_t *data, uint32_t sizeBytes)
 // bit-31 TADR back as 0x7000xxxx rather than 0x8000xxxx. Both are recorded, not fixed (Sprint 13 U7 review).
 bool PS2Memory::tryProcessNativeGifImageUploadChain(GS &gs, uint32_t tadr, uint32_t chcr)
 {
+    if (vu1domain::shouldPost())   // macOS fork, the VU1 worker: the generic path posts (upstream tests: same output)
+        return false;
     static constexpr uint32_t GIF_CHANNEL = 0x1000A000u;
     static constexpr uint32_t D_STAT = 0x1000E010u;
     static constexpr uint32_t D_CTRL = 0x1000E000u;
@@ -2399,6 +2469,8 @@ bool PS2Memory::tryProcessNativeGifImageUploadChain(GS &gs, uint32_t tadr, uint3
 
 bool PS2Memory::tryProcessNativeGifPackedChain(GS &gs, uint32_t tadr, uint32_t chcr)
 {
+    if (vu1domain::shouldPost())   // macOS fork, the VU1 worker: the generic path posts (upstream tests: same output)
+        return false;
     static constexpr uint32_t GIF_CHANNEL = 0x1000A000u;
     static constexpr uint32_t D_STAT = 0x1000E010u;
     static constexpr uint32_t D_CTRL = 0x1000E000u;

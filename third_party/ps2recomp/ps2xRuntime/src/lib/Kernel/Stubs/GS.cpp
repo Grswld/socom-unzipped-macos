@@ -1,3 +1,4 @@
+#include "runtime/vu1_domain_apply.h"   // macOS fork: VU1 worker Part 2
 #include <iostream>
 #include "Common.h"
 #include "GS.h"
@@ -121,12 +122,12 @@ namespace ps2_stubs
                 return;
             }
 
-            runtime->gs().writeRegister(static_cast<uint8_t>(clear.testa.reg & 0xFFu), clear.testa.value);
-            runtime->gs().writeRegister(static_cast<uint8_t>(clear.prim.reg & 0xFFu), clear.prim.value);
-            runtime->gs().writeRegister(static_cast<uint8_t>(clear.rgbaq.reg & 0xFFu), clear.rgbaq.value);
-            runtime->gs().writeRegister(static_cast<uint8_t>(clear.xyz2a.reg & 0xFFu), clear.xyz2a.value);
-            runtime->gs().writeRegister(static_cast<uint8_t>(clear.xyz2b.reg & 0xFFu), clear.xyz2b.value);
-            runtime->gs().writeRegister(static_cast<uint8_t>(clear.testb.reg & 0xFFu), clear.testb.value);
+            vu1domain::gsWriteRegister(runtime->gs(), static_cast<uint8_t>(clear.testa.reg & 0xFFu), clear.testa.value);   // macOS fork: VU1 worker
+            vu1domain::gsWriteRegister(runtime->gs(), static_cast<uint8_t>(clear.prim.reg & 0xFFu), clear.prim.value);   // macOS fork: VU1 worker
+            vu1domain::gsWriteRegister(runtime->gs(), static_cast<uint8_t>(clear.rgbaq.reg & 0xFFu), clear.rgbaq.value);   // macOS fork: VU1 worker
+            vu1domain::gsWriteRegister(runtime->gs(), static_cast<uint8_t>(clear.xyz2a.reg & 0xFFu), clear.xyz2a.value);   // macOS fork: VU1 worker
+            vu1domain::gsWriteRegister(runtime->gs(), static_cast<uint8_t>(clear.xyz2b.reg & 0xFFu), clear.xyz2b.value);   // macOS fork: VU1 worker
+            vu1domain::gsWriteRegister(runtime->gs(), static_cast<uint8_t>(clear.testb.reg & 0xFFu), clear.testb.value);   // macOS fork: VU1 worker
         }
 
         void refreshPacketBuilderPendingCount(uint8_t *rdram, PS2Runtime *runtime, uint32_t stateAddr);
@@ -1205,7 +1206,7 @@ namespace ps2_stubs
             if (hasSeededGsClearPacket(db.clear0))
             {
                 const uint32_t clearContext = static_cast<uint32_t>((db.clear0.prim.value >> 9) & 0x1u);
-                runtime->gs().clearFramebufferContext(clearContext, static_cast<uint32_t>(db.clear0.rgbaq.value));
+                vu1domain::gsClearFramebufferContext(runtime->gs(), clearContext, static_cast<uint32_t>(db.clear0.rgbaq.value));
             }
             applyGsClearPacket(runtime, db.clear0);
         }
@@ -1216,7 +1217,7 @@ namespace ps2_stubs
             if (hasSeededGsClearPacket(db.clear1))
             {
                 const uint32_t clearContext = static_cast<uint32_t>((db.clear1.prim.value >> 9) & 0x1u);
-                runtime->gs().clearFramebufferContext(clearContext, static_cast<uint32_t>(db.clear1.rgbaq.value));
+                vu1domain::gsClearFramebufferContext(runtime->gs(), clearContext, static_cast<uint32_t>(db.clear1.rgbaq.value));
             }
             applyGsClearPacket(runtime, db.clear1);
         }

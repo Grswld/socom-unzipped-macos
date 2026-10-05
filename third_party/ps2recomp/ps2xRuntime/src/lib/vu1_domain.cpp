@@ -168,4 +168,16 @@ namespace vu1domain
     }
 
     uint64_t drainCount(vu1overlap::SyncKind why) { return state().drains[int(why)].load(std::memory_order_relaxed); }
+
+    namespace
+    {
+        FbrstFn g_fbrstFn = nullptr;
+        void *g_fbrstCtx = nullptr;
+    }
+    void setFbrstProbe(FbrstFn fn, void *ctx)
+    {
+        g_fbrstFn = fn;
+        g_fbrstCtx = ctx;
+    }
+    uint64_t eeFbrst() { return g_fbrstFn ? g_fbrstFn(g_fbrstCtx) : 0u; }
 }

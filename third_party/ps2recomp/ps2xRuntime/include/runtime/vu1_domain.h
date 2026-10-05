@@ -40,4 +40,10 @@ namespace vu1domain
     void frameBoundary();                   // posts a FrameMark, then waits while more than queueFrames are in flight
 
     uint64_t drainCount(vu1overlap::SyncKind why);
+
+    // The EE's vu0_fbrst (VU1 D/T enables) at a VIF1 kick, captured into the Vif1Data item so the worker never reads
+    // the live EE context. The runtime installs the probe; without one it is 0.
+    using FbrstFn = uint64_t (*)(void *ctx);
+    void setFbrstProbe(FbrstFn fn, void *ctx);
+    uint64_t eeFbrst();
 }

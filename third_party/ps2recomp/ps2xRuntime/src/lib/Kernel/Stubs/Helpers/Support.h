@@ -1,3 +1,4 @@
+#include "runtime/vu1_domain_apply.h"   // macOS fork: VU1 worker Part 2
 #include <algorithm>
 #include <atomic>
 #include <cctype>
@@ -1981,7 +1982,7 @@ namespace
             return;
         for (size_t i = 0; i < pairCount; ++i)
         {
-            runtime->gs().writeRegister(static_cast<uint8_t>(pairs[i].reg & 0xFFu), pairs[i].value);
+            vu1domain::gsWriteRegister(runtime->gs(), static_cast<uint8_t>(pairs[i].reg & 0xFFu), pairs[i].value);   // macOS fork: VU1 worker
         }
     }
 

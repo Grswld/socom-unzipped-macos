@@ -6,6 +6,7 @@
 #include "runtime/gs/gs_frontend.h"
 #include "runtime/gs/ps2_gif_arbiter.h"
 #include "runtime/ps2_memory.h"
+#include "runtime/vu1_domain.h"
 
 namespace vu1domain
 {
@@ -51,5 +52,41 @@ namespace vu1domain
         case vu1work::Kind::FrameMark:
             break;
         }
+    }
+
+    void gsWriteRegister(GS &gs, uint8_t reg, uint64_t value)
+    {
+        if (!shouldPost())
+        {
+            gs.writeRegister(reg, value);
+            return;
+        }
+        vu1work::WorkItem it;
+        it.kind = vu1work::Kind::GsReg;
+        it.a = reg;
+        it.b = value;
+        post(std::move(it));
+    }
+
+    bool gsClearFramebufferContext(GS &gs, uint32_t context, uint32_t rgba)
+    {
+        if (!shouldPost())
+            return gs.clearFramebufferContext(context, rgba);
+        vu1work::WorkItem it;
+        it.kind = vu1work::Kind::ClearFb;
+        it.a = context;
+        it.b = rgba;
+        post(std::move(it));
+        return true;
+    }
+
+    bool postGuestFrameBoundary()
+    {
+        if (!shouldPost())
+            return false;
+        vu1work::WorkItem it;
+        it.kind = vu1work::Kind::GuestFrameBoundary;
+        post(std::move(it));
+        return true;
     }
 }

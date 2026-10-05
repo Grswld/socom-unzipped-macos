@@ -17,5 +17,11 @@ namespace vu1domain
         GifArbiter *arbiter = nullptr;
     };
     void applyItem(const vu1work::WorkItem &item, void *ctx);   // ctx: ApplyTarget*
-    uint64_t currentItemFbrst();   // on the worker: the EE's vu0_fbrst captured with the Vif1Data item being applied
+    uint64_t currentItemFbrst();
+
+    // The stubs' direct GS calls (GS.cpp, Support.h): posted while the worker is on, called through otherwise.
+    void gsWriteRegister(GS &gs, uint8_t reg, uint64_t value);
+    bool gsClearFramebufferContext(GS &gs, uint32_t context, uint32_t rgba);
+    // EeScheduler's VBlank frame mark: true when it was posted (the caller then skips its own call and its wait).
+    bool postGuestFrameBoundary();   // on the worker: the EE's vu0_fbrst captured with the Vif1Data item being applied
 }

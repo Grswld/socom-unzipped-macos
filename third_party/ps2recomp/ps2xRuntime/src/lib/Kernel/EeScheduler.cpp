@@ -1,3 +1,4 @@
+#include "runtime/vu1_domain_apply.h"   // macOS fork: VU1 worker Part 2
 #include <cstdlib>
 #include <cstdio>
 #include <string>
@@ -2221,7 +2222,9 @@ void EeScheduler::processDueDeadlines()
                 auto anchor = scheduled.hostDeadline;
                 uint64_t cycleAnchor = scheduled.deadlineCycle;
                 const auto boundaryStart = std::chrono::steady_clock::now();
-                if (m_runtime.gs().guestFrameBoundary())
+                // macOS fork, the VU1 worker: posted in order with the GS work; the GL backpressure then waits on the
+                // worker, not here (the queue bounds the game thread at sceGsSyncV instead).
+                if (!vu1domain::postGuestFrameBoundary() && m_runtime.gs().guestFrameBoundary())
                 {
                     const auto boundaryEnd = std::chrono::steady_clock::now();
                     ps2GuestClockExcludedNs().fetch_add(
