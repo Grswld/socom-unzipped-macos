@@ -11,6 +11,7 @@
 #include "runtime/gs/gs_readback_stats.h"   // macOS fork: readback attribution
 #include "runtime/vu1_domain_apply.h"
 #include "runtime/host_thread_qos.h"   // macOS fork: the game thread on the performance cores
+#include "socom2_mouse.h"               // macOS fork: the mouse
 #include "runtime/ps2_window_size.h"
 #include "ps2_log.h"
 #include "ps2_stubs.h"
@@ -3200,6 +3201,7 @@ void PS2Runtime::run()
         }
 
         const LoopClock::time_point drawStart = s_loopPhases ? LoopClock::now() : LoopClock::time_point{};
+        ps2_stubs::socom2MouseFrame();   // macOS fork: cursor capture and the mouse buttons (socom2_mouse.h)
         BeginDrawing();
         ClearBackground(BLACK);
         const float srcWidth = static_cast<float>(std::max<uint32_t>(1u, presentWidth));

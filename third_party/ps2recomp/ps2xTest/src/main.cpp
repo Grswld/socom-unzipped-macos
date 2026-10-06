@@ -70,6 +70,7 @@ void register_vu1_spsc_ring_tests();   // macOS fork: VU1 worker Part 3
 void register_guest_heap_equivalence_tests();   // macOS fork
 void register_gs_readback_stats_tests();   // macOS fork
 void register_gs_cpu_span_write_tests();   // macOS fork     // runtime/socom2_msg_bounds.h
+void register_socom2_mouse_tests();   // macOS fork: mouse look and aim-hold
 void reset_ps2_test_function_table();
 
 namespace
@@ -178,6 +179,7 @@ int main()
     register_guest_heap_equivalence_tests();
     register_gs_readback_stats_tests();
     register_gs_cpu_span_write_tests();
+    register_socom2_mouse_tests();
     int res = MiniTest::Run();
     std::cout.flush();
     std::cerr.flush();

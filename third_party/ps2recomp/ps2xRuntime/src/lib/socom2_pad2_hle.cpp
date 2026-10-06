@@ -80,7 +80,7 @@ namespace ps2_stubs
         const uint32_t buf = GPR_U32(ctx, 5) & PS2_RAM_MASK;
         vu1domain::notePadRead();   // macOS fork: input-to-display latency (PS2X_VU1_WORKER_STATS)
         if (socom2PadEnabled())
-            socom2HostInputPoll(g_socom2Pad);
+            socom2HostInputPoll(g_socom2Pad, rdram);
         uint8_t report[32] = {0};
         report[0] = 0x00;
         report[1] = 0x79;                   // DS2 analog + pressure mode

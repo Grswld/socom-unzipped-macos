@@ -66,6 +66,7 @@ add_library(ps2_test_lib STATIC
     src/guest_heap_equivalence_tests.cpp   # macOS fork: VU1 worker Part 3, the allocator
     src/gs_readback_stats_tests.cpp   # macOS fork: VU1 worker Part 3, readback attribution
     src/gs_cpu_span_write_tests.cpp   # macOS fork: VU1 worker Part 3, the readback cost
+    src/socom2_mouse_tests.cpp   # macOS fork: mouse look and aim-hold
     src/ps2_vu_tests.cpp
     src/ps2_gs_tests.cpp
     src/gs_frame_backpressure_tests.cpp
@@ -185,6 +186,8 @@ target_sources(ps2x_tests PRIVATE
 # now calls its socom2HostInputShutdown(); pad_input_tests.cpp drives that shutdown directly.
 target_sources(ps2x_tests PRIVATE
     ${CMAKE_SOURCE_DIR}/ps2xRuntime/src/lib/socom2_host_input.cpp
+    ${CMAKE_SOURCE_DIR}/ps2xRuntime/src/lib/socom2_mouse.cpp
+    ${CMAKE_SOURCE_DIR}/ps2xRuntime/src/lib/socom2_mouse_gc_stub.cpp
 )
 target_include_directories(ps2x_tests PRIVATE ${CMAKE_SOURCE_DIR}/ps2xRuntime/src/lib)
 if(WIN32)
