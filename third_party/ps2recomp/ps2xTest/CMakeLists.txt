@@ -66,6 +66,7 @@ add_library(ps2_test_lib STATIC
     src/guest_heap_equivalence_tests.cpp   # macOS fork: VU1 worker Part 3, the allocator
     src/gs_readback_stats_tests.cpp   # macOS fork: VU1 worker Part 3, readback attribution
     src/gs_cpu_span_write_tests.cpp   # macOS fork: VU1 worker Part 3, the readback cost
+    src/vblank_period_tests.cpp   # macOS fork: PS2X_VBLANK_NTSC
     src/socom2_mouse_tests.cpp   # macOS fork: mouse look and aim-hold
     src/ps2_vu_tests.cpp
     src/ps2_gs_tests.cpp
