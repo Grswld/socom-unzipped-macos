@@ -98,6 +98,13 @@ namespace vu1domain
     // completes at sceGsSyncV (worker off) or when the worker applies its frame mark (worker on); at every host present
     // the newest completed frame not yet presented gives one sample: now - its first pad read.
     void notePadRead();                     // game thread (scePad2Read)
+    // sceGsSyncV's exit, on the VBlank grid: an "E,frame,t_ms,vsync_tick,caller_ra,game_dt_ms,t0_entry,t0_exit" row. A game
+    // frame is ONE OR TWO sceGsSyncV calls (SOCOM II's zVid_Swap: a limiter wait, then the frame's own), so frame times
+    // come from the exits of the caller's final call, and VBlanks from their ticks. game_dt_ms: what the game measured
+    // for its frame on T0 (the caller passes it; NaN when unknown).
+    // t0Entry/t0Exit: EE timer 0's COUNT at the call and at the resume (the game paces on T0 % 525).
+    void noteSyncVExit(uint64_t vsyncTick, uint32_t callerRa, float gameDtMs, uint32_t t0Entry = 0, uint32_t t0Exit = 0);
+    bool frameLogOn();
     void notePresent();                     // main thread, after EndDrawing
     std::vector<double> latencySamples();   // ms, since resetFrameStats
 

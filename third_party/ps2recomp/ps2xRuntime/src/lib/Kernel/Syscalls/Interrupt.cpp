@@ -94,6 +94,13 @@ namespace ps2_syscalls
         ee.waitVSync(ee.currentVSyncTick(), fixedResult);
     }
 
+    void WaitVSyncTick(uint8_t *rdram, R5900Context *ctx, PS2Runtime *runtime, int fixedResult,
+                       std::function<void(R5900Context &)> completion)
+    {
+        EeScheduler &ee = scheduler(rdram, ctx, runtime);
+        ee.waitVSync(ee.currentVSyncTick(), fixedResult, std::move(completion));
+    }
+
     void SetVSyncFlag(uint8_t *rdram, R5900Context *ctx, PS2Runtime *runtime)
     {
         const uint32_t flagAddress = getRegU32(ctx, 4);

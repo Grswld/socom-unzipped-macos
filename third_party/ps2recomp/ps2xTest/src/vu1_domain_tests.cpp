@@ -424,4 +424,32 @@ void register_vu1_domain_tests()
             t.Equals(l, 3, "three presents of three completed frames");
         });
     });
+
+    MiniTest::Case("Vu1DomainFrameLogExit", [](TestCase &tc)
+    {
+        tc.Run("each sceGsSyncV exit writes an E row with its VSync tick", [](TestCase &t)
+        {
+            const std::string path = "vu1_frame_log_exit_test.csv";
+            std::remove(path.c_str());
+            vu1domain::Config c;
+            c.stats = true;
+            c.frameLogPath = path;
+            vu1domain::start(c, recordApply, nullptr);
+            vu1domain::resetFrameStats();
+            vu1domain::frameBoundary();
+            vu1domain::noteSyncVExit(5, 0x3aff80u, 10.0f);
+            vu1domain::frameBoundary();
+            vu1domain::noteSyncVExit(7, 0x3b00a4u, 12.5f, 480u, 3u);
+            vu1domain::stop();
+            std::ifstream in(path);
+            std::string line;
+            std::vector<std::string> e;
+            while (std::getline(in, line))
+                if (line.rfind("E,", 0) == 0)
+                    e.push_back(line);
+            std::remove(path.c_str());
+            t.Equals(e.size(), size_t(2), "two exits");
+            t.IsTrue(e.size() == 2 && e[1].find(",7,003b00a4,12.500,480,3") != std::string::npos, "tick 7, its caller, the game's dt: " + (e.size() == 2 ? e[1] : std::string()));
+        });
+    });
 }

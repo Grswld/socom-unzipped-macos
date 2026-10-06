@@ -1,6 +1,7 @@
 #ifndef PS2_SYSCALLS_H
 #define PS2_SYSCALLS_H
 
+#include <functional>
 #include "ps2_runtime.h"
 #include "ps2_call_list.h"
 #include <mutex>
@@ -31,6 +32,9 @@ namespace ps2_syscalls
     void TODO(uint8_t *rdram, R5900Context *ctx, PS2Runtime *runtime, uint32_t encodedSyscallId);
     uint64_t GetCurrentVSyncTick(PS2Runtime *runtime);
     void WaitVSyncTick(uint8_t *rdram, R5900Context *ctx, PS2Runtime *runtime, int fixedResult = -1);
+    // macOS fork: the same wait, with `completion` run as the thread resumes (the wait never returns to the caller).
+    void WaitVSyncTick(uint8_t *rdram, R5900Context *ctx, PS2Runtime *runtime, int fixedResult,
+                       std::function<void(R5900Context &)> completion);
 }
 
 #endif // PS2_SYSCALLS_H

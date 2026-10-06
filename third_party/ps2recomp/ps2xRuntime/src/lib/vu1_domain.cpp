@@ -170,7 +170,8 @@ namespace vu1domain
             if ((s.frameLog = std::fopen(cfg.frameLogPath.c_str(), "w")))
                 std::fprintf(s.frameLog, "# vu1 frame log: worker=%d queue_frames=%u\n"
                                          "# F,frame,t_ms,interval_ms,backpressure_ms,readbacks,vu1_programs\n"
-                                         "# L,t_ms,input_latency_ms\n",
+                                         "# L,t_ms,input_latency_ms\n"
+                                         "# E,frame,t_ms,vsync_tick,caller_ra,game_dt_ms,t0_entry,t0_exit (sceGsSyncV's exit)\n",
                              cfg.enabled ? 1 : 0, cfg.queueFrames);
         }
         if (!cfg.enabled || !apply)
@@ -400,6 +401,24 @@ namespace vu1domain
             return;
         s.padFrame = s.frameIndex;
         s.padTime[s.frameIndex % 64].store(nowNs(), std::memory_order_release);
+    }
+
+    bool frameLogOn()
+    {
+        State &s = state();
+        std::lock_guard<std::mutex> lock(s.frameLogMutex);
+        return s.frameLog != nullptr;
+    }
+
+    void noteSyncVExit(uint64_t vsyncTick, uint32_t callerRa, float gameDtMs, uint32_t t0Entry, uint32_t t0Exit)
+    {
+        State &s = state();
+        if (!s.cfg.stats)
+            return;
+        std::lock_guard<std::mutex> lock(s.frameLogMutex);
+        if (s.frameLog)
+            std::fprintf(s.frameLog, "E,%llu,%.3f,%llu,%08x,%.3f,%u,%u\n", (unsigned long long)s.frameIndex,
+                         double(nowNs()) / 1e6, (unsigned long long)vsyncTick, callerRa, double(gameDtMs), t0Entry, t0Exit);
     }
 
     void notePresent()

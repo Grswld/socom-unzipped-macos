@@ -1325,10 +1325,26 @@ namespace ps2_stubs
     {
         g_gsSyncVCount.fetch_add(1, std::memory_order_relaxed);
         vu1domain::frameBoundary();   // macOS fork, the VU1 worker: the frame mark, backpressure and frame times
-        ps2_syscalls::WaitVSyncTick(rdram,
-                                    ctx,
-                                    runtime,
-                                    gsRuntimeStateFor(runtime).gparam.interlace != 0u ? -1 : 1);
+        const int fixedResult = gsRuntimeStateFor(runtime).gparam.interlace != 0u ? -1 : 1;
+        if (!vu1domain::frameLogOn())
+        {
+            ps2_syscalls::WaitVSyncTick(rdram, ctx, runtime, fixedResult);
+            return;
+        }
+        // macOS fork: VBlanks per game frame, logged as the thread resumes (waitVSync blocks the thread and never returns
+        // here). On r0001 zVid_Swap stores its T0-measured frame time (seconds, a float) at 0x4A44A4 in its final call's
+        // delay slot (recomp/output/zVid_Swap_0x3aff30.cpp, 0x3b00a0); other images log it too, meaning nothing there.
+        const uint32_t callerRa = getRegU32(ctx, 31);
+        const uint32_t t0Entry = runtime->memory().read32(0x10000000u) & 0xFFFFu;   // T0 COUNT
+        ps2_syscalls::WaitVSyncTick(rdram, ctx, runtime, fixedResult, [rdram, runtime, callerRa, t0Entry](R5900Context &) {
+            uint32_t bits = 0;
+            if (rdram)
+                std::memcpy(&bits, rdram + 0x4A44A4u, 4);
+            float gameDt;
+            std::memcpy(&gameDt, &bits, 4);
+            vu1domain::noteSyncVExit(runtime->eeScheduler().currentVSyncTick(), callerRa, gameDt * 1000.0f, t0Entry,
+                                     runtime->memory().read32(0x10000000u) & 0xFFFFu);
+        });
     }
 
     void sceGsSyncVCallback(uint8_t *rdram, R5900Context *ctx, PS2Runtime *runtime)
