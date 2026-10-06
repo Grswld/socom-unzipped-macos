@@ -5,6 +5,7 @@
 #include <atomic>
 #include <chrono>
 #include <cstring>
+#include <string>
 #include <thread>
 #include <vector>
 
@@ -202,6 +203,62 @@ void register_vu1_spsc_ring_tests()
             ring.waitFramesAhead(0);
             ring.waitDone(ring.lastPushed());
             t.IsTrue(true, "no hang");
+        });
+
+        // The run-3 freeze of 2026-10-05 (PS2X_VU1_QUEUE_FRAMES=0): the game thread waits for 0 frames ahead after
+        // every frame mark, so the mark is the last item and no later release can rescue a missed wake-up.
+        tc.Run("no lost wake-up: waitFramesAhead(0) after every frame mark, 300,000 times", [](TestCase &t)
+        {
+            SpscRing ring(1024, 1 << 20);
+            std::thread consumer([&] {
+                ItemView v;
+                uint64_t seq;
+                while (ring.pop(v, seq))
+                {
+                    if (v.kind == Kind::FrameMark)   // long enough that the producer reaches its sleep path
+                    {
+                        const auto until = std::chrono::steady_clock::now() + std::chrono::microseconds(3);
+                        while (std::chrono::steady_clock::now() < until)
+                        {
+                        }
+                    }
+                    ring.release(seq, v.kind == Kind::FrameMark);
+                }
+            });
+            std::atomic<uint64_t> rounds{0};
+            std::atomic<bool> producerDone{false};
+            std::thread producer([&] {
+                for (int i = 0; i < 300000; ++i)
+                {
+                    ring.push(Kind::GsReg, 0, 0, nullptr, 0);
+                    ring.push(Kind::FrameMark, 0, 0, nullptr, 0);
+                    ring.waitFramesAhead(0);
+                    rounds.fetch_add(1, std::memory_order_relaxed);
+                }
+                producerDone = true;
+            });
+            bool hung = false;
+            uint64_t last = 0;
+            auto lastMove = std::chrono::steady_clock::now();
+            while (!producerDone)
+            {
+                std::this_thread::sleep_for(std::chrono::milliseconds(20));
+                const uint64_t r = rounds.load();
+                if (r != last)
+                {
+                    last = r;
+                    lastMove = std::chrono::steady_clock::now();
+                }
+                else if (std::chrono::steady_clock::now() - lastMove > std::chrono::seconds(2))
+                {
+                    hung = true;
+                    break;
+                }
+            }
+            ring.close();   // frees a stuck producer (and the consumer) either way
+            producer.join();
+            consumer.join();
+            t.IsTrue(!hung, "the producer never stalls (it stalled after " + std::to_string(last) + " rounds)");
         });
     });
 }

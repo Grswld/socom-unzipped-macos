@@ -7,7 +7,10 @@
 //   - items are invisible until publish(); the domain publishes every 64 items, at batch ends, or at once when the
 //     worker is asleep, and notifies only then;
 //   - the worker sleeps on the published index (std::atomic::wait) behind a sleeping flag, the producer on the released
-//     index behind a waiting flag; the flag and the index are seq_cst on both sides, so no wake-up is lost;
+//     index behind a waiting flag. Each side stores its flag (or index), then a seq_cst FENCE, then loads the other's:
+//     with the fences the two cannot both miss. seq_cst on the atomics alone was not enough -- the producer's ready()
+//     reads m_doneFrames with acquire, and on 2026-10-05 a PS2X_VU1_QUEUE_FRAMES=0 run froze with every item
+//     released, frames ahead 0, the waiting flag set and the producer's epoch never bumped (read from the hung process);
 //   - the worker reads a payload in place (ItemView) and releases slot and arena strictly in order.
 #include "runtime/vu1_work_queue.h"
 
@@ -111,6 +114,7 @@ namespace vu1work
             if (m_published.load(std::memory_order_relaxed) == m_writeSeq)
                 return;
             m_published.store(m_writeSeq, std::memory_order_seq_cst);
+            std::atomic_thread_fence(std::memory_order_seq_cst);   // pairs with pop()'s: see the class comment
             if (m_consumerSleeping.load(std::memory_order_seq_cst))
                 wake(m_consumerEpoch);
         }
@@ -165,6 +169,7 @@ namespace vu1work
                 // below returns (std::atomic::wait returns only on a changed value -- a bare notify is not enough).
                 const uint32_t epoch = m_consumerEpoch.load(std::memory_order_seq_cst);
                 m_consumerSleeping.store(true, std::memory_order_seq_cst);
+                std::atomic_thread_fence(std::memory_order_seq_cst);   // pairs with publish()'s
                 if (m_published.load(std::memory_order_seq_cst) == m_readSeq && !m_closed.load(std::memory_order_seq_cst))
                     m_consumerEpoch.wait(epoch, std::memory_order_seq_cst);
                 m_consumerSleeping.store(false, std::memory_order_relaxed);
@@ -179,6 +184,7 @@ namespace vu1work
             if (frameMark)
                 m_doneFrames.fetch_add(1, std::memory_order_release);
             m_releasedSeq.store(seq, std::memory_order_seq_cst);
+            std::atomic_thread_fence(std::memory_order_seq_cst);   // pairs with waitProducer()'s
             if (m_producerWaiting.load(std::memory_order_seq_cst))
                 wake(m_producerEpoch);
         }
@@ -243,6 +249,7 @@ namespace vu1work
             {
                 const uint32_t epoch = m_producerEpoch.load(std::memory_order_seq_cst);
                 m_producerWaiting.store(true, std::memory_order_seq_cst);
+                std::atomic_thread_fence(std::memory_order_seq_cst);   // pairs with release()'s
                 if (ready() || m_closed.load(std::memory_order_seq_cst))
                     break;
                 m_producerEpoch.wait(epoch, std::memory_order_seq_cst);
