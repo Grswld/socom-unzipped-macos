@@ -2,12 +2,13 @@
 
 > **Generated -- do not edit.** Written by `python -m tools_py.changelog` from `git log` (R272): every merge commit on the first-parent line of the history it was rendered from, and on the first-parent line of each branch those merges brought in, grouped by the oldest `v*` tag that contains it. `python -m tools_py.changelog --check` exits 1 when this file is stale; regenerate at every merge to a sprint branch (in the merge's follow-up commit) and at the close. The rules are the module's docstring. The reasoning behind a merge is its commit message and the sprint plan's Log; the hand-written log this page replaced is `docs/archive/STATUS-log-to-2026-09-26.md`.
 
-448 merges (81 on the first-parent line, 367 from the branches they merged) in 13 sections: 12 tags and the merges since the newest. Each line: the date, the merge commit, the head of its subject, [the branch it merged]. An indented line came in on the branch the line above it merged.
+449 merges (82 on the first-parent line, 367 from the branches they merged) in 13 sections: 12 tags and the merges since the newest. Each line: the date, the merge commit, the head of its subject, [the branch it merged]. An indented line came in on the branch the line above it merged.
 
 ## Since v0.16.0
 
-223 merges.
+224 merges.
 
+- 2026-10-11 `b16feba2` docs/research/h62, Harry62's work digested and mapped onto ours (R364), reviewed [agent/h62-digest]
 - 2026-10-11 `d3ee58a9` research/89 and the Sprint 19 RE spec (PROPOSED) and plan, Fable-reviewed [agent/s19-spec]
 - 2026-10-11 `1461ee49` the Sprint 17 close doc review's fixes (24 findings), reviewed PASS [agent/s17-close-docs]
 - 2026-10-11 `16116fdc` PR #134, the macOS CI job (R358), into sprint-17; LATER 104 kept beside main's 105 [origin/main, main merged in]
