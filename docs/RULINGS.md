@@ -2,16 +2,18 @@
 
 > **Generated -- do not edit.** Written by `python -m tools_py.rulings` from the ruling records `tools_py/docmaint.py` reads for checks 9 and 10 (`ruling_records()`: the definitions in the plans, the sprint file and `docs/archive/`, the ledger rows and the vacancy notes), plus the sprint-local `S12-R<n>` and `S13-R<n>` definitions in the same documents. Change the source and regenerate; `python -m tools_py.rulings --check` exits 1 when this file is stale. The status rules are the module's docstring; the conventions are `docs/DOC_MAINTENANCE.md` section 4.
 
-395 rulings (356 global, 39 sprint-local): 387 active, 5 superseded, 1 retracted, 1 withdrawn, 1 vacant.
+397 rulings (358 global, 39 sprint-local): 389 active, 5 superseded, 1 retracted, 1 withdrawn, 1 vacant.
 
 *Home* is where the ruling is written: its definition, else its ledger row, else its vacancy note. *The line* is its first sentence, cut at 160 characters.
 
 ## Global (R<n>), newest first
 
-356 rulings.
+358 rulings.
 
 | Number | Date | Status | The line | Home |
 |---|---|---|---|---|
+| R365 | 2026-10-11 | active | the spec is APPROVED with D-a..D-i at their defaults, D-d as R364 amends it, and D-h amended: when the redotcom export (`re/exports/`) is finished it is handed… | `docs/superpowers/plans/2026-10-11-sprint-19-re-foundation.md` **R365** |
+| R364 | 2026-10-11 | active | all of Harry62's work comes into the project, credited as "h62": his raw work (the `.ide`, the return set, the label CSVs, his scripts and object notes) stays… | `docs/superpowers/plans/2026-10-11-sprint-19-re-foundation.md` **R364** |
 | R363 | 2026-10-11 | active | the untracked Codex harness port (`.agents/`, `.codex/`, `AGENTS.md`) is removed. | `docs/superpowers/plans/2026-09-27-sprint-17.md` **R363** |
 | R362 | 2026-10-11 | active | owner rows O21-O30 are struck at the Sprint 17 close under R271's circuit breaker; any one is reopened by its number. | `docs/superpowers/plans/2026-09-27-sprint-17.md` **R362** |
 | R361 | 2026-10-11 | active | Sprint 19's phase-0 research runs as 3-4 parallel Opus agents plus one Fable synthesis review, not a Workflow. | `docs/superpowers/plans/2026-09-27-sprint-17.md` **R361** |
@@ -21,7 +23,7 @@
 | R357 | 2026-10-11 | active | `v0.17.0` and `v0.18.0` are tagged on their close merge commits and pushed, each with its release archives attached to a DRAFT GitHub release; the owner publis… | `docs/superpowers/plans/2026-09-27-sprint-17.md` **R357** |
 | R356 | 2026-10-11 | active | redotcom's findings enter this public tree only as facts, re-derived against our own artefacts and cited as "redotcom research N". | `docs/superpowers/plans/2026-09-27-sprint-17.md` **R356** |
 | R355 | 2026-10-11 | active | for now the public tree takes no reconstructed game-function bodies: names, types, notes and tools only. | `docs/superpowers/plans/2026-09-27-sprint-17.md` **R355** |
-| R354 | 2026-10-11 | active | names and findings derived from Harry62's `.ide` may be published in this repository, credited where they add to our own findings; his full corpus may not. | `docs/superpowers/plans/2026-09-27-sprint-17.md` **R354** |
+| R354 | 2026-10-11 | active | names and findings derived from Harry62's `.ide` may be published in this repository, credited where they add to our own findings; his full corpus may not. (amended: see the ledger) | `docs/superpowers/plans/2026-09-27-sprint-17.md` **R354** |
 | R353 | 2026-10-11 | active | the owner's three O33 items are not done for this window; the controller does what it can without them. | `docs/superpowers/plans/2026-09-27-sprint-17.md` **R353** |
 | R352 | 2026-10-11 | active | one window tonight for the lock-bound steps, opening no earlier than 03:00-04:00 ADT on 2026-10-12 (06:00-07:00Z), coordinated with the web main controller. | `docs/superpowers/plans/2026-09-27-sprint-17.md` **R352** |
 | R351 | 2026-10-11 | active | Sprint 17 closes; R348's default stands; the `s17_voice_fullscale` 48-window compare is waived and #91 is left as KNOWN states it (7-10 dB short). | `docs/superpowers/plans/2026-09-27-sprint-17.md` **R351** |

@@ -12,7 +12,7 @@ and every rule's reason, in `docs/archive/HANDOFF-to-2026-09-26.md` (a HANDOFF s
 
 - **Where the loop is now (2026-10-11 21:00Z, LATEST) -- closing Sprint 17, then 18 (R351-R363).** Seat: the plan `2026-10-11-handoff-close-17-18-and-the-re-sprint.md`. main = 70c62146 (PR #134); chain 2 green 10-04.
 - **Sprint 18 OPEN** (`sprint-18` at f4c8435c; T0/T7 in R352's window or carried, R359).
-- **Next free ruling number: R364** (R351-R363 on Sprint 17's plan; R349-R350 the macOS plan; older: RULINGS.md).
+- **Next free ruling number: R366** (R364-R365 on Sprint 19's plan; R351-R363 on Sprint 17's plan; R349-R350 the macOS plan; older: RULINGS.md).
 
 ## 3. Your first hour (lock-free; start nothing heavy)
 

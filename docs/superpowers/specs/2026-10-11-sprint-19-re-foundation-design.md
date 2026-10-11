@@ -1,7 +1,7 @@
 # Sprint 19 design — "the RE foundation": Harry62's names and redotcom's findings joined to ours, measured on our instruments, in a lasting `re/` corpus
 
-Date: 2026-10-11 22:05Z (by `date -u`). Status: **PROPOSED** to the owner (his word owed; the decisions in §4 are
-numbered from HANDOFF's counter at the open). Supersedes and folds in the PROPOSED "two cartographers" spec
+Date: 2026-10-11 22:05Z (by `date -u`). Status: **APPROVED** 2026-10-11 22:28Z (R365; §4's decisions at their defaults, D-d as R364 amends it, D-h
+as R365 amends it). Supersedes and folds in the PROPOSED "two cartographers" spec
 (`docs/superpowers/specs/2026-10-02-sprint-19-two-cartographers-design.md`) by R360; branches off `main` after
 Sprints 17 and 18 close (R360). Drafted in the worktree `agent/s19-spec` off `sprint-17` at `d5fe0d59` from the
 phase-0 research (`docs/research/89-re-foundation-phase0.md`, four Opus agents per R361). The plan is
@@ -170,11 +170,11 @@ sprint without a ruling.
 | D-a | A private repository for reconstructed bodies (R355 allows one; creating it is the owner's) | Until the owner creates one, E3's body lives in a git-ignored folder in the main tree, read by `PS2X_PRIVATE_OVERRIDES_DIR`; nothing public depends on it |
 | D-b | The Metrowerks compiler (obtaining `mwccps2` 2.4.1.01, its licence) | **Moot** under the functional route: no compiler is obtained or used |
 | D-c | The strength of Harry's lever (the old spec's D2) | Loose (lands where a strict lever of ours agrees). **Plainly: loose yields almost none of the 512 new names through the lever, by construction** -- a name new to us has no lever of ours agreeing; the yield is the 62 hand rows (N2) plus N3's body reads. research/84 §10's evidence (dead code is the game's; 524:55 agreement, five real conflicts) is the case for stronger, the owner's to make |
-| D-d | What of `agent/wizard-harry` merges, and the way back | The research/84 note (its patch-code sections and any LAN address left out) and the three scripts only as sources for N's tools; no label CSV, `.ide` or return-set archive (R354). The way back (N-T2's export) is built by the tool; **the owner alone sends anything to Harry, each time, as a HUMAN_TASKS row** |
+| D-d | What of Harry62's work comes in, and the way back | **R364:** all of it, as the digested research set `docs/research/h62/` (his findings in our words, mapped onto our names, addresses and types, credited "h62"); his raw work (`.ide`, return set, label CSVs, scripts, object notes) stays git-ignored under `game/harry62/`; no LAN address. The way back (N-T2's export) is built by the tool; **the owner alone sends anything to Harry, each time, as a HUMAN_TASKS row** |
 | D-e | The capture session's hands | Scripted by the harness (`PS2X_HOST_GAMEPAD`) on two of our clients or ours plus a PCSX2 instance; an item that needs a human pair of hands becomes an owner row, not a blocker |
 | D-f | The window for Z-a, and Z-b's occasion | Z-a in one window the owner names (O20/R297); Z-b in any short window or the owner's own PCSX2 session; until then every lock-free task lands |
 | D-g | README credit wording for Harry62 and redotcom | One line each in "License and credits", drafted by K2; the owner may reword |
-| D-h | redotcom's use of the exports | We publish `re/exports/` on `main`; how redotcom vendors it is its own seat's call (this sprint edits nothing in redotcom) |
+| D-h | redotcom's use of the exports | **R365:** when `re/exports/` is finished, it is handed to redotcom's main controller as a handoff (a message plus a handoff note naming the files and their grades), and that seat decides what to take; this sprint edits nothing in redotcom |
 | D-i | How much a public contract note may say for a small leaf (E3) | Behaviour, signature, offsets and the return rule; no statement-by-statement code; the owner may tighten it |
 
 ## 5. The acceptance bar, per deliverable

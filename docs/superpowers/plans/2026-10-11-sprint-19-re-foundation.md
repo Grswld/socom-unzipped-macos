@@ -73,8 +73,8 @@ Kind: **free** = lock-free; **Z-a** = a step of the one chain; **Z-b** = the PCS
 
 ## Rulings made on the owner's behalf
 
-None. The spec's D-a..D-i are numbered at the open from HANDOFF's counter when the owner gives his word, or proceed
-as their defaults under that counter.
+- **R364 (2026-10-11 22:28Z, the owner's word; amends R354 and the spec's D-d) -- all of Harry62's work comes into the project, credited as "h62": his raw work (the `.ide`, the return set, the label CSVs, his scripts and object notes) stays in the repository's tree git-ignored under `game/harry62/`; what is tracked is a digested research set, `docs/research/h62/`, that restates his findings in our words and maps them onto our names, addresses and types, outside his tooling and conventions, for future work.** The owner: "We want to bring in all of Harry's work and reference it as h62 ... a 'digested' version for future work as it maps onto ours. His work stays in the repo gitignored. He gave approval for us to include his findings; I just want to be respectful." Harry's approval covers his findings; the digest credits him on every page, carries no LAN address, and the owner alone sends anything back to him (D-d).
+- **R365 (2026-10-11 22:28Z, the owner's word) -- the spec is APPROVED with D-a..D-i at their defaults, D-d as R364 amends it, and D-h amended: when the redotcom export (`re/exports/`) is finished it is handed to redotcom's main controller as a handoff, and that seat decides what to take.** The owner: "agreed. When the export for redotcom is finished provide it to the main controller as a handoff and let it decide."
 
 ## Outcome
 
