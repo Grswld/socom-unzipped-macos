@@ -13,6 +13,7 @@ and Horizon) are the two outside bodies of work this sprint joins to ours. Under
 published with credit, not his corpus; under R356 redotcom enters only as facts we re-derive against our own artefacts,
 cited "redotcom research N". Nothing here quotes redotcom's text or names its private paths, and nothing here reproduces
 Harry's patch codes (one of his files carries a LAN address; it stays out).
+Harry's work digested onto ours (R364): [`docs/research/h62/`](h62/README.md).
 
 ## Q1. The canonical address space: r0004, every row carrying its r0001 twin
 
