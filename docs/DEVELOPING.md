@@ -756,7 +756,7 @@ Experimental, written by Grswld in his fork and taken upstream by cherry-pick on
 upstream has validated and the ledger of the fork's commits are in `docs/MACOS.md`; the numbers below are his, from
 his Mac. Phase 1 of the macOS port (2026-10-01): the game from your own disc, offline, native arm64 -- boots, walks the menus by keyboard, plays
 the intro movie and a mission with sound. A mission runs at about 30 ms a frame on an M2 Pro (Windows: ~27; the
-console 16.7), so it is choppy. Not yet on macOS: the launcher flow, online, the microphone, an app bundle, macOS CI.
+console 16.7), so it is choppy. Not yet on macOS: the launcher flow, online, the microphone, an app bundle; CI builds and tests the no-disc half (`macos.yml`, not a required check).
 
 Needs Xcode Command Line Tools (AppleClang) and the **arm64** Homebrew at `/opt/homebrew`:
 `brew install cmake ninja pkgconf bash coreutils` (bash and coreutils only for `test`). An Intel Homebrew under
