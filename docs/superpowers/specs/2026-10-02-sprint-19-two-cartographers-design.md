@@ -1,5 +1,7 @@
 # Sprint 19 design — "two cartographers": Harry62's names joined to ours, with their provenance, their tests and a way back
 
+> Superseded by `docs/superpowers/specs/2026-10-11-sprint-19-re-foundation-design.md` (R360, 2026-10-11)
+
 Date: 2026-10-02 02:35Z. Status: **PROPOSED** (R-numbers at the open; the owner's word owed). Drafted by a
 read-only research agent for the main-tree controller; nothing in either tree was changed. Inputs: research/84 and its
 assets on the unmerged branch `agent/wizard-harry` (worktree `C:\Projects\wt-wizard-harry`, head `40684620`), and the
