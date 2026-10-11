@@ -2,17 +2,19 @@
 
 > **Generated -- do not edit.** Written by `python -m tools_py.sitting` from `docs/HUMAN_TASKS.md` (the O rows and the stamp of the sittings), the rulings `docs/RULINGS.md` shows (`tools_py.rulings.rows()`), `docs/BACKLOG.md` (the `Carried` column) and `docs/PLAYTEST.md` (its build block). Change a source and regenerate; `python -m tools_py.sitting --check` exits 1 when this file is stale.
 
-The page as of 2026-10-11, for the sitting after the one of 2026-10-11: 1 open O row (0 answered or struck); 13 active rulings since 2026-10-11 (13 dated, 0 placed by number or home, 201 undated and unplaceable, not listed); 5 issues carried twice; the build: built.
+The page as of 2026-10-11, for the sitting after the one of 2026-10-11: 3 open O rows (0 answered or struck); 13 active rulings since 2026-10-11 (13 dated, 0 placed by number or home, 201 undated and unplaceable, not listed); 5 issues carried twice; the build: built.
 
 **How to answer.** One line per item, by number -- "O5: acceptable for v1", "R271: overturn", "#25: close" -- in the next session's prompt or as a line in the open plan's Log.
 
 ## 1. The O rows
 
-1 open, 0 answered or struck. Each stands on its default until you answer; days waited are to 2026-10-11.
+3 open, 0 answered or struck. Each stands on its default until you answer; days waited are to 2026-10-11.
 
 | O | the hand needed | the default the loop is on | first asked | days waited |
 |---|---|---|---|---|
 | O33 | The PCSX2 door, your hands | T0/T7 wait; T8 proceeds | 2026-10-02 | 9 |
+| O34 | Publish the draft GitHub releases `v0.17.0` and `v0.18.0` | the drafts wait, unpublished | 2026-10-11 | 0 |
+| O35 | Two Sprint 17 items named as yours | (a) the knob stays on by default and #104 stays open; (b) both stay merged in the tree, the box keeps its current build | 2026-10-11 | 0 |
 
 Answered or struck since the last sitting (struck rows live in the archive, `docs/archive/HUMAN_TASKS-to-2026-09-25.md`, its "Struck rows moved from the live table" section; reopenable by number):
 

@@ -10,7 +10,7 @@ and every rule's reason, in `docs/archive/HANDOFF-to-2026-09-26.md` (a HANDOFF s
 
 ## 2. Where it stands
 
-- **Where the loop is now (2026-10-11 21:00Z, LATEST) -- closing Sprint 17, then 18 (R351-R363).** Seat: the plan `2026-10-11-handoff-close-17-18-and-the-re-sprint.md`. main = 4ca3f4f4 (PR #133); chain 2 green 10-04.
+- **Where the loop is now (2026-10-11 21:00Z, LATEST) -- closing Sprint 17, then 18 (R351-R363).** Seat: the plan `2026-10-11-handoff-close-17-18-and-the-re-sprint.md`. main = 70c62146 (PR #134); chain 2 green 10-04.
 - **Sprint 18 OPEN** (`sprint-18` at f4c8435c; T0/T7 in R352's window or carried, R359).
 - **Next free ruling number: R364** (R351-R363 on Sprint 17's plan; R349-R350 the macOS plan; older: RULINGS.md).
 
@@ -53,14 +53,15 @@ and every rule's reason, in `docs/archive/HANDOFF-to-2026-09-26.md` (a HANDOFF s
 
 - **The main-tree controller from 2026-09-28 02:52Z is `socom-pc-e0`** (seated by the owner under the ruling above); the
   Sprint 16 desktop seat (`.claude/worktrees/sprint-16-cronjob-setup-76e59d`) ended after the close. **Keep** `wt-s16-r1b` (`agent/s16-r1b` at `3d17f192`, unmerged; its `logs/` hold research/76's patch and script).
-- **Other sessions' trees, never edit:** the web seat's `wt-web-play`, `wt-web-teaser`, `wt-domain-socomunzipped`, `socom_pc_web`
-  (the web code lives in the repo `Scotho/redotcom` since 2026-10-01); `.claude/worktrees/*`; `wt-pad-focus`, `wt-cherry`, `wt-ci-fix`.
+- **Other sessions' trees, never edit:** the web seat's `wt-web-play`, `socom_pc_web` (web code in `Scotho/redotcom`
+  since 10-01); `.claude/worktrees/*`. **Keep, unmerged:** `wt-pad-focus`, `wt-wizard-harry` (Sprint 19), `wt-codex-perf-todos`.
+  **Remove after the close (merged, this docs tree once merged):** `wt-i110-lock-heartbeat`, `wt-macos-ci`, `wt-readme-remodel`, `wt-s17-q0`, `wt-s17-replay-bench`, `wt-s17-close-docs`.
 - **The hosted-server / site session** owns `server/`, the Lightsail box and `../scotho`; never edit those.
 - **`wt-s18-docs` (`agent/s18-docs`) is the controller's sprint-18 seat:** merges and Log edits there, then `update-ref sprint-18` from the main tree and a push.
 
 ## 6. What is owed
 
-- PAUSED 2026-10-04 20:40Z until the usage reset: next `audio_parity.sh compare s17_voice_fullscale`, then the owner's calls (the voice knob's default; Sprint 17's close).
-- **The owner's rows** (`docs/SITTING.md`): O22 the helper as a shipped binary; O25 the persona viewer's human pass.
+- R352's window, after 06:00Z on 2026-10-12, coordinated with the web controller: Sprint 17's close chain, then Sprint 18's T0/T7 if they can run (else carried, R359), then Sprint 18's close gate.
+- **The owner's rows** (`docs/SITTING.md`): O33 (b) one real INSTALL; O34 the draft releases; O35 #104 by eye, the box deploy.
 - 2026-09-28: the story generator `tools_py/story/site.py` emits the s2u design system's classes (scotho branch s2u-design-system, spec section 8); the story session regenerates with `--ds-dir` pointing at `web/shared/ds` (the default since 2026-09-29).
 
