@@ -2,7 +2,7 @@
 
 > **Generated -- do not edit.** Written by `python -m tools_py.sitting` from `docs/HUMAN_TASKS.md` (the O rows and the stamp of the sittings), the rulings `docs/RULINGS.md` shows (`tools_py.rulings.rows()`), `docs/BACKLOG.md` (the `Carried` column) and `docs/PLAYTEST.md` (its build block). Change a source and regenerate; `python -m tools_py.sitting --check` exits 1 when this file is stale.
 
-The page as of 2026-10-11, for the sitting after the one of 2026-10-11: 3 open O rows (0 answered or struck); 13 active rulings since 2026-10-11 (13 dated, 0 placed by number or home, 201 undated and unplaceable, not listed); 5 issues carried twice; the build: built.
+The page as of 2026-10-11, for the sitting after the one of 2026-10-11: 3 open O rows (0 answered or struck); 16 active rulings since 2026-10-11 (15 dated, 1 placed by number or home, 201 undated and unplaceable, not listed); 5 issues carried twice; the build: built.
 
 **How to answer.** One line per item, by number -- "O5: acceptable for v1", "R271: overturn", "#25: close" -- in the next session's prompt or as a line in the open plan's Log.
 
@@ -22,12 +22,12 @@ Answered or struck since the last sitting (struck rows live in the archive, `doc
 
 ## 2. The rulings since the last sitting
 
-13 active rulings on or after 2026-10-11, in the counter's order (the sprint-local names last, by date): 13 dated on or after it, and 0 with no date in the label but *placed by number* -- above the highest-numbered active ruling dated before 2026-10-11 -- or *placed by home*, its file dated on or after it. Each stands until you overturn it; an overturn is its number and the word. Left out: 201 active rulings with no date, which neither signal places (`docs/RULINGS.md` lists every ruling).
+16 active rulings on or after 2026-10-11, in the counter's order (the sprint-local names last, by date): 15 dated on or after it, and 1 with no date in the label but *placed by number* -- above the highest-numbered active ruling dated before 2026-10-11 -- or *placed by home*, its file dated on or after it. Each stands until you overturn it; an overturn is its number and the word. Left out: 201 active rulings with no date, which neither signal places (`docs/RULINGS.md` lists every ruling).
 
 - **R351** (2026-10-11) Sprint 17 closes; R348's default stands; the `s17_voice_fullscale` 48-window compare is waived and #91 is left as KNOWN states it (7-10 dB short). -- overturn by number
 - **R352** (2026-10-11) one window tonight for the lock-bound steps, opening no earlier than 03:00-04:00 ADT on 2026-10-12 (06:00-07:00Z), coordinated with the web main controller. -- overturn by number
 - **R353** (2026-10-11) the owner's three O33 items are not done for this window; the controller does what it can without them. -- overturn by number
-- **R354** (2026-10-11) names and findings derived from Harry62's `.ide` may be published in this repository, credited where they add to our own findings; his full corpus may not. -- overturn by number
+- **R354** (2026-10-11) names and findings derived from Harry62's `.ide` may be published in this repository, credited where they add to our own findings; his full corpus may not. (am… -- overturn by number
 - **R355** (2026-10-11) for now the public tree takes no reconstructed game-function bodies: names, types, notes and tools only. -- overturn by number
 - **R356** (2026-10-11) redotcom's findings enter this public tree only as facts, re-derived against our own artefacts and cited as "redotcom research N". -- overturn by number
 - **R357** (2026-10-11) `v0.17.0` and `v0.18.0` are tagged on their close merge commits and pushed, each with its release archives attached to a DRAFT GitHub release; the owner publis… -- overturn by number
@@ -37,6 +37,9 @@ Answered or struck since the last sitting (struck rows live in the archive, `doc
 - **R361** (2026-10-11) Sprint 19's phase-0 research runs as 3-4 parallel Opus agents plus one Fable synthesis review, not a Workflow. -- overturn by number
 - **R362** (2026-10-11) owner rows O21-O30 are struck at the Sprint 17 close under R271's circuit breaker; any one is reopened by its number. -- overturn by number
 - **R363** (2026-10-11) the untracked Codex harness port (`.agents/`, `.codex/`, `AGENTS.md`) is removed. -- overturn by number
+- **R364** (2026-10-11) all of Harry62's work comes into the project, credited as "h62": his raw work (the `.ide`, the return set, the label CSVs, his scripts and object notes) stays… -- overturn by number
+- **R365** (2026-10-11) the spec is APPROVED with D-a..D-i at their defaults, D-d as R364 amends it, and D-h amended: when the redotcom export (`re/exports/`) is finished it is handed… -- overturn by number
+- **R366** (placed by number) (2026-10-11 23:09Z, the owner's word, O33(b); Sprint 18 T7) -- one real PCSX2 INSTALL from GitHub is granted: the launcher's INSTALL fetches PCSX2 v2.8.2's rel… -- overturn by number
 
 ## 3. The issues carried twice
 

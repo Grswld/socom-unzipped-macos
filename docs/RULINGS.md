@@ -2,16 +2,17 @@
 
 > **Generated -- do not edit.** Written by `python -m tools_py.rulings` from the ruling records `tools_py/docmaint.py` reads for checks 9 and 10 (`ruling_records()`: the definitions in the plans, the sprint file and `docs/archive/`, the ledger rows and the vacancy notes), plus the sprint-local `S12-R<n>` and `S13-R<n>` definitions in the same documents. Change the source and regenerate; `python -m tools_py.rulings --check` exits 1 when this file is stale. The status rules are the module's docstring; the conventions are `docs/DOC_MAINTENANCE.md` section 4.
 
-397 rulings (358 global, 39 sprint-local): 389 active, 5 superseded, 1 retracted, 1 withdrawn, 1 vacant.
+398 rulings (359 global, 39 sprint-local): 390 active, 5 superseded, 1 retracted, 1 withdrawn, 1 vacant.
 
 *Home* is where the ruling is written: its definition, else its ledger row, else its vacancy note. *The line* is its first sentence, cut at 160 characters.
 
 ## Global (R<n>), newest first
 
-358 rulings.
+359 rulings.
 
 | Number | Date | Status | The line | Home |
 |---|---|---|---|---|
+| R366 | -- | active | (2026-10-11 23:09Z, the owner's word, O33(b); Sprint 18 T7) -- one real PCSX2 INSTALL from GitHub is granted: the launcher's INSTALL fetches PCSX2 v2.8.2's rel… | `docs/superpowers/plans/2026-09-27-sprint-17.md` **R366** |
 | R365 | 2026-10-11 | active | the spec is APPROVED with D-a..D-i at their defaults, D-d as R364 amends it, and D-h amended: when the redotcom export (`re/exports/`) is finished it is handed… | `docs/superpowers/plans/2026-10-11-sprint-19-re-foundation.md` **R365** |
 | R364 | 2026-10-11 | active | all of Harry62's work comes into the project, credited as "h62": his raw work (the `.ide`, the return set, the label CSVs, his scripts and object notes) stays… | `docs/superpowers/plans/2026-10-11-sprint-19-re-foundation.md` **R364** |
 | R363 | 2026-10-11 | active | the untracked Codex harness port (`.agents/`, `.codex/`, `AGENTS.md`) is removed. | `docs/superpowers/plans/2026-09-27-sprint-17.md` **R363** |
