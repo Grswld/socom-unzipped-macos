@@ -1,7 +1,7 @@
 # Sprint 19 Implementation Plan — "the RE foundation" (PROPOSED 2026-10-11 22:05Z; opens on `sprint-19` off `main` after Sprints 17 and 18 close, R360)
 
 > **For agentic workers:** REQUIRED SUB-SKILL: the project's `loop-iteration` skill runs this plan (one task at a time,
-> a failing test first, a fresh reviewer per task, the lock for every build and run, every lock-bound step in chain Z).
+> a failing test first, a fresh reviewer per task, the lock for every build and run, every lock-bound step in chain Z-a or session Z-b).
 > It is the project's form of superpowers:subagent-driven-development.
 
 > Spec: `docs/superpowers/specs/2026-10-11-sprint-19-re-foundation-design.md` (PROPOSED). Research:
@@ -15,8 +15,9 @@ with a proven worked example of functional decompilation whose body stays privat
 ## Global Constraints
 
 - **Order:** T1 and L1 first (lock-free, parallel); then Y, N, W, S, U, M, X1, Q, B1, E1-E3 lock-free in `agent/s19-*`
-  worktrees; C1 once B1 and the probes are known; **Z** once in an owner-named window (O20, R297); C3, X2/X3's
-  records and K last. A task out of order needs a ruling.
+  worktrees; C1 once B1 and the probes are known; **Z-a** once in an owner-named window (O20, R297); **Z-b** (no
+  build) in any short window or the owner's own PCSX2 session (spec §3: a late failure costs the proof, not the
+  measurement); C3, X2/X3's records and K last. A task out of order needs a ruling.
 - **The owner's rulings** R354, R355 and R356 bind every task: Harry's derived names with credit, never his corpus;
   no reconstructed body in the public tree; redotcom only as facts re-derived against our artefacts, cited "redotcom
   research N", no text, paths or tools copied.
@@ -28,50 +29,51 @@ with a proven worked example of functional decompilation whose body stays privat
 
 ## The task table
 
-Kind: **free** = lock-free; **Z** = a step of the one chain. Bars in short; the spec §5 holds them in full.
+Kind: **free** = lock-free; **Z-a** = a step of the one chain; **Z-b** = the PCSX2 session. Bars in short; the spec §5 holds them in full.
 
 | id | title | kind | depends | bar |
 |---|---|---|---|---|
-| T0 | The open: `sprint-19` off `main`, milestone, the spec's D-a..D-h numbered as rulings, CURRENT_SPRINT | free | 17 and 18 closed | docmaint OK; rulings in this file |
-| T1 | The twin table: `re/exports/twins.csv` generated from match.json, bogus and capsule rows flagged | free | T0 | 14,879 rows; `how` counts equal the summary; regenerates byte-identical under test |
+| T0 | The open: `sprint-19` off `main`, milestone, the spec's D-a..D-i numbered as rulings, CURRENT_SPRINT | free | 17 and 18 closed | docmaint OK; rulings in this file |
+| T1 | The twin table: `re/exports/twins.csv` generated from match.json, bogus and capsule rows flagged; its header carries the SHA-256 of match.json and the two input csvs | free | T0 | 14,879 rows; `how` counts equal the summary; the test asserts the csv hashes on every run (CI sees a stale table) and regenerates byte-identical where match.json is present |
 | L1 | `re/` README, the types and facts schemas, the validating test, the registry row | free | T0 | planted bad anchor, bad evidence kind, over-grade each fail; docmaint OK |
 | Y1 | The type master: `GameObject`, `PlayerObject`, `cAppCamera`, the replication record, aliases per source | free | L1, N-T1 | every field cited; the `+0x113` / `+0x115..+0x119` conflict held with its settling read |
 | Y2 | The runtime header `socom2_types_generated.h` + `static_assert`s in the hand headers | free (compiles in Z) | Y1 | `clang -fsyntax-only` clean; regenerates byte-identical |
 | Y3 | Ghidra `ImportNames.java`/`ImportTypes.java`; `re/exports/types.json`, `facts.json`, `socom2-types.d.ts` | free (never beside a build) | Y1 | one headless run on r0004 with counts in the Log; exports fresh under test |
 | N-T1 | The ps2dis reader promoted to `tools_py` (object block -> `re/types` candidates tagged `harry62`) | free | T0 | synthetic round trip byte-identical; real file reproduces 5,956 labels, 3 objects, 512 new names |
-| N-T2 | The `.cds` exporter and the labels-only way back (old T2, T3) | free | N-T1 | unittest: no memory or uninterpreted block in the output |
-| N1 | The lever: `Pass=ps2dis-harry62`, provenance per source, screening pass, loose (D-c) | free | N-T1 | `apply_names --report-only` accounts for every candidate |
+| N-T2 | The `.cds` exporter and the labels-only way back (old T2, T3); **the owner alone sends anything to Harry, each time, as a HUMAN_TASKS row** | free | N-T1 | unittest: no memory or uninterpreted block in the output |
+| N1 | The lever: `Pass=ps2dis-harry62`, provenance per source, screening pass, loose (D-c: by construction it lands almost none of the 512 new names; their yield is N2 + N3) | free | N-T1 | `apply_names --report-only` accounts for every candidate |
 | N2 | Hand file for the 62 self-evident loader names, `file:line` each | free | N1 | report-only: applied count, 0 refused |
 | N3 | r0004-only body reads (101 no-twin + 112 non-exact) within the time box, `Pass=hand` | free | N1 | `name_provenance audit` 0 findings; uncovered count recorded |
 | N5 | redotcom-sourced names as `Pass=hand` rows on our own read, "redotcom research N" in `Source` | free | T1 | each row our `file:line`; a reviewer finds no copied text or path |
-| D1 | The 32 disagreements dispositioned under test; aliases into Y1 | free | N-T1 | test: every row has a disposition |
+| D1 | The 32 disagreements dispositioned under test, with an alias column for the old D3's 18 function-name aliases (field aliases go to Y1) | free | N-T1 | test: every row has a disposition; the 18 aliases in the column |
 | D2 | The five real conflicts, one body read each, a ruling and holds line per moved name | free | D1 | five artefacts; report-only shows no unruled change |
-| W1 | Weapons and damage at r0004 into `re/facts/weapons_damage.json` (incl. `MPBOMB Ammo` `damage_point`) | free (probes in Z) | T1, L1 | each entry an r0004 read, re-read by a second agent |
+| W1 | Weapons and damage at r0004 into `re/facts/weapons_damage.json` (incl. `MPBOMB Ammo` `damage_point`, `docs/research/43-what-changed-in-r0004.md:75`) | free (probes in Z-a) | T1, L1 | each entry an r0004 read, re-read by a second agent |
 | S1 | The stats record and rating at r0004 into `re/facts/stats.json` | free (PEEK in Z) | T1, L1 | as W1 |
 | U1 | The UI command table at r0004 into `re/facts/ui_commands.json` | free (trace in Z) | T1, L1 | as W1; constant vs non-constant answers marked |
 | M1 | DME class-2 ids and the voice pair at r0004 into `re/facts/dme_messages.json`, checked against the s4 log and the box's DME logs on disk | free | T1, L1, N1 | one KNOWN row per verified id |
-| M2 | Protocol map vs `server/horizon-server` (old P1-P2): a `Server.Test` case or a LATER row per missing message | free | M1 | `dotnet test` green; every row classified |
+| M2 | Protocol map vs `server/horizon-server` (old P1-P2): a `Server.Test` case or a LATER row per missing message; if the sprint runs long, M2/M3 become one LATER row (spec §7) | free | M1 | `dotnet test` green; every row classified |
 | M3 | #26's receive path as the map's first entry (old P3) | free | M2 | LATER row 7 points at it |
 | X1 | MENULOOP's picture count from our ISO, SHA checked | free | T0 | count and SHA in the Log; KNOWN row; banner on research/09 |
 | Q1 | The MemoryCard stub's `Mkdir` answer, re-derived against our libmc read | free (builds in Z) | T0 | planted runtime test |
 | Q2 | `tools_py/card_save.py` fill byte and flattening, re-derived against the game's own card writes | free | T0 | Python test |
 | Q3 | Whether the launcher's card creator adopts Q2 | free | Q2 | a LATER row or a task |
 | B1 | The coverage bitmap (knob-gated in `lookupFunction`) and its `tools_py` reader | free (collected in Z) | T0 | reader unittest on a synthetic dump; tail-call caveat printed |
-| E1 | `PS2X_PRIVATE_OVERRIDES_DIR`: an optional CMake hook adding outside sources | free (builds in Z) | T0 | configures unset and set; no public body |
-| E2 | The `PS2X_SHADOW` harness: snapshot, original, restore, body, compare GPRs/`sp`/`f0`/write log | free (builds in Z) | E1 | a planted mismatch caught under test |
-| E3 | `CZWeaponList_GetWeapon` (r0004 `0x003e6cc0`): the public contract note; the body private (D-a) | free | E2 | the note in `docs/research/`; a test that the public tree holds no body for it |
-| C1 | The capture script and manifest: the drivable items, the knobs, the facts each settles | free | B1, W1, S1, U1 | dry-run of the script; manifest schema-tested |
-| Z | The chain (spec §3): apply N, recomp, census, build, r0001 + r0004 gates, the E gate with shadow, C2 twice, the PCSX2 legs X2 and X3 | **lock-bound, one window** | all above | census `extents_changed: 0`; gates 3/3 PINS MATCH; shadow calls > 0 and mismatches 0; two capture runs equal apart from timings; X2's counter reads; X3's recording |
-| C3 | Promote the facts C2 settled to `capture`/`probe` evidence; the coverage hot set recorded | free | Z | facts re-validated; hot-set file in the Log |
-| X2 | The frame clock: an r0004 read of the cap word (before Z), Z's counter reads (after) | free + Z leg | T1 | KNOWN row; research/09 banner |
-| X3 | The movie PCM ring: Z's recording cross-correlated both ways; `Mixer::pcmStream*` checked | free + Z leg | Z | KNOWN row; research/32 banner; a fix task for the next window if blocks win |
-| K1 | The census before and after, per revision, region and provenance | free | Z | printed in the Log (baseline r0004 1,736/16,417, r0001 1,871/14,879, 2026-10-02) |
+| E1 | `PS2X_PRIVATE_OVERRIDES_DIR`: an optional CMake hook adding outside sources to the runner target `ps2EntryRunner` (not the static library, which drops a self-registering TU) | free (builds in Z-a) | T0 | configures unset and set; the sources land on `ps2EntryRunner`; no public body |
+| E2 | The `PS2X_SHADOW` harness: snapshot, original, restore, body, compare GPRs/`sp`/`f0`/write log | free (builds in Z-a) | E1 | a planted mismatch caught under test; an original exit with `pc != ra` (the `eeCheckpointDue()` back-edge return, resume entry `0x3c4b50` r0001) detected and that call skipped/re-queued, under test |
+| E3 | `CZWeaponList_GetWeapon` (r0004 `0x003e6cc0`): the public contract note (behaviour, offsets, return rule; no statement-by-statement code -- close to a reconstruction for a 72-byte leaf, D-i); the body private (D-a) | free | E2 | the note in `docs/research/`; a test that the public tree holds no body for it |
+| C1 | The capture script and manifest: the drivable items, the knobs, the facts each settles; the named normaliser behind "equal apart from timings" (drops wall-clock stamps, host addresses, thread timings; keeps guest values, call order, payload bytes) | free | B1, W1, S1, U1 | dry-run of the script; manifest schema-tested; the normaliser's unittest |
+| Z-a | The chain (spec §3): apply N, recomp, census, build, the r0004 gate, **C2 twice right after it**, the E gate with shadow on, the r0001 gate | **lock-bound, one owner-named window** | all free tasks above | census `extents_changed: 0`; gates 3/3 PINS MATCH; two capture runs equal after C1's normaliser; shadow calls > 0 and mismatches 0 |
+| Z-b | The PCSX2 legs: X2's counter reads in the named revision, X3's title-loop recording | **lock-bound, no build; any short window or the owner's own session** | X2's address step | the two counter reads with revision and address; the recording |
+| C3 | Promote the facts C2 settled to `capture`/`probe` evidence; the coverage hot set recorded | free | Z-a | facts re-validated; hot-set file in the Log |
+| X2 | The frame clock in a named revision: default the plain r0001 disc (not instance A, whose card loads r0004) reading `0x004a4490` (an r0001 data address; match.json maps functions only); on r0004, the counter's address first derived lock-free by data-via-twin and the cap word's xrefs | free + Z-b leg | T1 | revision and address named before Z-b; KNOWN row; research/09 banner |
+| X3 | The movie PCM ring: Z-b's recording cross-correlated both ways; `Mixer::pcmStream*` checked | free + Z-b leg | Z-b | KNOWN row; research/32 banner; a fix task for the next window if blocks win |
+| K1 | The census before and after, per revision, region and provenance | free | Z-a | printed in the Log (baseline r0004 1,736/16,417, r0001 1,871/14,879, 2026-10-02) |
 | K2 | DEVELOPING "Reverse engineering", README credits (Harry62, redotcom), KNOWN rows | free | C3 | docmaint OK; leakcheck passes |
 | K3 | LATER rows: the PC engine fixes the route is for, DebugServer, matching rejected, the next functions | free | E3 | rows with triggers |
 
 ## Rulings made on the owner's behalf
 
-None. The spec's D-a..D-h are numbered at the open from HANDOFF's counter when the owner gives his word, or proceed
+None. The spec's D-a..D-i are numbered at the open from HANDOFF's counter when the owner gives his word, or proceed
 as their defaults under that counter.
 
 ## Outcome
@@ -80,6 +82,14 @@ as their defaults under that counter.
 owner's rows left)
 
 ## Log (newest first)
+
+- **2026-10-11 22:19Z** -- The Fable review of 9d517511 (APPROVE WITH CHANGES), all eight applied: X2 names its revision
+  and the counter's address (`_DAT_004a4490` is r0001 data); E2's bar catches the checkpoint return (`pc != ra`) and
+  E1's sources go on `ps2EntryRunner`; Z split into Z-a (captures right after the first r0004 gate) and Z-b (the
+  PCSX2 legs, no build); the owner-alone way back to Harry restored and D3's aliases moved to D1's table; T1's
+  table carries its input hashes; the MPBOMB cite is research/43 §4; note 89 keeps only the 13-of-964 fact; D-c
+  says loose lands almost none of the 512. Also: C1's normaliser, D-i (the contract note's line), the M2/M3
+  fallback.
 
 - **2026-10-11 22:05Z** -- Drafted, PROPOSED: the spec, this plan and `docs/research/89-re-foundation-phase0.md`, from
   the four phase-0 reports (revisions and tooling; compiler and route; types, grading and layout; redotcom's needs) of

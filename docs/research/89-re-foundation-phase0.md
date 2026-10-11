@@ -113,7 +113,9 @@ override path and is proven equal by an in-process differential check, then the 
   `recomp/socom2_names_r0004.csv`), 72 B. It walks a circular list (sentinel at `this+4`, `next` at `+4`, data at
   `+8`) and returns the first weapon whose byte at `+0x7c` equals the id, else 0. Integer-only, a leaf, no stores, no
   frame; 38 call sites in 23 functions, the most-called named game leaf outside libc. It carries one hazard worth
-  proving -- a resume entry at the loop head (`0x3c4b50` in r0001) -- and one quirk to reproduce: `a0` returns as
+  proving -- a resume entry at the loop head (`0x3c4b50` in r0001): the generated body returns mid-loop at the
+  back-edge when `eeCheckpointDue()`, leaving `pc` at the loop head rather than `ra`, so a shadow comparison must detect
+  an original exit with `pc != ra` and skip or re-queue that call -- and one quirk to reproduce: `a0` returns as
   `this+4` and `v1` holds the masked id, so the first comparison is all GPRs, an ABI-only mode only after it passes.
   `CQuat_Apply` (76 sites, VU0 macro mode, stack stores) is round two.
 
@@ -145,9 +147,8 @@ output fresh (class G, the way `rulings --check` holds `docs/RULINGS.md`):
    `createLabel|setName|DataType` across `ghidra_scripts`, `tools_py`, `scripts` finds none).
 2. **The runtime:** one generated `socom2_types_generated.h` (`constexpr` offsets, widths, anchors); hand headers gain
    `static_assert`s against it. Names stay in `recomp/socom2_names*.csv`; the address table keeps its own generator.
-3. **redotcom:** `re/exports/types.json` plus a generated `socom2-types.d.ts`. redotcom already reads our tree through
-   a pinned submodule or an environment variable, and already consumes generated JSON; whether and how it vendors the
-   export is its own seat's call.
+3. **redotcom:** `re/exports/types.json` plus a generated `socom2-types.d.ts`; whether and how it vendors the export
+   is its own seat's call.
 
 ## Q4. One grading scheme: grade by evidence kind, derive the word
 
@@ -205,9 +206,8 @@ decompilation or ELF `file:line` and whose source names "redotcom research N"; `
 
 ## Q7. What redotcom needs most
 
-**The measure:** redotcom's parity registry has 964 entries and only 13 proven (11 are its scoring harness reproducing
-ours, 2 camera facts); 934 are readings, 17 drift, 300 carry an owed proof. Its code holds 270 named placeholder and
-674 reading constants. Nearly every reading names the same promotion route -- a recomp trace window, an online
+**The measure:** of the 964 entries in redotcom's parity registry, **13 are proven** (counted 2026-10-11; the open
+rows and the captures they owe are redotcom research 101). Nearly every reading names the same promotion route -- a recomp trace window, an online
 reference set, or a capture session -- and none has run. **The decompilation has given it readings; what it lacks is
 measurement, which is what our instruments do.** Ranked by what raises its validation confidence:
 
@@ -220,7 +220,7 @@ measurement, which is what our instruments do.** Ranked by what raises its valid
 2. **Weapons and damage.** About 25 round-damage readings and 91 weapon readings exist (the ZWEAPON table, bullet scale
    and falloff, the armour step, limb cap and spill, hit location, penetration). Settled by: the 8-byte Hit payload at
    its send in a capture (including one piercing hit, to fix the rounding), a trace with friendly fire off at the
-   gate's branches, and a read of r0004's new `MPBOMB Ammo` `damage_point` (research/43b §4).
+   gate's branches, and a read of r0004's new `MPBOMB Ammo` `damage_point` (`docs/research/43-what-changed-in-r0004.md:75`, §4).
 3. **An r0001 -> r0004 twin table for every function it cites.** It presents r0001; the captures we can take are
    r0004. Without the table, an r0004 trace cannot honestly promote an r0001 reading. Cheap, mechanical, lock-free.
    r0004 rewrote the multiplayer game-state block (r0001 0x2a6ad0-0x2a7d40) and added per-map collision fixups.
@@ -241,7 +241,7 @@ measurement, which is what our instruments do.** Ranked by what raises its valid
 
 | # | Ours | redotcom | Likely right | The one measurement |
 |---|---|---|---|---|
-| 1 | `docs/research/09-menu-movie-ipu.md:36` -- the shell runs "every shell tick (60 Hz)", no citation | 30 Hz game logic, dt 525/15734 s: the swap waits fields against a cap word that reads 30 in the ELF and in 25 RDRAM dumps (redotcom research 110, 208) | redotcom; our own research/87 (pad read once per 30 Hz frame) and research/32 §7.1 (a picture every 2 fields) agree with it | In **PCSX2** (not the recomp, whose HLE paces by PTS), at the main menu, read the frame counter `_DAT_004a4490` twice 600 VBlanks apart: +300 means 30 Hz. A lock-free r0004 read of the cap word precedes it |
+| 1 | `docs/research/09-menu-movie-ipu.md:36` -- the shell runs "every shell tick (60 Hz)", no citation | 30 Hz game logic, dt 525/15734 s: the swap waits fields against a cap word that reads 30 in the ELF and in 25 RDRAM dumps (redotcom research 110, 208) | redotcom; our own research/87 (pad read once per 30 Hz frame) and research/32 §7.1 (a picture every 2 fields) agree with it | In **PCSX2** (not the recomp, whose HLE paces by PTS), at the main menu, read the frame counter twice 600 VBlanks apart: +300 means 30 Hz. `_DAT_004a4490` is an **r0001 data** address and match.json maps functions only, so the leg names its revision: boot the plain r0001 disc (not instance A, whose card loads r0004) and read `0x004a4490`; or, on r0004, first derive the counter's address lock-free from the twinned functions that access it (the data-via-twin method `tools_py/parity/guest_addresses.py` used for `guest_clock`) and the cap word's xrefs |
 | 2 | `docs/research/09-menu-movie-ipu.md:45` -- MENULOOP 3790 pictures (~126 s), no method | 3,732 pictures counted three independent ways and decoded by two decoders, 124.4 s at 30 fps (redotcom research 109, 120) | redotcom | Demux the video PES (0xE0) payloads of `RUN/MOVIES/MENULOOP.PSS` from our ISO and count `00 00 01 00` picture start codes, after checking the file's SHA against the one redotcom measured. Lock-free |
 | 3 | research/32: §7.1 reads the disc track as 512-byte blocks left then right; §7 measured the EE-written PCM ring as sample-interleaved (even/odd correlation 0.97, adjacent blocks 0.00) and the mixer plays it interleaved | 0x200-byte blocks per channel on the disc, measured on all 69 tracks (block-edge steps 1.8-8.6x the in-block step; block decoding 1.7-1.9x smoother) (redotcom research 137) | the disc layer is blocks on both sides; the open question is the **ring** a movie fills, since §7.1's 0.99 check is void if its reference was decoded the same way. A possible bug: a ring carrying blocks played interleaved swaps channels every 256 frames | Record PCSX2's output over the title loop and cross-correlate its left channel against the disc track decoded both ways; the layout reaching ~0.99 wins. Then check `Mixer::pcmStream*` against it |
 
