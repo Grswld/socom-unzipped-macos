@@ -156,7 +156,7 @@ voice is only dumped (`micPlaybackWrite`, research/56 §6.1), and the launcher's
 (`test_launcher_wording.py:125-131`). A "real test of the mic across the line" therefore has a precondition the tree
 does not meet: the voice path (research/56 §6, "Q5") must exist first.
 
-> Superseded in part, 2026-09-29 (research/80, H1): the harness does open the chat box (`online_match_ours.py
+> Superseded in part, 2026-09-29 (research/88, H1; numbered 80 until 2026-10-11): the harness does open the chat box (`online_match_ours.py
 > --chat`, its `chat_line` step, Sprint 13) -- what #26 still lacks is a received line proven across the client
 > bound; swapping teams in a game lobby is driven (`--host-switch`, `--same-team`, read by `lobby_teams_of`); and
 > "the talk action is unbound" was withdrawn (research/66:192, both talk actions are bound) -- the game still never

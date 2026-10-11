@@ -86,7 +86,7 @@ KIexster/god-of-war-recomp. It works in worktree `C:\projects\wt-readme-remodel`
    - Sprint 18's plan names `research/83-pcsx2-door-spike.md` for T0, which collides with that 83.
    - `agent/wizard-harry` holds Harry's note as 84.
    - grswld's `perf-vu1-worker` holds a different 84.
-   - Renumber before merging. The next free number on sprint-17 is **88**. Check every branch you merge.
+   - Renumber before merging. The next free number on sprint-17 is **89** (88 went to the online-menus note, renumbered from 80 on 2026-10-11). Check every branch you merge.
 
 ## 3. Opening the gates -- put these to Craig in ONE message at session start
 
@@ -244,7 +244,7 @@ This environment is not a normal decompilation project. Answer these with eviden
    and damage constants, the stats and ladder, the UI command table.
 
 Deliverables of phase 0:
-- a research note at the next free number (88+);
+- a research note at the next free number (89+);
 - the Sprint 19 spec, PROPOSED to Craig with the old two-cartographers spec folded in;
 - the plan with its task table.
 
