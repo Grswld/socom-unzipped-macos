@@ -2,12 +2,13 @@
 
 > **Generated -- do not edit.** Written by `python -m tools_py.changelog` from `git log` (R272): every merge commit on the first-parent line of the history it was rendered from, and on the first-parent line of each branch those merges brought in, grouped by the oldest `v*` tag that contains it. `python -m tools_py.changelog --check` exits 1 when this file is stale; regenerate at every merge to a sprint branch (in the merge's follow-up commit) and at the close. The rules are the module's docstring. The reasoning behind a merge is its commit message and the sprint plan's Log; the hand-written log this page replaced is `docs/archive/STATUS-log-to-2026-09-26.md`.
 
-443 merges (77 on the first-parent line, 366 from the branches they merged) in 13 sections: 12 tags and the merges since the newest. Each line: the date, the merge commit, the head of its subject, [the branch it merged]. An indented line came in on the branch the line above it merged.
+444 merges (78 on the first-parent line, 366 from the branches they merged) in 13 sections: 12 tags and the merges since the newest. Each line: the date, the merge commit, the head of its subject, [the branch it merged]. An indented line came in on the branch the line above it merged.
 
 ## Since v0.16.0
 
-218 merges.
+219 merges.
 
+- 2026-10-11 `d9064100` README remodelled after the god-of-war-recomp layout, status from KNOWN [agent/readme-remodel]
 - 2026-10-09 `26939fab` PR #133, the macOS work on main (R349, R350) back into sprint-17 [origin/main, main merged in]
   - 2026-10-09 `4ca3f4f4` Merge pull request #133 from Scotho/feat/macos-experimental [feat/macos-experimental]
 - 2026-10-08 `7e3167e8` the story to 2026-10-08 (eleven entries) and the October status note on the landing page [agent/story-oct]
