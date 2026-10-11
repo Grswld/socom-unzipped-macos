@@ -11,14 +11,14 @@ reasons not to take a label at face value, and says how each kind is treated.
 
 Our test (2026-10-11): take each of his labels, look up the SOCOM 1 demo's symbol table
 (`game/demo_scus_972_05/SCUS_972.05`, the source of research/44) at the **same address**, and ask whether a symbol of
-that exact name sits there. **1,577 of his 5,956 labels do** -- every one a data symbol, all between `0x00438770` and
+that exact name sits there. **1,577 of his 5,956 labels do** -- all but one a data symbol (the exception, the function `DeleteChild` at `0x00227650`, is below), the data ones between `0x00438770` and
 `0x004c4d20`. That range is the zero-filled area past the end of SOCOM II's overlay segment, where the demo's
 variables happened to live in the demo's own layout. The labels name SOCOM 1's variables at SOCOM 1's addresses; in
 SOCOM II the same addresses hold something else, or nothing.
 
 Our r0004 data-reference census agrees: of the 1,577, **4** are reached by any `lui`/low-half pair in the r0004 image
 (`database`, `ai_cmdid` and two animation-name words -- coincidences of layout), against 265 of his 874 other data
-labels. The whole block `0x00474000`-`0x0047a000` (1,498 of the imports) has **no** r0004 reference at all.
+labels. The whole block `0x00474000`-`0x0047a000` (1,408 of the imports) has **no** r0004 reference at all.
 
 What this retires. Research/84 §3 (on the unmerged `agent/wizard-harry` branch) listed among "data labels worth
 having" the in-game packet-type constants `0x0047598c`..`0x004759cc`, the `m_NetStructIndex*`/`m_*FieldID` statics

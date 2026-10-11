@@ -34,7 +34,7 @@ The 55 differences, sorted:
 |---|---|---|
 | his note appended to our very name | 3 | agreement: `CZNetwork_zNetSendApplicationMessage` `0x0032a420` ("packet sender 1"), `CCharacterWeap_SetupCharacterWeapon` `0x00543930` ("init weapon selected"), `CZSealBody_RemoteRespawn` `0x0059e690` ("respawn player") |
 | his short alias for our full name | 18 | same function, fewer letters; ours stand (table below) |
-| his purpose note where we have an identity | 6 | a cheat-maker names what patching the body does; ours stand |
+| his purpose note where we have an identity | 6 | a patcher names what patching the body does; ours stand |
 | a free-text note on a start we name | 23 | a description, not a name; mostly agreeing in substance (table below) |
 | **real conflicts** | **5** | name against name; each wants one body read (below) |
 
