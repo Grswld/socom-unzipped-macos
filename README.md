@@ -98,10 +98,10 @@ Screenshots from the project's own builds (native Windows, OpenGL renderer):
 | OpenGL rendering at up to four times the console's resolution | Works |
 | Online login, lobby and full rounds on the project's test server (copies of the game driven by the test harness on one machine) | Works |
 | A build of the community's r0004 revision passes the same checks and plays a round on the test server | Works |
-| Launcher: disc check, video and controller settings, the personas that have logged in from it | Works |
+| Launcher: disc check, video and controller settings, the personas on your memory cards | Works |
 | Two people playing each other | Not yet |
-| The console's full frame rate in missions (about 27 ms a frame on a quiet machine, against the console's 16.7) | In progress |
-| Audio (the mission's ambient bed about 11 dB too quiet, music dropping out in the menus) | In progress |
+| The game's full frame rate in missions (the VBlank pacing holds at the console's 16.7 ms; the game itself draws about 23 frames a second against its 30) | In progress |
+| Audio (the mission's ambient bed 7-10 dB short of the console; unexplained dips in the online menus' music) | In progress |
 | Voice: the game does not send your voice yet | Not yet |
 | Playing on a community server (the launcher installing the r0004 update; the community preset stays greyed until then) | Not yet |
 | A program-only public download that builds the game's image from your disc on first run | Not yet |
@@ -109,20 +109,24 @@ Screenshots from the project's own builds (native Windows, OpenGL renderer):
 | macOS (Apple Silicon): community port by Grswld, offline, no launcher (`docs/MACOS.md`) | Experimental |
 | Any disc other than the NTSC r0001 release | Not yet |
 
-As of 2026-09-27 the game boots from your own disc to the title, through the menus and into the missions, with a pad
+As of 2026-10-11 the game boots from your own disc to the title, through the menus and into the missions, with a pad
 (the keyboard walks the menus), and renders through OpenGL at up to four times the console's resolution. Online login,
 the lobby and full rounds work on the project's test server, so far only between copies of the game driven by the test
-harness on one machine; a build of the community's r0004 revision passes the same checks and plays a round there too.
-The launcher lists the personas that have logged in from this launcher, from a record the game writes on each
-successful login. Version 0.16.0 is the latest tag. Still ahead: a program-only download that builds the game's image
-from your disc on first run, the launcher installing the community's r0004 update itself, and a frame-rate bar. Not
-yet: playing on a community server (the launcher's community preset stays greyed until the update installs), the
-console's full frame rate in missions (about 27 ms a frame on a quiet machine against the console's 16.7), a finished
-Linux client (it boots in a virtual machine, never yet on a real GPU), and any disc other than the NTSC r0001 release.
+harness on one machine (no round has been played between two different networks); a build of the community's r0004
+revision passes the same checks and plays a round there too. The launcher lists the personas on your memory cards,
+read from the game's own persona file, and a persona it writes to a card is one the game reads (#73). Version 0.16.0
+is the latest tag. Still ahead: a program-only download that builds the game's image from your disc on first run, the
+launcher installing the community's r0004 update itself, and a frame-rate bar. Not yet: playing on a community
+server (the launcher's community preset stays greyed until the update installs), the game's full frame rate in
+missions, a finished Linux client (it boots in a virtual machine, never yet on a real GPU), and any disc other than
+the NTSC r0001 release. In a mission the guest's VBlank pacing now holds at the console's 16.7 ms (16.7-16.9 on the
+gate since 2026-09-28), but the game's own work on its main thread limits it to about 23 frames a second against the
+30 it targets (`docs/KNOWN.md`, the row "The game thread's own work is what limits the mission's frame rate").
 **macOS (Apple Silicon) is experimental:** a community port by Grswld, who reports it booting the game offline to
 a mission on an M2 Pro, built from your own disc on the Mac; no launcher, online or download there yet, and no
-Mac upstream to confirm it (`docs/MACOS.md`). The mission's ambient sound bed plays about 11 dB too quiet and the
-music still drops out in the menus. The game does not send your voice yet.
+Mac upstream to confirm it (`docs/MACOS.md`). The mission's ambient sound bed plays 7-10 dB short of the console
+since the default volume divisor changed on 2026-10-04 (R348; issue #91), and the music on the online login screens
+still carries unexplained dips (#94). The game does not send your voice yet.
 
 The audited version of this, with the evidence for each claim, is `docs/KNOWN.md`.
 
