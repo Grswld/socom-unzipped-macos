@@ -2,16 +2,29 @@
 
 > **Generated -- do not edit.** Written by `python -m tools_py.rulings` from the ruling records `tools_py/docmaint.py` reads for checks 9 and 10 (`ruling_records()`: the definitions in the plans, the sprint file and `docs/archive/`, the ledger rows and the vacancy notes), plus the sprint-local `S12-R<n>` and `S13-R<n>` definitions in the same documents. Change the source and regenerate; `python -m tools_py.rulings --check` exits 1 when this file is stale. The status rules are the module's docstring; the conventions are `docs/DOC_MAINTENANCE.md` section 4.
 
-382 rulings (343 global, 39 sprint-local): 374 active, 5 superseded, 1 retracted, 1 withdrawn, 1 vacant.
+395 rulings (356 global, 39 sprint-local): 387 active, 5 superseded, 1 retracted, 1 withdrawn, 1 vacant.
 
 *Home* is where the ruling is written: its definition, else its ledger row, else its vacancy note. *The line* is its first sentence, cut at 160 characters.
 
 ## Global (R<n>), newest first
 
-343 rulings.
+356 rulings.
 
 | Number | Date | Status | The line | Home |
 |---|---|---|---|---|
+| R363 | 2026-10-11 | active | the untracked Codex harness port (`.agents/`, `.codex/`, `AGENTS.md`) is removed. | `docs/superpowers/plans/2026-09-27-sprint-17.md` **R363** |
+| R362 | 2026-10-11 | active | owner rows O21-O30 are struck at the Sprint 17 close under R271's circuit breaker; any one is reopened by its number. | `docs/superpowers/plans/2026-09-27-sprint-17.md` **R362** |
+| R361 | 2026-10-11 | active | Sprint 19's phase-0 research runs as 3-4 parallel Opus agents plus one Fable synthesis review, not a Workflow. | `docs/superpowers/plans/2026-09-27-sprint-17.md` **R361** |
+| R360 | 2026-10-11 | active | the reverse-engineering sprint (Harry62 plus redotcom) is Sprint 19. | `docs/superpowers/plans/2026-09-27-sprint-17.md` **R360** |
+| R359 | 2026-10-11 | active | Sprint 18 closes in full only if T0 and T7 both run in R352's window; otherwise it closes on code, labelled "proof pending", with T0 and T7 carried as issues o… | `docs/superpowers/plans/2026-09-27-sprint-17.md` **R359** |
+| R358 | 2026-10-11 | active | PR #134 (macOS CI) merges after its review on green CI; Dependabot #98, #99 and #103 merge on green CI (R294). | `docs/superpowers/plans/2026-09-27-sprint-17.md` **R358** |
+| R357 | 2026-10-11 | active | `v0.17.0` and `v0.18.0` are tagged on their close merge commits and pushed, each with its release archives attached to a DRAFT GitHub release; the owner publis… | `docs/superpowers/plans/2026-09-27-sprint-17.md` **R357** |
+| R356 | 2026-10-11 | active | redotcom's findings enter this public tree only as facts, re-derived against our own artefacts and cited as "redotcom research N". | `docs/superpowers/plans/2026-09-27-sprint-17.md` **R356** |
+| R355 | 2026-10-11 | active | for now the public tree takes no reconstructed game-function bodies: names, types, notes and tools only. | `docs/superpowers/plans/2026-09-27-sprint-17.md` **R355** |
+| R354 | 2026-10-11 | active | names and findings derived from Harry62's `.ide` may be published in this repository, credited where they add to our own findings; his full corpus may not. | `docs/superpowers/plans/2026-09-27-sprint-17.md` **R354** |
+| R353 | 2026-10-11 | active | the owner's three O33 items are not done for this window; the controller does what it can without them. | `docs/superpowers/plans/2026-09-27-sprint-17.md` **R353** |
+| R352 | 2026-10-11 | active | one window tonight for the lock-bound steps, opening no earlier than 03:00-04:00 ADT on 2026-10-12 (06:00-07:00Z), coordinated with the web main controller. | `docs/superpowers/plans/2026-09-27-sprint-17.md` **R352** |
+| R351 | 2026-10-11 | active | Sprint 17 closes; R348's default stands; the `s17_voice_fullscale` 48-window compare is waived and #91 is left as KNOWN states it (7-10 dB short). | `docs/superpowers/plans/2026-09-27-sprint-17.md` **R351** |
 | R350 | 2026-10-09 | active | the macOS work goes to `main` as experimental, ahead of a chain. | `docs/superpowers/plans/2026-10-09-macos-to-main.md` **R350** |
 | R349 | 2026-10-09 | active | mouse look stays in, off by default. | `docs/superpowers/plans/2026-10-09-macos-to-main.md` **R349** |
 | R348 | 2026-10-04 | active | the voice and stream register divisor is 0x4000 by default: register 0x3FFF is full scale. | `docs/superpowers/plans/2026-09-27-sprint-17.md` **R348** |
