@@ -9,7 +9,8 @@ launcher at their own r0001 ISO and playing a round against another stranger on 
 repository another person can fork, build and contribute to.
 
 ```
-branch:       sprint-17 -- OPEN 2026-09-28 03:05Z, cut off main at d77b58c5 (the Sprint 16 merge, PR #97, tagged v0.16.0) by the
+branch:       sprint-17 -- OPEN 2026-09-28 03:05Z, CLOSING 2026-10-11 (R351; the seat plan
+              docs/superpowers/plans/2026-10-11-handoff-close-17-18-and-the-re-sprint.md), cut off main at d77b58c5 (the Sprint 16 merge, PR #97, tagged v0.16.0) by the
               main-tree controller socom-pc-e0 (the owner's ruling of 2026-09-28: one controller seated in C:\Projects\socom_pc,
               every other session in its own worktree; the Sprint 17 seat "Mission frame drop causes" plans, briefs and
               reviews from .claude/worktrees/mission-frame-drops-7e50ea and hands each branch to the controller, who
@@ -25,8 +26,8 @@ branch (2):   sprint-18 -- OPEN 2026-10-01 02:40Z beside the open sprint-17 (the
 spec:         docs/superpowers/specs/2026-09-27-sprint-17-sixty-and-the-way-back-design.md (four milestones F, Q, A, H in the
               owner's order; approved by the owner 2026-09-27 ~23:00Z). The Sprint 16, 15, 14, 13, 12 and 11 specs closed
               with v0.16.0 down to v0.11.0.
-plans:        docs/superpowers/plans/2026-09-27-sprint-17.md (the task table, the rulings R322-R335 from the global counter, the
-              Outcome, the Log newest first -- its entries before 2026-09-29 in docs/archive/2026-09-27-sprint-17-log-to-2026-09-29.md and those to 2026-09-30 ~10Z in docs/archive/2026-09-27-sprint-17-log-to-2026-09-30.md and to 2026-10-01 ~00Z in docs/archive/2026-09-27-sprint-17-log-to-2026-10-01.md; its task book 2026-09-27-sprint-17-tasks.md beside it; GitHub milestone 7).
+plans:        docs/superpowers/plans/2026-09-27-sprint-17.md (the task table, the rulings R322-R338, R345, R348, R351-R363 from the global counter, the
+              Outcome, the Log newest first -- its entries before 2026-09-29 in docs/archive/2026-09-27-sprint-17-log-to-2026-09-29.md and those to 2026-09-30 ~10Z in docs/archive/2026-09-27-sprint-17-log-to-2026-09-30.md and to 2026-10-01 ~00Z in docs/archive/2026-09-27-sprint-17-log-to-2026-10-01.md, then docs/archive/2026-09-27-sprint-17-log-to-2026-10-03.md and docs/archive/2026-09-27-sprint-17-log-to-2026-10-11.md; its task book 2026-09-27-sprint-17-tasks.md beside it; GitHub milestone 7).
               The Sprint 16 plan (R299-R321, R314 vacant; docs/superpowers/plans/2026-09-27-sprint-16.md) and the Sprint 15
               plan (R282-R289; R298 the close's window, superseded) with the owner's sitting (R290-R297,
               docs/superpowers/plans/2026-09-26-owner-sitting.md) are closed, Sprint 16's block below and Sprint 15's in docs/archive/CURRENT_SPRINT-closed-sprint-15.md (moved 2026-10-01); the Sprint 14 plan
@@ -67,9 +68,11 @@ saved settings; in the PCSX2 client, SELECT your PCSX2 or INSTALL the official r
 server or a custom address, the community server still "coming soon"; the hosted box answers SOCOM II's host names on
 53/udp (the owner granted the DNS changes on the Lightsail box; an agent without a live AWS session asks for the
 firewall rule). Spec `docs/superpowers/specs/2026-10-01-sprint-18-the-pcsx2-door-design.md`; plan
-`docs/superpowers/plans/2026-10-01-sprint-18-the-pcsx2-door.md` (the table, rulings R-A…R-F to be numbered, the Log);
+`docs/superpowers/plans/2026-10-01-sprint-18-the-pcsx2-door.md` (the table, rulings R339-R344, the Log);
 task book `docs/superpowers/plans/2026-10-01-sprint-18-tasks.md` (T0 the spike and T1 the box first). Launcher-only
 on our side: no runtime, recomp or parity change; its builds take the lock, its PCSX2 boots a window (O20).
+State (2026-10-11): T1-T6, T8, T9 and T10 done; T0 and T7 run in R352's window or are carried (R359).
+Next: Sprint 19, the reverse-engineering sprint, off main after both closes (R360, R361).
 
 ---
 

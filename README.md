@@ -101,7 +101,7 @@ Screenshots from the project's own builds (native Windows, OpenGL renderer):
 | A build of the community's r0004 revision passes the same checks and plays a round on the test server | Works |
 | Launcher: disc check, video and controller settings, the personas on your memory cards | Works |
 | Two people playing each other | Not yet |
-| The game's full frame rate in missions (the VBlank pacing holds at the console's 16.7 ms; the game itself draws about 23 frames a second against its 30) | In progress |
+| The game's full frame rate in missions (the VBlank pacing holds at the console's 16.7 ms; the game itself draws about 25 frames a second against its 30) | In progress |
 | Audio (the mission's ambient bed 7-10 dB short of the console; unexplained dips in the online menus' music) | In progress |
 | Voice: the game does not send your voice yet | Not yet |
 | Playing on a community server (the launcher installing the r0004 update; the community preset stays greyed until then) | Not yet |
@@ -120,8 +120,8 @@ is the latest tag. Still ahead: a program-only download that builds the game's i
 launcher installing the community's r0004 update itself, and a frame-rate bar. Not yet: playing on a community
 server (the launcher's community preset stays greyed until the update installs), the game's full frame rate in
 missions, a finished Linux client (it boots in a virtual machine, never yet on a real GPU), and any disc other than
-the NTSC r0001 release. In a mission the guest's VBlank pacing now holds at the console's 16.7 ms (16.7-16.9 on the
-gate since 2026-09-28), but the game's own work on its main thread limits it to about 23 frames a second against the
+the NTSC r0001 release. In a mission the guest's VBlank pacing now holds at the console's 16.7 ms (16.7-17.1 on the
+gate since 2026-09-28), but the game's own work on its main thread limits it to about 25 frames a second against the
 30 it targets (`docs/KNOWN.md`, the row "The game thread's own work is what limits the mission's frame rate").
 **macOS (Apple Silicon) is experimental:** a community port by Grswld, who reports it booting the game offline to
 a mission on an M2 Pro, built from your own disc on the Mac; no launcher, online or download there yet, and no
