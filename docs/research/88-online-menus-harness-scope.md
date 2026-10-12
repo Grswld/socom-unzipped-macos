@@ -1,4 +1,4 @@
-# 80 -- The online menus' harness: every screen and flow, what drives it today, what a green is (Sprint 17 H1)
+# 88 -- The online menus' harness: every screen and flow, what drives it today, what a green is (Sprint 17 H1)
 
 *2026-09-29 04:39Z (by `date -u`). A scoping note: nothing built, no run made. Line numbers are this branch's
 (`agent/s17-h1` off `sprint-17` at `c1b66d0d`). KNOWN wins on any disagreement.*

@@ -41,7 +41,10 @@ class RegistryShapeTest(unittest.TestCase):
         # unconditionally, which needs no knob at all.
         rows = knobs.table()
         self.assertEqual(sum(1 for r in rows if r["cls"] == "Shipping"), 18)
-        self.assertFalse([r["name"] for r in rows if "MOUSE" in r["name"]], "no mouse knob survives Q3")
+        # macOS fork (docs/superpowers/specs/2026-10-03-mouse-look-design.md): the mouse is back, in the fork only,
+        # and its knobs are developer-mode ones. R210 still holds for the player-facing surface: no Shipping mouse knob.
+        self.assertFalse([r["name"] for r in rows if "MOUSE" in r["name"] and r["cls"] != "Dev"],
+                         "the fork's mouse knobs are Dev, none Shipping (R210 for players)")
         self.assertEqual([r["name"] for r in rows if r["cls"] == "Switch"], ["PS2X_DEV"])
 
 
@@ -88,6 +91,24 @@ class SourceAgainstRegistryTest(unittest.TestCase):
             sites = knobs.helper_getenv_sites(root)
             self.assertEqual(len(sites), 1, sites)
             self.assertTrue(sites[0].endswith("h.cpp:3"))
+
+    def test_a_wide_literal_is_a_literal_for_both_getenv_checks(self):
+        # Sprint 18 T6 review: documentsDir reads _wgetenv(L"USERPROFILE") -- the wide form, so a non-ASCII profile
+        # survives. A wide literal names its variable as plainly as a narrow one: not a handed name, and a wide
+        # PS2X_* literal is still a raw knob read. A wide getenv of a variable stays a helper site.
+        with tempfile.TemporaryDirectory() as root:
+            la = os.path.join(root, "third_party", "ps2recomp", "ps2xLauncher", "src")
+            os.makedirs(la)
+            with open(os.path.join(la, "w.cpp"), "w") as fh:
+                fh.write('const wchar_t *p = _wgetenv(L"USERPROFILE");\n'
+                         'const wchar_t *k = _wgetenv(L"PS2X_GS_SCALE");\n'
+                         'const wchar_t *h = _wgetenv(name);\n')
+            helpers = knobs.helper_getenv_sites(root)
+            self.assertEqual(len(helpers), 1, helpers)
+            self.assertTrue(helpers[0].endswith("w.cpp:3"), helpers)
+            raw = knobs.raw_getenv_sites(root)
+            self.assertEqual(len(raw), 1, raw)
+            self.assertTrue(raw[0].endswith("w.cpp:2"), raw)
 
     def test_a_read_before_main_is_found(self):
         with tempfile.TemporaryDirectory() as root:

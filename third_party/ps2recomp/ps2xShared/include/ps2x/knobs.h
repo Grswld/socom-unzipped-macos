@@ -74,6 +74,7 @@
     X("PS2X_FPS_OVERLAY", Shipping, Int, "0", "Any value but 0 draws host fps, guest vsync Hz and frame ms in the window (never in exported frames).") /* read: ps2xRuntime/src/lib/ps2_runtime.cpp:run */ \
     X("PS2X_FPU_TRAP", Dev, Float, "-1", "Seconds after which EE divisions by zero and saturated square roots are reported with their pc.") \
     X("PS2X_FRAME_DUMP", Dev, Path, "", "Directory: a PPM every 60 presents plus the VU1 trace dumps; forces a pixel readback per present.") \
+    X("PS2X_GAME_THREAD_QOS", Dev, Flag, "0", "macOS fork: 1 runs the game thread at QoS user-interactive (the performance cores).") \
     X("PS2X_GIF_DUMP", Dev, Spec, "", "<file>[:<seconds>]: record the GIF stream and a VRAM snapshot in PCSX2-dump shape.") \
     X("PS2X_GIF_PRIORITY_SORT", Dev, Flag, "0", "Restore the GIF arbiter priority sort (A/B of the 2026-09-08 change).") \
     X("PS2X_GIF_TRACE", Dev, Int, "0", "Print the first n GIF submissions with their path and BITBLTBUF.") \
@@ -119,6 +120,7 @@
     X("PS2X_GS_TRACE_PRESENT", Dev, Int, "-1", "Presents to skip (or trig), then trace uploads, downloads and the present path.") \
     X("PS2X_GS_UPLOAD_SKIP", Dev, Flag, "0", "Skip an upload whose bytes are already in the shadow and every target (#32); see the reasons line.") \
     X("PS2X_GS_UPLOAD_TRACE", Dev, Presence, "", "Per-call timing of the tile upload path on the [gs-gl stats] cadence.") \
+    X("PS2X_GS_ZFLOOR", Dev, Flag, "1", "#104 (PCSX2 #13795/#13851): 1 floors+clamps z, 0 = old; DEPTH_LEGACY: floored z exact, flat z on 128-grid.") \
     X("PS2X_HLE_STATS", Dev, Flag, "0", "Count calls per bound HLE stub and print the table periodically.") \
     X("PS2X_HLE_STATS_PERIOD", Dev, Int, "30", "With HLE_STATS: seconds between tables.") \
     X("PS2X_HLE_STATS_TOML", Dev, Path, "recomp/socom2.toml", "With HLE_STATS: the recompiler config naming the stubs.") \
@@ -135,6 +137,8 @@
     X("PS2X_JALR_TRACE", Dev, Spec, "", "0xSRC[,...]: log the resolved target of indirect calls issued from these pcs.") \
     X("PS2X_LAUNCHER_API_BASE", Dev, Text, "https://socomunzipped.com", "Launcher tests only: a loopback base URL for the bug-report and stats calls.") \
     X("PS2X_LAUNCHER_PATCH_BASE", Dev, Text, "http://patch.psrewired.com", "Launcher tests only: a loopback base URL for the r0004 package download (#71).") \
+    X("PS2X_LAUNCHER_PCSX2_API", Dev, Text, "https://api.github.com/repos/PCSX2/pcsx2/releases/latest", "Launcher tests only: a loopback URL for the PCSX2 release JSON that INSTALL reads (S18 T4).") \
+    X("PS2X_LAUNCHER_PCSX2_TEST_FAIL", Dev, Text, "", "Launcher tests only: carry | final-rename -- make that step of INSTALL's swap fail, to prove the roll-back.") \
     X("PS2X_LAUNCHER_SHOT", Dev, Path, "", "Launcher: after 120 frames save the real window to this PNG and quit.") \
     X("PS2X_LOD_SCALE", Dev, Float, "0", "Experiment: force both LOD scale floats of the camera (writes guest memory).") \
     X("PS2X_MC_DIR", Shipping, Path, "", "Memory-card folder for slot 0; unset = mc0 beside the ELF.") /* read: ps2xRuntime/src/main.cpp:main ps2xRuntime/src/lib/ps2_runtime.cpp:setIoPaths ps2xRuntime/src/lib/ps2_runtime.cpp:configureIoPathsFromElf */ \
@@ -145,6 +149,14 @@
     X("PS2X_MIC_DUMP_PLAYBACK", Dev, Path, "", "WAV of what lgaud 0x09 asked the headset to play ({title} expands to the window tag).") \
     X("PS2X_MIC_FAKE", Dev, Path, "", "Feed this WAV as the microphone; beats MIC_DEVICE (R115).") \
     X("PS2X_MIC_GAMEREAD_DUMP", Dev, Path, "", "WAV of what lgaud 0x08 served the game.") \
+    X("PS2X_MOUSE", Dev, Flag, "0", "Experimental (R349): 1 = mouse look, left click R1, right click aim-hold; 0 (default) = off.") \
+    X("PS2X_MOUSE_AIM_SENS", Dev, Float, "0.6", "macOS fork: mouse-look sensitivity multiplier while zoomed in (first person and the scope).") \
+    X("PS2X_MOUSE_DEADZONE", Dev, Int, "24", "macOS fork: stick units (0-126) added to any non-zero mouse output, past the game's dead zone.") \
+    X("PS2X_MOUSE_GC_MAINQ", Dev, Flag, "0", "macOS fork: 1 delivers GCMouse events on the main queue (batched per frame) instead of the mouse's own queue.") \
+    X("PS2X_MOUSE_INVERT_Y", Dev, Flag, "0", "macOS fork: 1 inverts the mouse's vertical look.") \
+    X("PS2X_MOUSE_PROBE", Dev, Presence, "", "macOS fork: the O key queues 50 D-pad UP/DOWN pairs at the aim-hold timing (the ratchet probe).") \
+    X("PS2X_MOUSE_SENS", Dev, Float, "1.0", "macOS fork: right-stick units per raw mouse count.") \
+    X("PS2X_MOUSE_TRACE", Dev, Presence, "", "macOS fork: [mouse] lines -- deltas, carry, axes, aim-hold state, the view mode -- when any changes.") \
     X("PS2X_MPEG_TRACE", Dev, Presence, "", "Log the sceMpeg HLE lifecycle and the IOP stream opens.") \
     X("PS2X_PACK_TRACE", Dev, Path, "", "Trace the terrain pack function 0x25a5d0 to this file (research/31 s17).") \
     X("PS2X_PAD_CROUCH_SHORTCUT", Shipping, Text, "l3", "l3 | touchpad | l2 | off (unset is l3, O12): the host control that sends a light Triangle (R139).") /* read: ps2xRuntime/src/lib/socom2_host_input.cpp:socom2HostInputPoll */ \
@@ -163,6 +175,7 @@
     X("PS2X_SCHED_TRACE_TOML", Dev, Path, "recomp/socom2.toml", "With SCHED_TRACE: the recompiler config naming the stubs.") \
     X("PS2X_SND_MUTE_BANK", Dev, Spec, "", "0xHANDLE[,...]: play nothing from these 989snd banks (which sound is the stray one).") \
     X("PS2X_SND_STREAM_WORKER", Dev, Int, "1", "0 reads audio streams on the mixer thread instead of the worker (A/B).") \
+    X("PS2X_SND_VOICE_FULLSCALE", Dev, Int, "1", "0 restores the old 0x7FFE register divisor; 1 (default, R348) 0x4000: 0x3FFF = full scale (#91).") \
     X("PS2X_SOCOM2_HOSTS", Dev, Spec, "", "name=ip[,...]: extra host-name answers for the resolver the game uses.") \
     X("PS2X_SOCOM2_INPUT_FILE", Dev, Path, "", "Pad-state injection file polled by a sampler thread; how the harness presses buttons.") \
     X("PS2X_SOCOM2_INPUT_SCRIPT", Dev, Spec, "", "t:BTN[+BTN][:hold],...: press buttons at those seconds.") \
@@ -188,6 +201,7 @@
     X("PS2X_TRACE_VU_FLAGS", Dev, Presence, "", "Log what the VU flag readers see.") \
     X("PS2X_TRACE_VU_STEPS", Dev, Int, "1200", "With TRACE_VU: instruction budget per traced program.") \
     X("PS2X_TRIGGER", Dev, Spec, "", "lo:hi: arm the trig trace modes when the first PEEK word, as a float, lies in the range.") \
+    X("PS2X_VBLANK_NTSC", Dev, Flag, "0", "macOS fork: 1 puts VBlanks on NTSC 59.94 Hz, the rate T0 and the CD/MPEG timing assume (60.00 today).") \
     X("PS2X_VIF1_NO_IRQ_STALL", Dev, Flag, "0", "Restore VIF1 without the i-bit stall (A/B).") \
     X("PS2X_VU0_FAST", Dev, Int, "1", "0 keeps VU0 micro programs on the cycle-exact scheduler.") \
     X("PS2X_VU1_BAILHIST", Dev, Presence, "", "Histogram of where generated VU1 code bails to the interpreter.") \

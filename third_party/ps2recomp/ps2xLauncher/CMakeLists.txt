@@ -17,6 +17,8 @@ add_library(ps2x_launcher_core STATIC
     # focus list and holds every control to a line.
     src/ui/tips.cpp
     src/ui/page_controller_tips.cpp
+    # Sprint 18 T5: the PCSX2 page's lines, pure like CONTROLLER's.
+    src/ui/page_pcsx2_tips.cpp
     # Sprint 10 Q4: the menu cues out of the player's own disc -- the HUDUI bank read through iso9660::Reader,
     # rendered by the runtime's 989snd mixer (ps2x_snd989), cached as WAV. Pure; main.cpp plays the files.
     src/menu_sounds.cpp
@@ -94,6 +96,8 @@ add_executable(socom_unzipped_launcher ${PS2X_LAUNCHER_EXE_TYPE}
     src/ui/page_online.cpp
     src/ui/page_report.cpp
     src/ui/page_about.cpp
+    # Sprint 18 T5: the PCSX2 page (INSTANCE, VERSION, BIOS, the adapter).
+    src/ui/page_pcsx2.cpp
 )
 if(UNIX)
     target_sources(socom_unzipped_launcher PRIVATE src/posix_glue.cpp)
@@ -111,7 +115,27 @@ target_include_directories(socom_unzipped_launcher PRIVATE ${PS2X_LAUNCHER_FONTS
 if(WIN32)
     # winhttp: Sprint 9 Goal 8's bug report and status line (win32glue::httpRequest). Windows only -- the POSIX
     # glue starts curl instead, so the Linux build links nothing new.
-    target_link_libraries(socom_unzipped_launcher PRIVATE comdlg32 shell32 winhttp)
+    # iphlpapi: Sprint 18 T4's adapter list for PCSX2 (win32glue::listAdapters, GetAdaptersAddresses).
+    # ole32: Sprint 18 T6 review, CoTaskMemFree after SHGetKnownFolderPath (win32glue::documentsDir).
+    target_link_libraries(socom_unzipped_launcher PRIVATE comdlg32 shell32 winhttp iphlpapi ole32)
+    # Sprint 18 T9: the exe's own icon (Explorer, shortcuts), a resource made from assets/logo/socom_unzipped.ico
+    # (scripts/make_launcher_icon.py; tools_py/tests/test_launcher_icon.py reads it back out of the built exe).
+    # With clang's GNU front end CMake already enables RC and finds llvm-mingw's windres beside the compiler; when
+    # nothing chose one, the resource compiler is taken from the compiler's own directory, as build.sh's PATH
+    # puts tools/llvm-mingw/bin first.
+    if(NOT CMAKE_RC_COMPILER)
+        get_filename_component(PS2X_COMPILER_DIR "${CMAKE_CXX_COMPILER}" DIRECTORY)
+        find_program(PS2X_LAUNCHER_WINDRES NAMES windres llvm-windres HINTS "${PS2X_COMPILER_DIR}")
+        if(PS2X_LAUNCHER_WINDRES)
+            set(CMAKE_RC_COMPILER "${PS2X_LAUNCHER_WINDRES}")
+        endif()
+    endif()
+    enable_language(RC)
+    target_sources(socom_unzipped_launcher PRIVATE launcher.rc)
+    # launcher.rc names the .ico relative to this directory; windres resolves it through the include path.
+    target_include_directories(socom_unzipped_launcher PRIVATE $<$<COMPILE_LANGUAGE:RC>:${CMAKE_CURRENT_SOURCE_DIR}>)
+    set_source_files_properties(launcher.rc PROPERTIES
+        OBJECT_DEPENDS "${CMAKE_CURRENT_SOURCE_DIR}/assets/logo/socom_unzipped.ico")
 endif()
 if(UNIX AND NOT APPLE)
     # The portable folder keeps its non-system .so files in lib/ next to the binary.

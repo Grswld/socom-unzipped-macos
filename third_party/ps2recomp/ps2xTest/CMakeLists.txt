@@ -56,6 +56,9 @@ add_library(ps2_test_lib STATIC
     src/vu1_native_tests.cpp
     src/vu1_ops_tests.cpp   # Sprint 17 F C1: the product-sum fast path against its slow classifier
     src/gs_gl_flush_reasons_tests.cpp   # macOS perf step 1: flush reasons, pipeline states, frame percentiles
+    src/vblank_period_tests.cpp   # macOS fork: PS2X_VBLANK_NTSC
+    src/socom2_mouse_tests.cpp   # macOS fork: mouse look and aim-hold
+    src/host_thread_qos_tests.cpp   # macOS fork: the game thread on the performance cores
     src/ps2_vu_tests.cpp
     src/ps2_gs_tests.cpp
     src/gs_frame_backpressure_tests.cpp
@@ -81,6 +84,9 @@ add_library(ps2_test_lib STATIC
     src/diagnostics_tests.cpp
     src/bug_report_tests.cpp
     src/patch_fetch_tests.cpp   # Sprint 16 R2a (#71)
+    src/pcsx2_config_tests.cpp   # Sprint 18 T2: the client mode and config.pcsx2.json
+    src/pcsx2_files_tests.cpp    # Sprint 18 T3: the ini merge, the embedded pnach, the data root, the DNS pick
+    src/pcsx2_install_tests.cpp  # Sprint 18 T4: INSTALL's pure half -- the release parse, redirects, the adapter pick
     src/mapping_tests.cpp
     src/socom2_osk_prefill_tests.cpp
     src/knobs_tests.cpp
@@ -137,6 +143,9 @@ endif()
 target_compile_definitions(ps2_test_lib PRIVATE PS2X_LAUNCHER_FONTS_DIR="${CMAKE_SOURCE_DIR}/ps2xLauncher/assets/fonts")
 # The persona-card plan Task 1: card_save_tests.cpp reads the fixture cards under ps2xTest/fixtures/cards/, never a real card.
 target_compile_definitions(ps2_test_lib PRIVATE PS2X_TEST_FIXTURES_DIR="${CMAKE_SOURCE_DIR}/ps2xTest/fixtures")
+# Sprint 18 T3: pcsx2_files_tests.cpp holds the embedded pnach to the tracked master (the suite runs from the build dir).
+get_filename_component(PS2X_TEST_PNACH_MASTER "${CMAKE_SOURCE_DIR}/../../scripts/parity/pcsx2/0F6FC6CF.pnach" ABSOLUTE)
+target_compile_definitions(ps2_test_lib PRIVATE PS2X_PNACH_MASTER_PATH="${PS2X_TEST_PNACH_MASTER}")
 
 if(TARGET ps2_iop_fake_plugin)
     target_compile_definitions(ps2_test_lib PRIVATE
@@ -175,6 +184,8 @@ target_sources(ps2x_tests PRIVATE
 # now calls its socom2HostInputShutdown(); pad_input_tests.cpp drives that shutdown directly.
 target_sources(ps2x_tests PRIVATE
     ${CMAKE_SOURCE_DIR}/ps2xRuntime/src/lib/socom2_host_input.cpp
+    ${CMAKE_SOURCE_DIR}/ps2xRuntime/src/lib/socom2_mouse.cpp
+    ${CMAKE_SOURCE_DIR}/ps2xRuntime/src/lib/socom2_mouse_gc_stub.cpp
 )
 target_include_directories(ps2x_tests PRIVATE ${CMAKE_SOURCE_DIR}/ps2xRuntime/src/lib)
 if(WIN32)

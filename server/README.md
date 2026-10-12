@@ -18,7 +18,7 @@ Horizon `1a7b9cd` (see "Upstream base").
 |---|---|
 | `horizon-server/` | Vendored copy of upstream Horizon at `1a7b9cd` (no `.git`), built in place, with the project's changes listed in "Local source changes". |
 | `config/` | The tracked configuration: `nat.json`, `muis.json`, `medius.json`, `dme.json`, `db.config.json` (the advertised address a RFC 5737 placeholder). `simulated.db` is git-ignored: each host seeds its own. |
-| `linux/` | The Linux glue: `install.sh`, the four systemd units and `horizon.target`, `horizon-ctl.sh`, `wait-for-port.sh` ("Hosting it on Linux"). |
+| `linux/` | The Linux glue: `install.sh`, five systemd units (the four Horizon units and `socom-dns`) and `horizon.target`, `horizon-ctl.sh`, `wait-for-port.sh`, `socom-dns.sh` and `socom_dns.py` ("Hosting it on Linux"). |
 | `ops/` | The hosted box's backup, health and off-box pull, with every secret, address and key path in the git-ignored `ops/ops.env` (`ops.env.example` is its shape). See "Backups, health and the off-box pull". |
 | `start-servers.ps1` | Start / `-Stop` / `-Status` / `-Build` the stack; `-PublicIp` / `-ShowIp` set and show the advertised address. |
 | `seed-simulated-db.ps1` | Write (or `-Show`) the encrypted `config/simulated.db` (test account + per-app settings). |
@@ -126,12 +126,27 @@ only the glue is per-platform. `linux/` is that glue for Ubuntu 24.04:
 |---|---|
 | `linux/install.sh` | As root, from the unpacked server folder: the runtime, a `horizon` user, the folder under `/opt/socom-unzipped-server`, the units, a logrotate rule. Idempotent; never overwrites an installed `config/`. |
 | `linux/horizon-{nat,muis,medius,dme}.service`, `horizon.target` | The Separate mode as four units (the unified launcher's race applies on Linux too). DME waits for MPS on 10077 (`wait-for-port.sh`). Consoles go to the journal: `journalctl -u horizon-medius`. |
-| `linux/horizon-ctl.sh` | `start`, `stop`, `restart`, `status`, `show-ip`, `public-ip <ip or hostname>`, `check` -- `start-servers.ps1`'s verbs, with the same six-field rewrite, the same refusal to start on an RFC 5737 placeholder, the same untouched `MPS.Ip`, the same refusal to write JSON that does not parse (`tools_py/tests/test_horizon_ctl.py`). |
+| `linux/horizon-ctl.sh` | `start`, `stop`, `restart`, `status`, `show-ip`, `public-ip <ip or hostname>`, `check` -- `start-servers.ps1`'s verbs, with the same six-field rewrite, the same refusal to start on an RFC 5737 placeholder, the same untouched `MPS.Ip`, the same refusal to write JSON that does not parse (`tools_py/tests/test_horizon_ctl.py`). `start`, `stop` and `restart` act on all five units; `status` lists `socom-dns`'s `udp 53 DNS` row with the Horizon ports. |
+| `linux/socom-dns.service`, `socom-dns.sh`, `socom_dns.py` | The box's name service on 53/udp (Sprint 18, R342), the fifth unit. It answers SOCOM II's six retail host names (`socom2-prod.pdonline.scea.com`, `socom2-prod.muis.pdonline.scea.com`, `gate1.{us,jp,eu}.dnas.playstation.org`, `www.playstation.org`) with `muis.json`'s `Endpoint`, and NXDOMAIN for every other name: A records only, one 16-byte record at most, nothing after the question echoed, so a reply is never larger than the query plus 16 bytes. It binds the box's first private IPv4, which `socom-dns.sh` finds with `hostname -I`, never the wildcard: systemd-resolved keeps its loopback listeners. Each source is capped at 20 queries a second (`--per-second`). The journal stays quiet: one line a minute with the counts, never one per query (`journalctl -u socom-dns`). Runs as `User=horizon` with `CAP_NET_BIND_SERVICE` only; `install.sh` enables it under `horizon.target`. Tests: `tools_py/tests/test_socom_dns.py`. |
 
 `seed-simulated-db.ps1` stays PowerShell: seed on a Windows machine (inside the package folder, so the repo's own
 database is not involved) and copy `config/simulated.db` up. On a cloud box the advertised address is the public
 (static) one, never the private address the interface carries; open the same ports in the provider's firewall
 (the table above, the UDP range included) and leave 10077 closed.
+
+53/udp is the one step the scripts cannot do: the provider's firewall must admit it from anywhere, or `socom-dns`
+answers nobody outside the box. On Lightsail that is `aws lightsail open-instance-public-ports --region us-east-2 --instance-name <name>
+--port-info fromPort=53,toPort=53,protocol=udp` (`open-` adds a rule; never `put-`, which replaces them all). The
+native client does not use it; the launcher's PCSX2 client does (LAUNCH gives PCSX2 the server's address as `DNS1`
+and `DNS2`, `docs/PCSX2_PLAY.md`), as would a console pointed at the box.
+Check it, on the box, then from anywhere:
+
+```
+nslookup -type=A socom2-prod.pdonline.scea.com <the box's private address>   # answers the public address
+nslookup -type=A example.com <the box's private address>                     # NXDOMAIN
+journalctl -u socom-dns -n 3
+nslookup -type=A socom2-prod.pdonline.scea.com 3.143.65.100                  # from outside: the same answer
+```
 
 **Verified on the project's hosted box (`socom.scotho.com`, 2 vCPU / 2 GB, 2026-09-19):** from outside, 10071, 10073, 10075 and
 10078 accept and 10077 does not; any datagram to 10070/udp is answered with the sender's public address and port;
@@ -140,7 +155,8 @@ database is not involved) and copy `config/simulated.db` up. On a cloud box the 
 new server address is a create-persona login: the game saves personas per server address, so moving the address
 orphans them), hosted and joined on Frostfire, played a full five-minute control round (`s8_hosted_control2`) and a
 four-round ladder with two kills (`s8_hosted_kill`); two 50000+ sockets bound per round, 537 MB resident after it.
-Ubuntu's `needrestart` restarted the units during an unattended upgrade once; `install.sh` now excludes them.
+Ubuntu's `needrestart` restarted the units during an unattended upgrade once; `install.sh` now excludes the
+`horizon-*` units (`socom-dns` holds no state, so a restart of it costs a second of lookups).
 
 ### Message of the day, channel name, live stats (Sprint 8 Goal 13, 2026-09-19)
 
@@ -197,7 +213,7 @@ address, not the box's public one, no key path), and the example has every key t
 | File | Where it runs | What it reads from `ops.env` | What it does |
 |---|---|---|---|
 | `ops/backup.sh` | the box, as `/usr/local/sbin/socom-backup.sh`, daily by `ops/backup.cron` (`/etc/cron.d/socom-backup`) | `OPS_SERVER_DIR`, `OPS_BACKUP_DIR`, `OPS_BACKUP_KEEP`, `OPS_BACKUP_SETTLE_SEC` | copies `config/simulated.db` (twice, compared, so a torn copy is retried; one that never settles is kept as `.unsettled` and the run exits 3) and `config/*.json` into `<OPS_BACKUP_DIR>/<UTC stamp>/` with a `SHA256SUMS`; keeps the newest `OPS_BACKUP_KEEP` sets |
-| `ops/health.sh` | the box, as `/usr/local/sbin/socom-health.sh` | `OPS_SERVER_DIR`, `OPS_BACKUP_DIR`, `OPS_STATS_URL`, `OPS_DEPLOYED_COMMIT` | one `HEALTH ok|WARN ...` line: uptime, disk, memory, the four units, the five public ports listening (TCP 10071/10073/10075/10078, UDP 10070), the database, the newest backup's age and whether it settled, the stats endpoint and its `build` against `OPS_DEPLOYED_COMMIT`; exit 1 on WARN |
+| `ops/health.sh` | the box, as `/usr/local/sbin/socom-health.sh` | `OPS_SERVER_DIR`, `OPS_BACKUP_DIR`, `OPS_STATS_URL`, `OPS_DEPLOYED_COMMIT` | one `HEALTH ok|WARN ...` line: uptime, disk, memory, the five units (the four Horizon units and socom-dns), the five public ports listening (TCP 10071/10073/10075/10078, UDP 10070), the database, the newest backup's age and whether it settled, the stats endpoint and its `build` against `OPS_DEPLOYED_COMMIT`; exit 1 on WARN |
 | `ops/backup-pull.ps1` | the owner's Windows machine | `OPS_BOX_HOST`, `OPS_BOX_USER`, `OPS_SSH_KEY`, `OPS_KNOWN_HOSTS`, `OPS_BACKUP_DIR`, `OPS_PULL_DIR` | pulls the newest set over SSH into `<OPS_PULL_DIR>/<stamp>/` and verifies it against its `SHA256SUMS`, which must list the database; the box's host key is pinned (`StrictHostKeyChecking=yes`, and a missing or empty `OPS_KNOWN_HOSTS` is refused); `-VerifyOnly <folder>` re-checks a pulled set; refuses the example's placeholder address |
 
 Installing them on the box is part of a deploy (the owner's): `make_server_zip.sh` ships `ops/` without `ops.env`;
@@ -315,6 +331,8 @@ No build fixes were needed.
 | `Server.Medius/Medius/ChatClamp.cs` (new, **the project's own**), its call sites in `Medius/MLS.cs` and `Medius/Models/Channel.cs`, `Server.Test/ChatClampTests.cs` (new) | The server clamps the chat fields it forwards | A security fix (SECURITY.md, "Known: the game's own network code"); details are deliberately not written up here. Carry it across every vendor bump. | `5b7d20e7`, `4d7e4816` |
 | `Server.Medius/Program.cs`, `Server.Dme/Program.cs` | The initial `SERVER_IP` is the RFC 5737 placeholder `192.0.2.1` | Upstream's was a LAN address; replaced as soon as the config loads (Sprint 13 S6). | `eda61d3a` |
 | `Server.Test/Server.Test.csproj`, `Server.Test/BuildIdTests.cs` (new) | xunit added (the harness's own `Main` stays the entry point); the build-id tests | Somewhere for the project's unit tests: `dotnet test server/horizon-server/Server.Test`. | `5b7d20e7`, O3 |
+| `RT.Models/Lobby/`: `MediusVersionServerRequest.cs`, `MediusVersionServerResponse.cs`, `MediusFileListRequest.cs`, `MediusFileListResponse.cs`, `MediusUpdateLadderStatsRequest.cs`, `MediusUpdateLadderStatsResponse.cs`, `MediusLadderList_ExtraInfoRequest0.cs`, `MediusGetBuddyInvitationsRequest.cs`, `MediusGetBuddyInvitationsResponse.cs` (new, **GPL-3.0, from PSHome-MultiServer**: see "Licence"), `MediusLadderList_ExtraInfoResponse0.cs` (new, the project's own); `RT.Common/Constants.cs`, `RT.Common/Types.cs`; `Server.Medius/Medius/Medius150Replies.cs` (new) and its case block in `Medius/MLS.cs`; `Server.Test/Medius150MessagesTests.cs` (new) | Lobby 0x86 VersionServer, 0xB2 FileListFiles, 0xCE UpdateLadderStats, 0xEF LadderList_ExtraInfo0 and LobbyExt 0x08 GetBuddyInvitations are modelled and answered: the version string, an empty NoResult file list, Success for a stats post that is dropped, an empty NoResult ladder page, no invitations (issue #72). No file store, ladder table or invitations behind them | The Medius 1.50 client (both revisions) sends them, and they did not parse. Every size is the client's own (its senders' lengths, its handlers' byte counts); the 0xEF answer needs the 1.50 entry (0x1D4 bytes, no AccountID), not Horizon's 0x1D8-byte `MediusLadderList_ExtraInfoResponse` | `0833b5ec`, `ee336e52` |
+| `RT.Cryptography/CipherService.cs`, `Server.Dme/UdpServer.cs`, `Server.Dme/Models/World.cs`; `Server.Test/Horizon38Tests.cs` (new), `Server.Test/Server.Test.csproj` (references `Server.Dme`) | **From upstream PR #38** (`e9aeb4b`, MIT, by Philip762; merged after our `1a7b9cd`), ported by hand: the cipher table a `ConcurrentDictionary`; one static `MultithreadEventLoopGroup` shared by every per-client DME UDP server (no longer made per `Start` and shut down per `Stop`); `SendTcpAppSingle`/`SendUdpAppSingle` look the target up by key in `World.Clients` (keyed by the DME id at its only insert, `OnJoinGameRequest`). Our relay caps in `World.cs` are kept | A plain `Dictionary` throws under concurrent sets; a group per client was a thread pool per player; the linear scan was O(n) per relayed packet (LATER 86) | this commit |
 
 Known upstream issues found (not fixed, worked around by the script):
 * **Unified launcher race**: `LogSettings.Singleton` is one static shared by all four components in the process and
@@ -326,6 +344,24 @@ Known upstream issues found (not fixed, worked around by the script):
   therefore named `console-<component>.log`.
 * Simulated `GetAppIds()` returns 0..99999, so Medius and DME allocate 100 000 `AppSettings` objects and re-walk them
   every 5 s. Harmless locally.
+
+## Licence
+
+`horizon-server/` is Horizon's, under the MIT licence (`horizon-server/LICENSE`, 2020 Daniel Gerendasy), and so is
+every change in the table above except the files below. Since issue #72 the folder also holds code from
+[PSHome-MultiServer](https://github.com/GitHubProUser67/PSHome-MultiServer) by GitHubProUser67, under **GPL-3.0**,
+at commit `8778e985e4`: in `RT.Models/Lobby/`, `MediusVersionServerRequest.cs`, `MediusVersionServerResponse.cs`,
+`MediusFileListRequest.cs`, `MediusFileListResponse.cs`, `MediusUpdateLadderStatsRequest.cs`,
+`MediusUpdateLadderStatsResponse.cs`, `MediusLadderList_ExtraInfoRequest0.cs`, `MediusGetBuddyInvitationsRequest.cs`
+and `MediusGetBuddyInvitationsResponse.cs`; `VERSIONSERVER_MAXLEN`, `LADDERSTATS_MAXLEN` (`RT.Common/Constants.cs`)
+and `MediusBuddyAddType` (`RT.Common/Types.cs`); and the answers in `Server.Medius/Medius/Medius150Replies.cs` and
+their case block in `Medius/MLS.cs`, which follow MultiServer's `Servers/Horizon/SERVER/Medius/MLS.cs`. Each says so
+at the change. The MIT files stay MIT, but the server as a whole -- what we build, package and run on the hosted box
+-- is now a combination with GPL-3.0 code and so is **GPL-3.0**, like the rest of the repository (`LICENSE`); the
+MIT licence allows that. The GPL text is `LICENSES/GPL-3.0-only.txt`; MultiServer's files carry no notice of their own.
+
+Credits: Horizon Private Server (Daniel Gerendasy and contributors) for the server; PSHome-MultiServer
+(GitHubProUser67) for the five Medius 1.50 models and their MLS answers (issue #72).
 
 ## What remains / risks for SOCOM II (Medius 1.50 client)
 

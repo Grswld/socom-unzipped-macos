@@ -681,8 +681,8 @@ only ever grow, so more than the number here is fine and fewer is a regression t
 |---|---|---|
 | 1 | `./build.sh recomp` | `recomp: 14882 files, unhandled=114399, unmapped=<n>` — and `Recompilation completed successfully` at the end of `recomp/recomp_run.log`, which also carries `Loaded 1871 display names from socom2_names.csv` (2026-09-25, after Sprint 13 N1; r0004's reads `Loaded 1736`; the number grows with the sidecar — its absence means the names were not applied and every function is still `FUN_`/`sub_`). **`unhandled=` is not a failure**: it counts `unhandled-instruction` lines in the log, which the recompiler emits and carries on from, and the exe built from exactly this generated code is the one the gate passes 3/3 on (measured twice on 2026-09-21, identically, in two working trees). What would be a failure is a non-zero exit (the last 20 log lines are printed then) or a file count that fell. `unmapped=` (since 2026-09-24) counts `unmapped-continuation` warnings: continuation pcs — a call's return, a syscall's return, a not-taken branch's fallthrough — that no recompiled row owns, each one a `[guest-branch:missing-target]` waiting for a thread to reach it. It is read, not gated, like `unhandled=`; r0001 printed `unmapped=0` on 2026-09-24 (chain 18), and a value that climbs after a map change is the map's holes, not the recompiler's. |
 | 2 | `./build.sh runtime` | `built dist/socom2.exe` (the launcher lands beside it) |
-| 3 | `./build.sh test` | First the Python suite's `OK` (row 4), then `Total Tests: 1159` / `Passed: 1158` / `Failed: 0` (one case skips itself; 2026-09-30 08:12Z, the batch-5 merged chain `s17_b5` on `1fd3cfdb`; before it 1025 on 2026-09-27 19:5xZ, the batch-3 merged chain `s16_b3` on `aa030d1a`; before it 969 on the `build-windows` run 36305306914 of #74's merge ref, the tree `main` became at `bb675dbd`; its Linux count was 971 — the Linux build runs two platform-guarded cases more, so a Linux count two above this is not a mismatch. Before: 967 on `8b65501` (run 36305304109); 966 on `9bb8511` (run 36303145546); 964 on `6168f2e` (run 36300160191); 940 on 2026-09-25 23:31Z, this machine, the tree at `2eca9389`, Sprint 13 V3's green run), then `PASS: vram diff against 1.00% tolerance, checked=15 skipped=0` |
-| 4 | `python -m unittest discover -s tools_py/tests -t .` | The same suite `./build.sh test` runs first — run it alone when you changed only Python. **`OK`, with no failures, is the bar** — match that, not a number. The count only ever grows: 3939 tests, `OK` with 94 skipped (2026-09-30 08:12Z, the batch-5 chain `s17_b5` on `1fd3cfdb`; 3766 with 161 skipped on 2026-09-28 10:36Z, this machine, the tree at `69be57cc`, web sprint 2's tip with its speed probe's two modules, 85 tests; 3530 with 93 skipped at `3bdf80e8` on 2026-09-26). Before it: `Ran 2795 tests` (2026-09-25, the tree at `eb190a42`, this machine and the Windows runner; the Linux runner ran 2797 at the same head). The **skip** count is not a constant and is not worth matching, because cases skip on what you have (a disc extracted into `game/`, a worktree without one). |
+| 3 | `./build.sh test` | First the Python suite's `OK` (row 4), then `Total Tests: 1328` / `Passed: 1327` / `Failed: 0` (one case skips itself; 2026-10-12, the Sprint 18 close chain `s18_close_chain` on `c57ea088`; 1286 the same day, `s17_close_chain` on `ed519ae5`; before it 1220 on 2026-10-04, `s17_adopt_chain2` on `b1b3f023`; 1159 on 2026-09-30, `s17_b5` on `1fd3cfdb`; 1025 on 2026-09-27 19:5xZ, the batch-3 merged chain `s16_b3` on `aa030d1a`; before it 969 on the `build-windows` run 36305306914 of #74's merge ref, the tree `main` became at `bb675dbd`; its Linux count was 971 — the Linux build runs two platform-guarded cases more, so a Linux count two above this is not a mismatch. Before: 967 on `8b65501` (run 36305304109); 966 on `9bb8511` (run 36303145546); 964 on `6168f2e` (run 36300160191); 940 on 2026-09-25 23:31Z, this machine, the tree at `2eca9389`, Sprint 13 V3's green run), then `PASS: vram diff against 1.00% tolerance, checked=15 skipped=0` |
+| 4 | `python -m unittest discover -s tools_py/tests -t .` | The same suite `./build.sh test` runs first — run it alone when you changed only Python. **`OK`, with no failures, is the bar** — match that, not a number. The count only ever grows: `Ran 4037`, `OK (skipped=101)` (2026-10-12, the Sprint 18 close chain `s18_close_chain` on `c57ea088`; 3984 the same day, `s17_close_chain` on `ed519ae5`; 3976 with 97 skipped on 2026-10-04, `s17_adopt_chain2` on `b1b3f023`; 3939 with 94 skipped on 2026-09-30, `s17_b5` on `1fd3cfdb`; 3766 with 161 skipped on 2026-09-28 10:36Z, this machine, the tree at `69be57cc`, web sprint 2's tip with its speed probe's two modules, 85 tests; 3530 with 93 skipped at `3bdf80e8` on 2026-09-26). Before it: `Ran 2795 tests` (2026-09-25, the tree at `eb190a42`, this machine and the Windows runner; the Linux runner ran 2797 at the same head). The **skip** count is not a constant and is not worth matching, because cases skip on what you have (a disc extracted into `game/`, a worktree without one). |
 | 5 | `python -m tools_py.parity.gate --stamp first_run` | `GATE PASS (3/3) -> logs\parity\gate\first_run` (15 to 17 minutes: three gates on 2026-09-25 took about 15, 17 and 16 — `s12_names_gate`, `s11_close_gate`, `s12_names_r0004_gate`, from the first file each wrote under `logs/parity/gate/<stamp>/` to its `summary.txt`; the game window opens and closes three times; do not touch the keyboard) |
 
 > Superseded 2026-09-25 (Sprint 13 R2, fix round 1): rows 1, 3 and 4 carried every earlier count (881, 880, 876 and
@@ -752,9 +752,11 @@ the plan's Log why, `docs/KNOWN.md` what is proven and what is believed, `docs/H
 
 ### macOS (Apple Silicon)
 
-Phase 1 of the macOS port (2026-10-01): the game from your own disc, offline, native arm64 -- boots, walks the menus by keyboard, plays
+Experimental, written by Grswld in his fork and taken upstream by cherry-pick on 2026-10-08. The conventions, what
+upstream has validated and the ledger of the fork's commits are in `docs/MACOS.md`; the numbers below are his, from
+his Mac. Phase 1 of the macOS port (2026-10-01): the game from your own disc, offline, native arm64 -- boots, walks the menus by keyboard, plays
 the intro movie and a mission with sound. A mission runs at about 30 ms a frame on an M2 Pro (Windows: ~27; the
-console 16.7), so it is choppy. Not yet on macOS: the launcher flow, online, the microphone, an app bundle, macOS CI.
+console 16.7), so it is choppy. Not yet on macOS: the launcher flow, online, the microphone, an app bundle; CI builds and tests the no-disc half (`macos.yml`, not a required check).
 
 Needs Xcode Command Line Tools (AppleClang) and the **arm64** Homebrew at `/opt/homebrew`:
 `brew install cmake ninja pkgconf bash coreutils` (bash and coreutils only for `test`). An Intel Homebrew under
@@ -775,7 +777,8 @@ Needs Xcode Command Line Tools (AppleClang) and the **arm64** Homebrew at `/opt/
 - **The recompiler's output** does not depend on the host: the Mac's recomp matches the Windows numbers above
   (14882 files, `unhandled=114399`, 1871 names).
 - **Rendering** is OpenGL 4.1, macOS's ceiling: `glClipControl` (4.5) is absent, so depth runs `GsGlDepth`'s
-  `Legacy` path. raylib's viewport is restored in framebuffer pixels, so a Retina window is not a quarter frame.
+  `Legacy` path. raylib's viewport is restored in framebuffer pixels, so a Retina window should not show a quarter frame
+  (checked on a 1x display only).
 - **Arithmetic:** sse2neon stands in for SSE. On arm64 `long double` is `double`; the VU's round-toward-zero scope
   sets FPCR through `_mm_setcsr`, and chopping to double then float equals chopping to float, so the VU1 goldens
   match bit for bit.
@@ -893,6 +896,11 @@ git diff --stat -- tests/fixtures/recomp_ref/expected                       # th
   over the repository's issues labelled `known-issue`, one milestone per sprint. `audit` exits 0 or names the row,
   citation, label or body that is wrong; `--json FILE` replays a saved `gh issue list` listing offline.
 - **The hosted box:** agent instructions are git-ignored in `vm/lightsail/README.md`. It is the server session's.
+  Its fifth unit, `socom-dns` (Sprint 18, R342), answers SOCOM II's six retail host names on 53/udp with
+  `muis.json`'s `Endpoint` and NXDOMAIN for every other name, so the launcher's PCSX2 client (which gives PCSX2 the
+  server's address as its DNS) finds the lobby from any home; installed by `server/linux/install.sh`, one journal
+  line a minute, none in a silent minute (`journalctl -u socom-dns`), tests `tools_py/tests/test_socom_dns.py`. The unit, the firewall rule
+  and the checks: `server/README.md` "Hosting it on Linux".
 
 ## Measuring a change without a chain
 
@@ -1031,7 +1039,9 @@ sprint). **Gap:** nothing refuses a second chain in a day.
 own; a worktree keeps its `third_party/ps2recomp/build-clang/` for its whole life (a re-recomp rebuilds only what
 changed, issue #57). **Gap:** there is no compiler cache and no shared build directory, so a fresh worktree's first
 `./build.sh runtime` is a full build (624-983 s from an empty tree, 2026-09-21; about an hour with the recomp and a
-loaded host).
+loaded host). **When memory is tight, fewer jobs:** a worktree build at 4 GB free with four sessions up died at the
+memory floor (`0xC0000142` on 18 runtime objects, 2026-10-02, Sprint 18 T3); the retry with `OMP_NUM_THREADS=8`
+(`build.sh` runs that many jobs, 28 by default on this host) passed.
 
 **When a second machine exists.** It takes the builds and the CPU-side suites (`./build.sh recomp|runtime`, the
 module tests, `./build.sh test`); game runs, the gate and the chain's gate step stay on the machine that holds the
@@ -1427,6 +1437,34 @@ shift 2, key b, `cards/<profile>_b`). LAUNCH writes `logs/run_<stamp>.log`; SAVE
 versions, the home directory scrubbed). `--diagnostics <out.zip>` writes the same zip with no window; `--selftest`
 prints the verified disc and the environment and exits; `--launch-test [seconds]` starts the game the way the button
 does and reports whether it is still running after that long.
+
+**The PCSX2 client (Sprint 18, R339-R344).** The top bar's NATIVE | PCSX2 toggle is saved in `launcher.json` beside
+the launcher, `{"client": "native"}` or `{"client": "pcsx2"}` (anything else reads as native; `client_mode.h`). The
+PCSX2 client's rail is PLAY, DISC, PCSX2, ONLINE, REPORT A BUG, ABOUT (`pagesFor`), and its settings are
+`config.pcsx2.json`'s six keys -- `isoPath`, `pcsx2Exe`, `gameRevision`, `serverPreset`, `server`, `ethDevice` -- none
+shared with `config.json`, malformed read as the defaults (`pcsx2_config.h`); the toggle saves the dirty file only.
+INSTALL (`pcsx2_install.h`, R341): the latest release from `api.github.com`, its `*-windows-x64-Qt.7z` asset checked
+against the API's sha256 and size, redirects only from github.com to a `*.githubusercontent.com` host, unpacked by
+`%SystemRoot%\System32\tar.exe` into `<launcher>/pcsx2.new` with `portable.txt` and `socom_unzipped_pcsx2.txt` (the
+tag), then swapped in: `pcsx2` -> `pcsx2.old`, the manifest `pcsx2.old/.carry` written before the first move names
+the player folders present (`bios`, `memcards`, `inis`, `sstates`, `snaps`, `cheats`, `patches`, `covers`,
+`gamesettings`, `cache`, `textures`, `logs`, `videos`), each moved whole into `pcsx2.new`, `pcsx2.new` -> `pcsx2`,
+`pcsx2.old` removed with its manifest last. A swap that stopped is put right by the manifest at the next start or
+INSTALL; one INSTALL per folder, held by `pcsx2.install.lock` opened with no sharing ("another INSTALL is running in
+this folder; wait for it to finish"); closing the window mid-INSTALL keeps the process alive, window-less, until the
+query, download and extract finish (up to about 15 minutes: 20 s + 600 s + 300 s), holding the lock, so a relaunched
+launcher's INSTALL reads that sentence with no window to wait for. LAUNCH (`launchPcsx2`, R344) writes `config.pcsx2.json`, merges `[DEV9/Eth]`
+and `[UI]`'s `SettingsVersion = 1` and `SetupWizardIncomplete = false` (the first-run wizard skip, R347) into `inis/PCSX2.ini` and writes `patches/0F6FC6CF.pnach` (embedded from `scripts/parity/pcsx2/0F6FC6CF.pnach`), each
+through `writeIfDifferent` with the old file kept once as `.bak-<stamp>` (`pcsx2_files.h`), creates a managed
+install's `memcards/` and `bios/`, and starts `pcsx2-qt.exe -batch <iso>`; PCSX2's data root is beside a portable
+exe, else `PCSX2` under the Documents known folder. Without the window: `--install-pcsx2 <dir>` (INSTALL into
+`<dir>/pcsx2`, every line on stdout, exit 1 on a refusal, `NOT INSTALLED. <sentence>`), `--pcsx2-status <exe>` (the
+version line, `data root: ...`, `BIOS folder: ... (N files)`; exit 1 `no PCSX2 at <exe>`), and `--selftest`'s four
+added lines `client:`, `pcsx2 config:`, `pcsx2 exe:`, `pcsx2 documents:`. The Dev knobs `PS2X_LAUNCHER_PCSX2_API`
+(a loopback stand-in for the release JSON) and `PS2X_LAUNCHER_PCSX2_TEST_FAIL` (`carry` | `final-rename`, the
+roll-back's fault injection) are in `docs/KNOBS.md`. Tests: `ps2x_tests` suites `pcsx2_config`, `pcsx2_files`,
+`pcsx2_install`; `tools_py/tests/test_launcher_pcsx2_install.py`, `test_pcsx2_masters.py`. The player's page is
+`docs/PCSX2_PLAY.md`.
 
 `socom2.exe` takes the ELF path as argv[1]; it mounts `PS2X_CD_IMAGE` when set, else the first `.iso` next to the
 ELF or one directory up (`configureCdImage`, `game_overrides_socom2.cpp`); the memory card is `PS2X_MC_DIR` when set (the launcher always sets it, to `cards/<profile>`), else

@@ -1,4 +1,4 @@
-# Handoff — SOCOM Unzipped, controller to controller (2026-09-26)
+# Handoff — SOCOM Unzipped, controller to controller (2026-10-12)
 
 ## 1. What this file is
 
@@ -10,10 +10,8 @@ and every rule's reason, in `docs/archive/HANDOFF-to-2026-09-26.md` (a HANDOFF s
 
 ## 2. Where it stands
 
-- **Where the loop is now (2026-09-30 08:54Z, LATEST) -- Sprint 17, `sprint-17` at 1fd3cfdb: batches 4 and 5 PROVED (C1 adopted); Q2, F3, A1 (#94), #111, #112 done on our side; N1c adopted (default 1), its chain owed. No close date (R338); one controller in the main tree (owner).**
-  Now: batch 6 unproven; the lock fix (wt-s17-lock-smoke-flake, uncommitted) lands after a green slow run on a quiet host (tonight): then merge, the chain, slice 2, the entry-0 reading.
-- **Sprint 18 OPEN 2026-10-01 02:40Z** (`sprint-18` off `sprint-17`; CURRENT_SPRINT's `branch (2):`; its plan's Log).
-- **Next free ruling number: R346** (R345 Sprint 17's; R339-R344 Sprint 18's open; R322-R338 Sprint 17's; R299-R321 Sprint 16's; R298 superseded).**
+- **Now (2026-10-12 09:45Z) -- Sprint 17 CLOSED (`v0.17.0`, PR #137); Sprint 18 CLOSED in full (R359), going to main as `v0.18.0`; next, Sprint 19 off main (R360, R365).** Seat: `2026-10-11-handoff-close-17-18-and-the-re-sprint.md`.
+- **Next free ruling number: R368** (R364-R365 Sprint 19's plan; R351-R363, R366-R367 Sprint 17's; older: RULINGS.md).
 
 ## 3. Your first hour (lock-free; start nothing heavy)
 
@@ -52,17 +50,18 @@ and every rule's reason, in `docs/archive/HANDOFF-to-2026-09-26.md` (a HANDOFF s
 
 ## 5. Who else is in the tree (`git worktree list` is the truth)
 
-- **The main-tree controller from 2026-09-28 02:52Z is `socom-pc-e0`** (seated by the owner under the ruling above); the
-  Sprint 16 desktop seat (`.claude/worktrees/sprint-16-cronjob-setup-76e59d`) ended after the close. **Keep** `wt-s16-r1b` (`agent/s16-r1b` at `3d17f192`, unmerged; its `logs/` hold research/76's patch and script).
-- **Other sessions' trees, never edit:** the web seat's `wt-web-play`, `wt-web-teaser`, `wt-domain-socomunzipped`, `socom_pc_web`
-  (the web code lives in the repo `Scotho/redotcom` since 2026-10-01); `.claude/worktrees/*`; `wt-pad-focus`, `wt-cherry`, `wt-ci-fix`.
+- **The main-tree controller from 2026-09-28 02:52Z is `socom-pc-e0`** (seated by the owner); the Sprint 16 desktop seat's
+  worktree `.claude/worktrees/sprint-16-cronjob-setup-76e59d` is still registered (never edit). **Keep** `wt-s16-r1b` (`agent/s16-r1b` at `3d17f192`, unmerged; its `logs/` hold research/76's patch and script).
+- **Other sessions' trees, never edit:** the web seat's `wt-web-play`, `socom_pc_web` (web code in `Scotho/redotcom`
+  since 10-01); `.claude/worktrees/*`. **Keep, unmerged:** `wt-pad-focus`, `wt-wizard-harry` (Sprint 19), `wt-codex-perf-todos`.
+  **Remove now (merged; the close has happened):** `wt-i110-lock-heartbeat`, `wt-macos-ci`, `wt-readme-remodel`, `wt-s17-q0`, `wt-s17-replay-bench`; the branch `agent/s17-close-docs` (no worktree).
 - **The hosted-server / site session** owns `server/`, the Lightsail box and `../scotho`; never edit those.
+- **The main tree holds `sprint-18` since 2026-10-12 08:10Z**; `wt-s18-docs` (stale at `46d17f06`) goes after the merge -- never `update-ref sprint-18` from it.
 
 ## 6. What is owed
 
-- **The owner's rows** (`docs/SITTING.md`): O22 the helper as a shipped binary; O25 the persona viewer's human pass.
-- **After this close:** `main` (`d77b58c5`) merged back into `sprint-16` and pushed -- the main-tree seat's; tonight's collisions audit (the guards) is Sprint 17's Task 0 material, its seat holds the draft.
-- **Carried to Sprint 17's Task 0:** R1b (#70), R2 (#71), #57's r0004 leg, #59's fence, R3b, R3a's developer build, F1, F3
-  (#32, backlog), X2, X4 (#41, backlog).
+- Sprint 18's close: the PR on green, `v0.18.0` and its draft (R357); then the merged worktrees (§5, `wt-s18-docs`) removed by script.
+- Sprint 19's open off main after `v0.18.0`: the branch, the header, the plan's first tasks; remind the owner of one controller in the main tree.
+- **The owner's rows** (`docs/SITTING.md`): O34 the draft releases; O35 #104 by eye, the box deploy; O36 four twice-carried issues.
 - 2026-09-28: the story generator `tools_py/story/site.py` emits the s2u design system's classes (scotho branch s2u-design-system, spec section 8); the story session regenerates with `--ds-dir` pointing at `web/shared/ds` (the default since 2026-09-29).
 

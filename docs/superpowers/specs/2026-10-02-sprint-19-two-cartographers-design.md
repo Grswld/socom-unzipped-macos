@@ -1,5 +1,7 @@
 # Sprint 19 design — "two cartographers": Harry62's names joined to ours, with their provenance, their tests and a way back
 
+> Superseded by `docs/superpowers/specs/2026-10-11-sprint-19-re-foundation-design.md` (R360, 2026-10-11)
+
 Date: 2026-10-02 02:35Z. Status: **PROPOSED** (R-numbers at the open; the owner's word owed). Drafted by a
 read-only research agent for the main-tree controller; nothing in either tree was changed. Inputs: research/84 and its
 assets on the unmerged branch `agent/wizard-harry` (worktree `C:\Projects\wt-wizard-harry`, head `40684620`), and the
@@ -152,7 +154,7 @@ table with tests for every gap that is a real message; the coverage moves are co
 | # | Decision | Default |
 |---|---|---|
 | D1 | Publishing his names in the public tree | Only function names on function starts, each row tagged `ps2dis-harry62` in `Pass` and `Source`; no annotation text, no memory bytes, no `.ide` in the tree; **waits for Harry62's yes, asked by the owner** (H0) |
-| D2 | How strong his lever is | Loose (promotes only with a second, different lever of ours); the 62 self-evident loader names as a hand file; nothing strict on his word alone |
+| D2 | How strong his lever is | Loose (promotes only with a second, different lever of ours); the 62 self-evident loader names as a hand file; nothing strict on his word alone. Evidence since the draft (research/84 §10, 2026-10-02, on `agent/wizard-harry`): against the r0004 image's call targets 15 % of our 1,736 named functions and 15 % of his 1,077 function-start names are unreferenced, versus 26 % of all 16,417 functions -- so "unused in S2" is the binary's dead code, not either label set; where the sets overlap they agree 524:55 with five real conflicts. The Harry62 seat's read: his function-start names deserve at least string-set's default, not a lower one. The owner rules |
 | D3 | r0004-only names | Into `recomp/socom2_names_r0004.csv` as r0004 `Pass=hand` after one body read each (N2 precedent); a name without a read stays out and is counted |
 | D4 | Placement | A third branch `sprint-19` off `sprint-17` after Sprint 18's open settles, lock-free tasks in `agent/s19-*` worktrees, one chain for N's apply in a window the owner names, merged forward like Sprint 18 |
 | D5 | The way back to him | An export of our names/labels only (CSV + `.cds`, optionally a labels-only `.ide` overlay), built by the promoted module; the owner alone sends anything, each time (HUMAN_TASKS) |
