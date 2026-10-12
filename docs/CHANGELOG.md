@@ -2,12 +2,34 @@
 
 > **Generated -- do not edit.** Written by `python -m tools_py.changelog` from `git log` (R272): every merge commit on the first-parent line of the history it was rendered from, and on the first-parent line of each branch those merges brought in, grouped by the oldest `v*` tag that contains it. `python -m tools_py.changelog --check` exits 1 when this file is stale; regenerate at every merge to a sprint branch (in the merge's follow-up commit) and at the close. The rules are the module's docstring. The reasoning behind a merge is its commit message and the sprint plan's Log; the hand-written log this page replaced is `docs/archive/STATUS-log-to-2026-09-26.md`.
 
-427 merges (63 on the first-parent line, 364 from the branches they merged) in 13 sections: 12 tags and the merges since the newest. Each line: the date, the merge commit, the head of its subject, [the branch it merged]. An indented line came in on the branch the line above it merged.
+449 merges (82 on the first-parent line, 367 from the branches they merged) in 13 sections: 12 tags and the merges since the newest. Each line: the date, the merge commit, the head of its subject, [the branch it merged]. An indented line came in on the branch the line above it merged.
 
 ## Since v0.16.0
 
-202 merges.
+224 merges.
 
+- 2026-10-11 `b16feba2` docs/research/h62, Harry62's work digested and mapped onto ours (R364), reviewed [agent/h62-digest]
+- 2026-10-11 `d3ee58a9` research/89 and the Sprint 19 RE spec (PROPOSED) and plan, Fable-reviewed [agent/s19-spec]
+- 2026-10-11 `1461ee49` the Sprint 17 close doc review's fixes (24 findings), reviewed PASS [agent/s17-close-docs]
+- 2026-10-11 `16116fdc` PR #134, the macOS CI job (R358), into sprint-17; LATER 104 kept beside main's 105 [origin/main, main merged in]
+  - 2026-10-11 `70c62146` Merge pull request #134 from Scotho/feat/macos-ci [feat/macos-ci]
+- 2026-10-11 `d9064100` README remodelled after the god-of-war-recomp layout, status from KNOWN [agent/readme-remodel]
+- 2026-10-09 `26939fab` PR #133, the macOS work on main (R349, R350) back into sprint-17 [origin/main, main merged in]
+  - 2026-10-09 `4ca3f4f4` Merge pull request #133 from Scotho/feat/macos-experimental [feat/macos-experimental]
+- 2026-10-08 `7e3167e8` the story to 2026-10-08 (eleven entries) and the October status note on the landing page [agent/story-oct]
+- 2026-10-08 `fe1a7fc7` Grswld's macOS arm64 port by cherry-pick -x (19 commits, his authorship kept), docs/MACOS.md [agent/macos-port]
+- 2026-10-04 `67ff370e` a PowerShell here-string commit message is one word to the guard (LATER 101) [agent/s17-hook-herestring]
+- 2026-10-04 `df6ad05a` Sprint 17 task 98 drafted [agent/s17-lessons]
+- 2026-10-04 `279fd33c` the invocation-stack pool stops above the main stack; reset clears its cache (LATER 82) [agent/s17-sched-stacks]
+- 2026-10-03 `05365bf6` Horizon upstream #38 [agent/s17-horizon-38]
+- 2026-10-03 `ff270d65` the VPK reader's three layout fixes (LATER 97) and the #91 voice-scale knob [agent/s17-audio-scale]
+- 2026-10-03 `bbf2a702` #72 the five r0004 requests answered [agent/s17-mls-models]
+- 2026-10-03 `bfba8a98` #104 fragment Z floor + ZBUF format clamp from PCSX2 (LATER 84, knob PS2X_GS_ZFLOOR) [agent/s17-zfloor]
+- 2026-10-03 `4a63e7dd` upstream #265 pad bytes, #257 D_ENABLER mirror, #268 VCALLMSR (LATER 83) [agent/s17-upstream-ports]
+- 2026-10-03 `99d66e06` research/85 the PS2 recomp projects audit, LATER 82-95, the licence rule (Sprint 17) [agent/s17-research85]
+- 2026-10-02 `3ff16398` research/83 §7 the entry-0 split reading [agent/s17-entry0-record]
+- 2026-10-02 `7ebf6044` merge origin/main into sprint-17 after slice 2 (PR #131) [origin/main, main merged in]
+  - 2026-10-02 `a519c9bf` Merge pull request #131 from Scotho/slice2-s17-to-main [slice2-s17-to-main]
 - 2026-10-02 `c6f7ce2e` a stale-mutex breaker retries the mkdir at once (the smoke flake); slow suite green [agent/s17-lock-smoke-flake]
 - 2026-10-02 `60a2f175` run_gate clears a stage's old captures, a reused stamp mixes no runs (S17) [agent/s17-gate-stale-stamp]
 - 2026-10-01 `d2693750` the CI changes step prints a long file list without a pipe that can close (PR #130's 679) [agent/s17-ci-head-pipe]

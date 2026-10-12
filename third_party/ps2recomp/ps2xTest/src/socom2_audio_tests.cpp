@@ -2136,6 +2136,91 @@ void register_socom2_audio_tests()
             }
         });
 
+        // Issue #91 (research/85 section 1.1): the IRX writes snd_AdjustVolToGroup(...) >> 1 to a voice's VOLL/VOLR,
+        // so its largest register value is 0x3FFF, and the hardware doubles it (psx-spx "Voice volume/2"; PCSX2
+        // SPU2 ADSR.cpp's SignExtend16(src << 1) then >> 15): 0x3FFF is full scale. Ours divides by 0x7FFE -- half.
+        // PS2X_SND_VOICE_FULLSCALE: 0x4000 by default (R348, 2026-10-04); "0" restores the old 0x7FFE for an A/B.
+        // The PCM ring (BVOL, unshifted, matched to the console within +0.47 dB) is not on that path.
+        tc.Run("Mixer: PS2X_SND_VOICE_FULLSCALE=1 makes register 0x3FFF full scale on voices and streams, never on the PCM ring (#91)", [](TestCase &t)
+        {
+            auto setKnob = [](const char *value) {
+#ifdef _WIN32
+                _putenv_s("PS2X_SND_VOICE_FULLSCALE", value);
+#else
+                if (*value)
+                    setenv("PS2X_SND_VOICE_FULLSCALE", value, 1);
+                else
+                    unsetenv("PS2X_SND_VOICE_FULLSCALE");
+#endif
+            };
+            const std::vector<uint8_t> blk = readFixture("hudui_block.bin");
+            const std::vector<uint8_t> vag = readFixture("hudui_vag.bin");
+            const std::string path = tmpPath("socom2_audio_fullscale.vpk");
+            t.IsTrue(writeVpk(path, 4, 2), "a loud four-chunk-pair VPK");
+            struct Levels { double gain3fff = 0.0, gain7ffe = 0.0, voice = 0.0, stream = 0.0, ring = 0.0; };
+            auto sumAbs = [](const std::vector<int16_t> &b) {
+                double s = 0.0;
+                for (int16_t v : b)
+                    s += v < 0 ? -static_cast<double>(v) : static_cast<double>(v);
+                return s;
+            };
+            auto measure = [&](const char *knobValue) {
+                setKnob(knobValue);
+                Levels lv;
+                std::vector<int16_t> buf(2 * 4096);
+                {
+                    snd989::Mixer mixer;   // reads the knob at construction
+                    lv.gain3fff = mixer.registerGainForTest(0x3FFF);
+                    lv.gain7ffe = mixer.registerGainForTest(0x7FFE);
+                    // A voice: the HUD click at full volume, the global master at 0x200 so neither setting clips.
+                    mixer.setMasterVolume(16u, 0x200);
+                    t.IsTrue(mixer.loadBank(0x00a00000u, blk.data(), blk.size(), vag.data(), vag.size()), "HUDUI loads");
+                    const uint32_t h = mixer.play(0x00a00000u, 8u, 0x400, -1, 0, 0);
+                    t.IsTrue(h != 0u, "the click plays");
+                    mixer.render(buf.data(), 4096);
+                    lv.voice = sumAbs(buf);
+                    mixer.stopAll();
+                }
+                {
+                    snd989::Mixer mixer;
+                    t.IsTrue(mixer.playStream(0x04000091u, path, 0u, 0x400, -1, 1u), "the stream plays");
+                    mixer.pumpStreams();
+                    mixer.render(buf.data(), 4096);
+                    lv.stream = sumAbs(buf);
+                    mixer.stop(0x04000091u);
+                }
+                {
+                    snd989::Mixer mixer;
+                    std::vector<uint8_t> ring(0x6000u);
+                    for (size_t i = 0; i + 1 < ring.size(); i += 2)
+                    {
+                        ring[i] = static_cast<uint8_t>(10000 & 0xFF);
+                        ring[i + 1] = static_cast<uint8_t>(10000 >> 8);
+                    }
+                    mixer.pcmStreamOpen(0x6000u, 2u);
+                    mixer.pcmStreamWrite(0u, ring.data(), ring.size());
+                    mixer.pcmStreamStart(0x6000u, 48000u, 2u, 0x400);
+                    mixer.render(buf.data(), 2048);
+                    lv.ring = sumAbs(std::vector<int16_t>(buf.begin(), buf.begin() + 2 * 2048));
+                    mixer.pcmStreamStop();
+                }
+                setKnob("");
+                return lv;
+            };
+            const Levels off = measure("0");   // "0" asks for the old 0x7FFE: unset is on since R348
+            const Levels on = measure("1");
+            t.IsTrue(std::fabs(off.gain3fff - 0.5) < 1e-6, "off: register 0x3FFF carries 0.5 (" + std::to_string(off.gain3fff) + ")");
+            t.IsTrue(std::fabs(off.gain7ffe - 1.0) < 1e-6, "off: 0x7FFE is unity, as before");
+            t.IsTrue(std::fabs(on.gain3fff - 16383.0 / 16384.0) < 1e-9,
+                     "on: register 0x3FFF carries 0x3FFF/0x4000 = 0.99994 (-0.0005 dB, as PCSX2's (0x3FFF << 1) >> 15): " + std::to_string(on.gain3fff));
+            t.IsTrue(off.voice > 0.0 && off.stream > 0.0 && off.ring > 0.0, "every path is in the mix with the knob off");
+            const double vr = on.voice / off.voice, sr = on.stream / off.stream, rr = on.ring / off.ring;
+            // The voice's samples are small and each is truncated to an integer, so its ratio carries ~1 % of rounding.
+            t.IsTrue(std::fabs(vr - 2.0) < 0.03, "a voice is 6.02 dB louder with the knob on (ratio " + std::to_string(vr) + ")");
+            t.IsTrue(std::fabs(sr - 2.0) < 0.01, "a stream is 6.02 dB louder with the knob on (ratio " + std::to_string(sr) + ")");
+            t.IsTrue(rr == 1.0, "the PCM ring is untouched by the knob (ratio " + std::to_string(rr) + ")");
+            std::remove(path.c_str());
+        });
 
         tc.Run("PS2AudioBackend: snd_PlayVAGStreamByLoc flags 4 (the lobby music's request) loops the file and keeps answering snd_SoundIsStillPlaying", [](TestCase &t)
         {
@@ -2253,12 +2338,12 @@ void register_socom2_audio_tests()
             std::remove(path.c_str());
         });
 
-        tc.Run("Mixer: a full-scale stream at full volume sits at the SPU's half scale (voice volume >> 1), not at clipping", [](TestCase &t)
+        tc.Run("Mixer: a full-scale stream at full volume sits at the square law's half, not at clipping (R348: the halved register is full scale)", [](TestCase &t)
         {
             // shift 0: a nibble of 7 decodes to 7 << 12 = 28672. At vol 0x400 and centre pan the 14-bit voice volume
             // is 0x7ffe * cos(45 deg); the group stage then SQUARES it (vol.c:434-455, research/36 Q6 item 1: the IRX
-            // applies the pan table BEFORE FUN_00019b7c, so the pan's 0.707 is squared to 0.5), then the SPU's >> 1:
-            // about 28672 * 0.5 * 0.5 = 7168 per channel.
+            // applies the pan table BEFORE FUN_00019b7c, so the pan's 0.707 is squared to 0.5); the IRX's >> 1 into the
+            // register is undone by the hardware's << 1 (R348, research/85 section 1.1): about 28672 * 0.5 = 14336 per channel.
             int8_t sevens[28];
             for (int i = 0; i < 28; ++i)
                 sevens[i] = 7;
@@ -2287,7 +2372,7 @@ void register_socom2_audio_tests()
                 int32_t peak = 0;
                 for (int16_t v : buf)
                     peak = std::max<int32_t>(peak, v < 0 ? -v : v);
-                t.IsTrue(peak >= 6400 && peak <= 8000, "peak " + std::to_string(peak) + " (about 7168: 28672 x 0.707^2 x 1/2, the square law)");
+                t.IsTrue(peak >= 12800 && peak <= 16000, "peak " + std::to_string(peak) + " (about 14336: 28672 x 0.707^2, the square law at full scale, R348)");
                 mixer.stopAll();
             }
             std::remove(path.c_str());
@@ -2349,7 +2434,7 @@ void register_socom2_audio_tests()
                 int32_t l = 0, r = 0;
                 peaks(l, r);
                 // Main voice at pan 270: table (0x3fff, 0) -> 32766, the square law's identity, >> 1: 28672 / 2 = 14336.
-                t.IsTrue(l >= 12900 && l <= 15800, "left data on the left at the table's full entry (peak " + std::to_string(l) + ", about 14336 = 28672 x 1 x 1/2)");
+                t.IsTrue(l >= 25800 && l <= 28700, "left data on the left at the table's full entry (peak " + std::to_string(l) + ", about 28672 = 28672 x 1, full scale under R348)");
                 t.IsTrue(r <= 8, "nothing of it on the right (peak " + std::to_string(r) + ")");
 
                 // The pair rotates with the handler pan: at 90 both voices sit on the centre entry, 0.707 squared = half.
@@ -2357,8 +2442,8 @@ void register_socom2_audio_tests()
                 mixer.pumpStreams();
                 mixer.render(buf.data(), 512);
                 peaks(l, r);
-                t.IsTrue(l >= 6400 && l <= 8000 && r >= 6400 && r <= 8000,
-                         "pan 90: the left data on both sides at the centre entry squared (L " + std::to_string(l) + ", R " + std::to_string(r) + ", about 7168)");
+                t.IsTrue(l >= 12800 && l <= 16000 && r >= 12800 && r <= 16000,
+                         "pan 90: the left data on both sides at the centre entry squared (L " + std::to_string(l) + ", R " + std::to_string(r) + ", about 14336 under R348)");
                 mixer.stopAll();
             }
             std::remove(path.c_str());

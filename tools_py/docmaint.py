@@ -105,11 +105,11 @@ ROW = re.compile(r"^\|\s*`([^`]+)`\s*\|\s*\*{0,2}([LGNSCA])\*{0,2}\s*\|")
 # older entries go to the archive with `python -m tools_py.docmaint archive-log --plan <path>`.
 OPEN_PLAN = "<the open plan>"
 CEILINGS = (
-    ("docs/CURRENT_SPRINT.md", None, 33000),       # 57,829 after the R1 split
-    ("docs/HANDOFF.md", "## 2.", 800),           # 3,022
+    ("docs/CURRENT_SPRINT.md", None, 12100),       # 57,829 after the R1 split
+    ("docs/HANDOFF.md", "## 2.", 500),           # 3,022
     ("docs/HANDOFF.md", None, 5900),              # Sprint 14 I3: the whole file, transient (was 36,232)
-    ("docs/STATUS.md", "## Current state", 2100),  # 2,309
-    ("docs/HUMAN_TASKS.md", None, 8400),         # 9,786 after the R4 cut (was 104,000 over 82,968)
+    ("docs/STATUS.md", "## Current state", 2000),  # 2,309
+    ("docs/HUMAN_TASKS.md", None, 5300),         # 9,786 after the R4 cut (was 104,000 over 82,968)
     ("docs/LOOP_PROMPT.md", None, 1100),          # Sprint 14 S3: a pointer since I2 (995)
     ("CLAUDE.md", None, 4900),                    # Sprint 14 S3: 4,453 plus ten percent (the sixty-line twin)
     (OPEN_PLAN, None, 59100),                     # Sprint 14 S3: the Sprint 14 plan, 83,025 plus ten percent
