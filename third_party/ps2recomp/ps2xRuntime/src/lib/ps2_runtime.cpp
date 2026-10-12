@@ -6,6 +6,8 @@
 #include "runtime/shot_queue.h"           // Sprint 17 F0 Step 5b
 #include <optional>                       // Sprint 17 Q2: the shot queue re-made across an in-process restart
 #include "socom2_host_input.h"
+#include "socom2_mouse.h"               // macOS fork: the mouse
+#include "runtime/host_thread_qos.h"   // macOS fork: the game thread on the performance cores
 #include "runtime/ps2_window_size.h"
 #include "ps2_log.h"
 #include "ps2_stubs.h"
@@ -16,6 +18,7 @@
 #include "runtime/gs/gs_gl_backend.h"
 #include "runtime/gs/gs_cpu_backend.h"
 #include "runtime/gs/gs_gl_caps.h"
+#include "runtime/host_display.h"
 #include "runtime/gs/gs_loop_phases.h"
 #include "runtime/ee_scheduler.h"
 #include "ThreadNaming.h"
@@ -819,6 +822,14 @@ bool PS2Runtime::initialize(const char *title)
         // PS2X_WINDOW_SIZE=<w>x<h> | fullscreen (the launcher's window-size choice, Task 8b); unset keeps the default
         // the parity gate depends on.
         const ps2_window::Size windowSize = ps2_window::parseWindowSize(ps2x::knob("PS2X_WINDOW_SIZE"), HOST_WINDOW_WIDTH, HOST_WINDOW_HEIGHT);
+        // macOS port: with every display asleep GLFW finds no monitor and raylib's InitWindow carries on into a GL
+        // that was never loaded (a crash in rlglInit). Refuse first, with the table's code and sentence.
+        if (ps2_window::noDisplayToOpen(ps2x_host::awakeDisplayCount()))
+        {
+            const ExitCodes::Entry *e = ExitCodes::find(ExitCodes::kNoDisplay);
+            std::cout << "[window] exit " << ExitCodes::kNoDisplay << " " << e->slug << ": " << e->sentence << std::endl;
+            std::exit(ExitCodes::kNoDisplay);
+        }
         InitWindow(windowSize.width, windowSize.height, title);
         // Owner 2026-09-20: Escape must not close the game. raylib's default exit key is KEY_ESCAPE, which made
         // WindowShouldClose() true on a key a PC player presses by reflex; the window's own close button and
@@ -2239,6 +2250,23 @@ uint32_t PS2Runtime::reserveAsyncCallbackStack(uint32_t size, uint32_t alignment
     return top - 0x10u;
 }
 
+// LATER 82 (docs/research/assets/85-ps2-recomp-audit/n258-stack-check.md): SetupThread(gp, -1, size) answers
+// sp = PS2_RAM_SIZE - size, so the main stack grows down from sp while the pool carves down from PS2_RAM_SIZE to a
+// floor of 0x01F00000 -- below sp. The 33rd stack of SOCOM II's SetupThread(-1, 0x80000) would cover the main
+// stack's top. The floor goes up to sp so the pool holds only [sp, PS2_RAM_SIZE) and refuses past it.
+void PS2Runtime::raiseAsyncCallbackStackFloor(uint32_t floor)
+{
+    if (floor > PS2_RAM_SIZE)
+    {
+        floor = PS2_RAM_SIZE;
+    }
+    std::lock_guard<std::mutex> lock(m_asyncCallbackStackMutex);
+    if (floor > m_asyncCallbackStackFloor)
+    {
+        m_asyncCallbackStackFloor = floor;
+    }
+}
+
 namespace
 {
     // Guest memory faults (TLB miss / unaligned access) are turned into a COP0 address error and
@@ -2904,6 +2932,10 @@ void PS2Runtime::run()
         return std::thread([&]()
                            {
         ThreadNaming::SetCurrentThreadName("GameThread");
+        // macOS fork: PS2X_GAME_THREAD_QOS=1 asks for the performance cores (runtime/host_thread_qos.h).
+        if (ps2x::knobOn("PS2X_GAME_THREAD_QOS", false))
+            hostThreadSetInteractive();
+        std::cout << "[thread] game thread QoS " << hostThreadQosName() << std::endl;
         // The EE FPU and VU0 truncate every result (PCSX2's default "Chop/Zero" rounding for EE
         // and VU); host float math rounds to nearest. Run the game thread with the host FPU/SSE
         // rounding toward zero (2026-09-08: SOCOM II's title-screen labels are composed from an
@@ -3069,6 +3101,7 @@ void PS2Runtime::run()
         }
 
         const LoopClock::time_point drawStart = s_loopPhases ? LoopClock::now() : LoopClock::time_point{};
+        ps2_stubs::socom2MouseFrame();   // macOS fork: cursor capture and the mouse buttons (socom2_mouse.h)
         BeginDrawing();
         ClearBackground(BLACK);
         const float srcWidth = static_cast<float>(std::max<uint32_t>(1u, presentWidth));

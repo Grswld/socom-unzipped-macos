@@ -1,6 +1,6 @@
 # Documentation maintenance — the classes, the registry, and the sprint-close review
 
-**Last full review: 2026-09-28 (Sprint 16 close; §5 by a read-only agent's table, 38 findings, the blocking ones fixed in `40defd7b` and Sprint 14's block archived; §7 by a read-only agent's table, the audit clean, four issues carried to Sprint 17 and two to the backlog, two opened, the milestone closed, the backlog regenerated, R271's breaker applied as R321).** Next: at the next sprint's close, by its controller.
+**Last full review: 2026-10-12 (Sprint 17 close; §5 by a read-only agent's table, 23 findings, every one fixed in the close-out commit -- stale pointers to the moved Sprint 16 block, the last green chain, the suite counts, README's 16.7-17.1 ms range and its latest tag, KNOWN rows 134/136/137/143/175 -- and Sprint 16's block archived; §7 the audit clean, seven issues carried to the backlog, four twice-carried moved there under R367 (O36), #91 retitled, milestone 7 closed, the backlog regenerated, no breaker row).** Next: at the next sprint's close, by its controller.
 
 > **The first review under this schema, 2026-09-23 (Sprint 10's close), and what it changed.** Step 1: `docmaint`
 > OK. Step 2: every L document read for truth by a read-only agent against the tree and the night's ledgers — 56
@@ -109,6 +109,7 @@ document gets a class, and an unclassified document is one nobody has decided th
 | `docs/DEVELOPING.md` | **L** | controller | **Owns the suite counts.** No other registered document may state them |
 | `docs/INSTALL.md` | **L** | controller | The player's setup page. Live because it quotes the launcher's own sentences and describes a download that does not exist yet — the "get the archive" paragraph changes the day the distribution decision is answered |
 | `docs/PCSX2_PLAY.md` | **L** | controller | The PCSX2 client's player guide (Sprint 18 T8): the six steps, hosting, what the launcher writes into PCSX2 and what it never touches. Live for `docs/INSTALL.md`'s reason: it quotes the launcher's own sentences (`launchBlockedReasonPcsx2`, the PCSX2 page, the ONLINE caption), so a change to one of them changes this file; its Status line changes when the T7 proof lands in `docs/KNOWN.md` |
+| `docs/MACOS.md` | **L** | controller | Experimental macOS support (2026-10-08): what runs, the credit convention for the fork's work (cherry-pick `-x`, the author kept), the macOS code conventions, what was validated upstream and the ledger of the fork's commits. A newly taken or deferred fork commit changes the ledger row |
 | `docs/FAQ.md` | **L** | controller | The player's failure page. Every exit-code sentence is quoted from `ps2x/exit_codes.h`; a change to that table changes this file |
 | `docs/story/PICTURES.md` | **L** | story | The inventory of what `STORY.md` shows; the citation test keeps them honest |
 | `docs/KNOBS.md` | **G** | `tools_py.knobs` | Generated from `ps2x/knobs.h`; a test fails on a stale row, an unregistered read or a row nothing reads |
@@ -145,15 +146,19 @@ document gets a class, and an unclassified document is one nobody has decided th
 | `docs/archive/CURRENT_SPRINT-closed-sprint-13.md` | **A** | — | Cut 2026-09-27 (the Sprint 15 close, §5 step 5): the Sprint 13 CLOSED block, verbatim, so the live file keeps two CLOSED blocks under its ceiling. The ruling counter and check 10 read it |
 | `docs/archive/CURRENT_SPRINT-closed-sprint-14.md` | **A** | — | Cut 2026-09-28 (the Sprint 16 close, §5 step 5): the Sprint 14 CLOSED block, verbatim, so the live file keeps two CLOSED blocks under its ceiling. The ruling counter and check 10 read it |
 | `docs/archive/CURRENT_SPRINT-closed-sprint-15.md` | **A** | — | Cut 2026-10-01 (the Sprint 18 open; §5 step 5, the ceiling rule): the Sprint 15 CLOSED block, verbatim, moved when the live file passed its 33,000-byte ceiling with the second open branch in its header; the live file keeps one CLOSED block (Sprint 16). The rulings R282-R297 stay in their plans. |
+| `docs/archive/CURRENT_SPRINT-closed-sprint-16.md` | **A** | — | Cut 2026-10-12 (the Sprint 17 close; §5 step 5, the ceiling rule): the Sprint 16 CLOSED block, verbatim; the live file keeps one CLOSED block (Sprint 17). The rulings R299-R321 stay in the Sprint 16 plan. |
 | `docs/archive/HANDOFF-reference-to-2026-09-13.md` | **A** | — | |
 | `docs/archive/HANDOFF-2026-09-08.md` | **A** | — | Banded 2026-09-22 |
 | `docs/archive/HANDOFF-AUDIT-2026-09-14.md` | **A** | — | Banded 2026-09-22 |
 | `docs/archive/2026-09-26-sprint-14-log-to-2026-09-26.md` | **A** | — | Cut 2026-09-26 (`python -m tools_py.docmaint archive-log`, check 7): the oldest 17 entries of `docs/superpowers/plans/2026-09-26-sprint-14.md`'s Log, verbatim; the Log points here |
 | `docs/archive/2026-09-27-sprint-16-log-to-2026-09-27.md` | **A** | — | Cut 2026-09-27 (`python -m tools_py.docmaint archive-log`, check 7): the oldest 13 entries of `docs/superpowers/plans/2026-09-27-sprint-16.md`'s Log, verbatim; the Log points here; from 2026-09-28 also the F2, L1b and R1b state cells as they stood at the close, verbatim (the rows rewritten to their outcomes) |
 | `docs/archive/HUMAN_TASKS-answered-to-2026-09-27.md` | **A** | — | Cut 2026-09-27 when `docs/HUMAN_TASKS.md`'s ceiling fired (check 7): its ten struck rows (O1, O3, O6, O11–O14, O16, O18, O19), verbatim; the live file points here. Reopenable by number |
+| `docs/archive/HUMAN_TASKS-struck-2026-10-11.md` | **A** | — | Cut 2026-10-11 at the Sprint 17/18 sitting: rows O21-O23, O25-O30 struck by default under R362 (R271), verbatim; the live file points here. Reopenable by number |
 | `docs/archive/2026-09-27-sprint-17-log-to-2026-09-29.md` | **A** | — | Cut 2026-09-29 (`python -m tools_py.docmaint archive-log`, check 7): the oldest 19 entries of `docs/superpowers/plans/2026-09-27-sprint-17.md`'s Log, verbatim; the Log points here |
 | `docs/archive/2026-09-27-sprint-17-log-to-2026-09-30.md` | **A** | — | Cut 2026-09-30 (`python -m tools_py.docmaint archive-log`, check 7): the oldest 9 entries of `docs/superpowers/plans/2026-09-27-sprint-17.md`'s Log, verbatim; the Log points here |
 | `docs/archive/2026-09-27-sprint-17-log-to-2026-10-01.md` | **A** | — | Cut 2026-10-01 (`python -m tools_py.docmaint archive-log`, check 7): the oldest 5 entries of `docs/superpowers/plans/2026-09-27-sprint-17.md`'s Log, verbatim; the Log points here |
+| `docs/archive/2026-09-27-sprint-17-log-to-2026-10-03.md` | **A** | — | Cut 2026-10-03 (`python -m tools_py.docmaint archive-log`, check 7): the oldest 1 entry of `docs/superpowers/plans/2026-09-27-sprint-17.md`'s Log, verbatim; the Log points here |
+| `docs/archive/2026-09-27-sprint-17-log-to-2026-10-11.md` | **A** | — | Cut 2026-10-11 (`python -m tools_py.docmaint archive-log`, check 7): the oldest 10 entries of `docs/superpowers/plans/2026-09-27-sprint-17.md`'s Log, verbatim; the Log points here |
 
 ## 4. What is enforced mechanically
 

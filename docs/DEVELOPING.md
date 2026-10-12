@@ -681,8 +681,8 @@ only ever grow, so more than the number here is fine and fewer is a regression t
 |---|---|---|
 | 1 | `./build.sh recomp` | `recomp: 14882 files, unhandled=114399, unmapped=<n>` — and `Recompilation completed successfully` at the end of `recomp/recomp_run.log`, which also carries `Loaded 1871 display names from socom2_names.csv` (2026-09-25, after Sprint 13 N1; r0004's reads `Loaded 1736`; the number grows with the sidecar — its absence means the names were not applied and every function is still `FUN_`/`sub_`). **`unhandled=` is not a failure**: it counts `unhandled-instruction` lines in the log, which the recompiler emits and carries on from, and the exe built from exactly this generated code is the one the gate passes 3/3 on (measured twice on 2026-09-21, identically, in two working trees). What would be a failure is a non-zero exit (the last 20 log lines are printed then) or a file count that fell. `unmapped=` (since 2026-09-24) counts `unmapped-continuation` warnings: continuation pcs — a call's return, a syscall's return, a not-taken branch's fallthrough — that no recompiled row owns, each one a `[guest-branch:missing-target]` waiting for a thread to reach it. It is read, not gated, like `unhandled=`; r0001 printed `unmapped=0` on 2026-09-24 (chain 18), and a value that climbs after a map change is the map's holes, not the recompiler's. |
 | 2 | `./build.sh runtime` | `built dist/socom2.exe` (the launcher lands beside it) |
-| 3 | `./build.sh test` | First the Python suite's `OK` (row 4), then `Total Tests: 1159` / `Passed: 1158` / `Failed: 0` (one case skips itself; 2026-09-30 08:12Z, the batch-5 merged chain `s17_b5` on `1fd3cfdb`; before it 1025 on 2026-09-27 19:5xZ, the batch-3 merged chain `s16_b3` on `aa030d1a`; before it 969 on the `build-windows` run 36305306914 of #74's merge ref, the tree `main` became at `bb675dbd`; its Linux count was 971 — the Linux build runs two platform-guarded cases more, so a Linux count two above this is not a mismatch. Before: 967 on `8b65501` (run 36305304109); 966 on `9bb8511` (run 36303145546); 964 on `6168f2e` (run 36300160191); 940 on 2026-09-25 23:31Z, this machine, the tree at `2eca9389`, Sprint 13 V3's green run), then `PASS: vram diff against 1.00% tolerance, checked=15 skipped=0` |
-| 4 | `python -m unittest discover -s tools_py/tests -t .` | The same suite `./build.sh test` runs first — run it alone when you changed only Python. **`OK`, with no failures, is the bar** — match that, not a number. The count only ever grows: 3939 tests, `OK` with 94 skipped (2026-09-30 08:12Z, the batch-5 chain `s17_b5` on `1fd3cfdb`; 3766 with 161 skipped on 2026-09-28 10:36Z, this machine, the tree at `69be57cc`, web sprint 2's tip with its speed probe's two modules, 85 tests; 3530 with 93 skipped at `3bdf80e8` on 2026-09-26). Before it: `Ran 2795 tests` (2026-09-25, the tree at `eb190a42`, this machine and the Windows runner; the Linux runner ran 2797 at the same head). The **skip** count is not a constant and is not worth matching, because cases skip on what you have (a disc extracted into `game/`, a worktree without one). |
+| 3 | `./build.sh test` | First the Python suite's `OK` (row 4), then `Total Tests: 1286` / `Passed: 1285` / `Failed: 0` (one case skips itself; 2026-10-12, the close chain `s17_close_chain` on `ed519ae5`; before it 1220 on 2026-10-04, `s17_adopt_chain2` on `b1b3f023`; 1159 on 2026-09-30, `s17_b5` on `1fd3cfdb`; 1025 on 2026-09-27 19:5xZ, the batch-3 merged chain `s16_b3` on `aa030d1a`; before it 969 on the `build-windows` run 36305306914 of #74's merge ref, the tree `main` became at `bb675dbd`; its Linux count was 971 — the Linux build runs two platform-guarded cases more, so a Linux count two above this is not a mismatch. Before: 967 on `8b65501` (run 36305304109); 966 on `9bb8511` (run 36303145546); 964 on `6168f2e` (run 36300160191); 940 on 2026-09-25 23:31Z, this machine, the tree at `2eca9389`, Sprint 13 V3's green run), then `PASS: vram diff against 1.00% tolerance, checked=15 skipped=0` |
+| 4 | `python -m unittest discover -s tools_py/tests -t .` | The same suite `./build.sh test` runs first — run it alone when you changed only Python. **`OK`, with no failures, is the bar** — match that, not a number. The count only ever grows: `Ran 3984`, `OK (skipped=101)` (2026-10-12, the close chain `s17_close_chain` on `ed519ae5`; 3976 with 97 skipped on 2026-10-04, `s17_adopt_chain2` on `b1b3f023`; 3939 with 94 skipped on 2026-09-30, `s17_b5` on `1fd3cfdb`; 3766 with 161 skipped on 2026-09-28 10:36Z, this machine, the tree at `69be57cc`, web sprint 2's tip with its speed probe's two modules, 85 tests; 3530 with 93 skipped at `3bdf80e8` on 2026-09-26). Before it: `Ran 2795 tests` (2026-09-25, the tree at `eb190a42`, this machine and the Windows runner; the Linux runner ran 2797 at the same head). The **skip** count is not a constant and is not worth matching, because cases skip on what you have (a disc extracted into `game/`, a worktree without one). |
 | 5 | `python -m tools_py.parity.gate --stamp first_run` | `GATE PASS (3/3) -> logs\parity\gate\first_run` (15 to 17 minutes: three gates on 2026-09-25 took about 15, 17 and 16 — `s12_names_gate`, `s11_close_gate`, `s12_names_r0004_gate`, from the first file each wrote under `logs/parity/gate/<stamp>/` to its `summary.txt`; the game window opens and closes three times; do not touch the keyboard) |
 
 > Superseded 2026-09-25 (Sprint 13 R2, fix round 1): rows 1, 3 and 4 carried every earlier count (881, 880, 876 and
@@ -750,6 +750,44 @@ the plan's Log why, `docs/KNOWN.md` what is proven and what is believed, `docs/H
 
 **The pinned references (Sprint 13 H3):** `scripts/parity/pins.json` (r0001; `pins_r0004.json` for r0004) is the gate's standard and the gate refuses on a drift; `scripts/parity/pins_refs.json` pins every OTHER reference PNG under `scripts/parity/` -- a tripwire, not a refusal: `test_gate_pins.EveryReferenceIsPinned` fails the suite when one changes and the file does not, so re-pin in the same commit.
 
+### macOS (Apple Silicon)
+
+Experimental, written by Grswld in his fork and taken upstream by cherry-pick on 2026-10-08. The conventions, what
+upstream has validated and the ledger of the fork's commits are in `docs/MACOS.md`; the numbers below are his, from
+his Mac. Phase 1 of the macOS port (2026-10-01): the game from your own disc, offline, native arm64 -- boots, walks the menus by keyboard, plays
+the intro movie and a mission with sound. A mission runs at about 30 ms a frame on an M2 Pro (Windows: ~27; the
+console 16.7), so it is choppy. Not yet on macOS: the launcher flow, online, the microphone, an app bundle; CI builds and tests the no-disc half (`macos.yml`, not a required check).
+
+Needs Xcode Command Line Tools (AppleClang) and the **arm64** Homebrew at `/opt/homebrew`:
+`brew install cmake ninja pkgconf bash coreutils` (bash and coreutils only for `test`). An Intel Homebrew under
+`/usr/local` is never used and cannot be: its libraries are x86_64. `build_macos.sh` pins `pkg-config` to
+`/opt/homebrew` for that reason -- its default search path reaches `/usr/local`.
+
+    python3 -m venv .venv && .venv/bin/python -m pip install -r requirements.txt
+    PATH="$PWD/.venv/bin:$PATH" bash scripts/disc_to_elf.sh "<your ISO>"   # ~7 min on an M2 Pro
+    scripts/build_macos.sh            # tools, recomp, runtime -> dist-macos/socom2 (~6 min)
+    scripts/build_macos.sh test       # Python suite, ps2x_tests, VU1 replay goldens
+    PS2X_CD_IMAGE="<your ISO>" bash run.sh 60
+    # or: PS2X_CD_IMAGE="<your ISO>" dist-macos/socom2 game/disc/socom2_game.elf
+
+- **FFmpeg** is built from source by the CMake tree on first configure: 7.1.5 (the Windows pin's version), static,
+  LGPL, only the MPEG-2 decoder and parser `Kernel/Stubs/MPEG.cpp` opens.
+- **The generated runner** compiles with at most `PS2X_MACOS_RUNNER_JOBS` (default 6) jobs, which keeps a 16 GB
+  machine out of swap.
+- **The recompiler's output** does not depend on the host: the Mac's recomp matches the Windows numbers above
+  (14882 files, `unhandled=114399`, 1871 names).
+- **Rendering** is OpenGL 4.1, macOS's ceiling: `glClipControl` (4.5) is absent, so depth runs `GsGlDepth`'s
+  `Legacy` path. raylib's viewport is restored in framebuffer pixels, so a Retina window should not show a quarter frame
+  (checked on a 1x display only).
+- **Arithmetic:** sse2neon stands in for SSE. On arm64 `long double` is `double`; the VU's round-toward-zero scope
+  sets FPCR through `_mm_setcsr`, and chopping to double then float equals chopping to float, so the VU1 goldens
+  match bit for bit.
+- **The Python suite** outside `build_macos.sh test` needs what that step puts on `PATH`: the venv's `bin/`, the
+  arm64 Homebrew's bash (the harness scripts want bash >= 4.4) and `$(brew --prefix coreutils)/libexec/gnubin`
+  (GNU `stat`, `date`). `server/ops/health.sh`'s test is skipped on macOS: it reads `/proc`.
+- `run.sh` uses `timeout` or `gtimeout` when present, else kills the run itself after the given seconds, exiting
+  124 as `timeout` does.
+
 ## Recompiler reference
 
 Since Sprint 14 Task E3 the `linux` workflow's `recomp-ref` job re-derives a synthetic program on every code push:
@@ -801,7 +839,8 @@ git diff --stat -- tests/fixtures/recomp_ref/expected                       # th
 
 - **Build:** `./build.sh tools | recomp | runtime | release | test | all` (Git Bash; `all` = recomp + runtime).
   Runtime about 3 minutes incremental, 10-15 for a header change or a full generated rebuild. Linux:
-  `scripts/build_linux.sh [tools|runtime|release|test|all] [--no-runner]`. Release kind: `PS2X_RELEASE_KIND=player`
+  `scripts/build_linux.sh [tools|runtime|release|test|all] [--no-runner]`. macOS (Apple Silicon):
+  `scripts/build_macos.sh [tools|recomp|runtime|test|all] [--no-runner]` (below, "macOS (Apple Silicon)"). Release kind: `PS2X_RELEASE_KIND=player`
   (default; `dist-release/`) or `developer` (`dist-release-dev/`; `dist-linux-release[-dev]/` on Linux). Packaging:
   `scripts/make_portable.sh [--release]` (both kinds' archives when both are built), `scripts/make_server_zip.sh`.
 - **The gate** (`python -m tools_py.parity.gate`, `--only <stage>`, `--stamp <name>`, `--baseline <stamp>` to re-score

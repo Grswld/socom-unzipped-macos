@@ -2,12 +2,13 @@
 
 > **Generated -- do not edit.** Written by `python -m tools_py.changelog` from `git log` (R272): every merge commit on the first-parent line of the history it was rendered from, and on the first-parent line of each branch those merges brought in, grouped by the oldest `v*` tag that contains it. `python -m tools_py.changelog --check` exits 1 when this file is stale; regenerate at every merge to a sprint branch (in the merge's follow-up commit) and at the close. The rules are the module's docstring. The reasoning behind a merge is its commit message and the sprint plan's Log; the hand-written log this page replaced is `docs/archive/STATUS-log-to-2026-09-26.md`.
 
-443 merges (68 on the first-parent line, 375 from the branches they merged) in 13 sections: 12 tags and the merges since the newest. Each line: the date, the merge commit, the head of its subject, [the branch it merged]. An indented line came in on the branch the line above it merged.
+444 merges (69 on the first-parent line, 375 from the branches they merged) in 13 sections: 12 tags and the merges since the newest. Each line: the date, the merge commit, the head of its subject, [the branch it merged]. An indented line came in on the branch the line above it merged.
 
 ## Since v0.16.0
 
-218 merges.
+219 merges.
 
+- 2026-10-03 `7f1dd777` T10 the wizard skip, [UI] keys beside [DEV9/Eth] (Sprint 18 T10, R347) [agent/s18-wizard]
 - 2026-10-03 `ce2fe007` pathFromUtf8 guard, per-client ONLINE title, knob checker L-literal (LATER 79/80) [agent/s18-later79]
 - 2026-10-03 `c34777cc` Sprint 18's documents [agent/s18-t8]
 - 2026-10-03 `29785ca6` merge sprint-17 into sprint-18: the live documents forward before T8 [sprint-17]
