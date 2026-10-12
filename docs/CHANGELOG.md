@@ -2,35 +2,253 @@
 
 > **Generated -- do not edit.** Written by `python -m tools_py.changelog` from `git log` (R272): every merge commit on the first-parent line of the history it was rendered from, and on the first-parent line of each branch those merges brought in, grouped by the oldest `v*` tag that contains it. `python -m tools_py.changelog --check` exits 1 when this file is stale; regenerate at every merge to a sprint branch (in the merge's follow-up commit) and at the close. The rules are the module's docstring. The reasoning behind a merge is its commit message and the sprint plan's Log; the hand-written log this page replaced is `docs/archive/STATUS-log-to-2026-09-26.md`.
 
-465 merges (70 on the first-parent line, 395 from the branches they merged) in 14 sections: 13 tags and the merges since the newest. Each line: the date, the merge commit, the head of its subject, [the branch it merged]. An indented line came in on the branch the line above it merged.
+897 merges (57 on the first-parent line, 840 from the branches they merged) in 15 sections: 14 tags and the merges since the newest. Each line: the date, the merge commit, the head of its subject, [the branch it merged]. An indented line came in on the branch the line above it merged.
 
-## Since v0.17.0
+## Since v0.18.0
 
-15 merges.
+209 merges.
 
-- 2026-10-12 `46d17f06` merge main (v0.17.0, the Sprint 17 close) into sprint-18: docs conflicts resolved, LATER 73-81 kept [branch not named]
-- 2026-10-03 `7f1dd777` T10 the wizard skip, [UI] keys beside [DEV9/Eth] (Sprint 18 T10, R347) [agent/s18-wizard]
-- 2026-10-03 `ce2fe007` pathFromUtf8 guard, per-client ONLINE title, knob checker L-literal (LATER 79/80) [agent/s18-later79]
-- 2026-10-03 `c34777cc` Sprint 18's documents [agent/s18-t8]
-- 2026-10-03 `29785ca6` merge sprint-17 into sprint-18: the live documents forward before T8 [sprint-17]
-- 2026-10-03 `e39f640b` PLAY, DISC and ONLINE in the PCSX2 view; LAUNCH writes DEV9 + the pnach and starts PCSX2 (S18 T6) [agent/s18-ui2]
-- 2026-10-02 `fcedc692` the project icon as the exe's resource, a reproducible .ico from our own crest (S18 T9, R346) [agent/s18-icon]
-- 2026-10-02 `a0cce785` the client toggle, the rail per mode and the PCSX2 page (Sprint 18 T5) [agent/s18-ui1]
-- 2026-10-02 `483fcf52` the extract-argv UTF-8 test joins with the platform separator (Linux CI green) [agent/s18-posix-fix]
-- 2026-10-02 `641b61de` PCSX2 INSTALL [agent/s18-install]
-- 2026-10-02 `74eac5ca` the PCSX2 files [agent/s18-files]
-- 2026-10-02 `9ee48ba4` the client mode and the PCSX2 config [agent/s18-config]
-- 2026-10-02 `39b4abba` server/README documents socom-dns beside the four Horizon units (Sprint 18 T8, server) [agent/s18-readme-dns]
-- 2026-10-02 `b08937c0` socom-dns reads the box's muis.json shape (a dict of app-id lists) and exits with a message (T1) [agent/s18-dns-muis]
-- 2026-10-02 `866faad1` socom-dns, the box's name service on 53/udp beside the Horizon units (Sprint 18 T1, code) [agent/s18-dns]
+- 2026-10-12 `cf449442` merge origin/main (v0.18.0): Sprint 18 lobby server, Sprint 19 RE spec, macOS CI into the macOS fork [origin/main, main merged in]
+- 2026-10-06 `50b36a98` the owner's README edits on GitHub [fork/main]
+- 2026-10-04 `dded3fdc` upstream's Sprint 17 VU1 work (N1c by default, the cheaper dispatch) into the macOS fork [origin/main, main merged in]
+  - 2026-10-02 `4182cfa5` Merge pull request #131 from Scotho/slice2-s17-to-main [slice2-s17-to-main]
+  - 2026-10-02 `fd37fa0f` a stale-mutex breaker retries the mkdir at once (the smoke flake); slow suite green [agent/s17-lock-smoke-flake]
+  - 2026-10-02 `a3cd24ef` run_gate clears a stage's old captures, a reused stamp mixes no runs (S17) [agent/s17-gate-stale-stamp]
+  - 2026-10-01 `85d8ce18` the CI changes step prints a long file list without a pipe that can close (PR #130's 679) [agent/s17-ci-head-pipe]
+  - 2026-10-01 `94a6a18b` merge origin/main into sprint-17: the web teaser as a local demo replaces web/ (#130, the owner's word) [origin/main, main merged in]
+  - 2026-10-01 `79ba9efb` no warning clock on a matched image, the native lookup cached, entry-0 split by path [agent/s17-vu1-dispatch]
+  - 2026-10-01 `4de0c5e0` research/83 the entry-0 swarm and 0x3e; the entry-0 shape scorer (Sprint 17 F) [agent/s17-entry0-swarm]
+  - 2026-10-01 `9ef5d7dc` build.sh, the chain and run_detached refuse while the launcher runs (three reds) [agent/s17-launcher-busy]
+  - 2026-10-01 `30df3fa1` PS2X_VU1_NATIVE_33C8 defaults to 1, N1c adopted (Sprint 17 F, R345) [agent/s17-n1c-default]
+  - 2026-09-30 `abc74383` N2, the native 0x52 skinning pass behind PS2X_VU1_NATIVE_SKIN (Sprint 17 F) [agent/s17-n2-skin]
+  - 2026-09-30 `4524cbbb` the 0x33c8 entry admits the walk's two last-bone shapes, A and the 0x02 loop (S17 F) [agent/s17-n1c-shapes]
+  - 2026-09-30 `826c4d3f` the 0x33c8 entry admits 0x54 and 0x10 with their stores proven (Sprint 17 F, N1c) [agent/s17-n1c-linear]
+  - 2026-09-30 `22d5f1f1` PS2X_VU1_DUMP_REFUSED dumps the programs native refused; the picker (S17 F) [agent/s17-n1c-dump-refused]
+  - 2026-09-30 `2b8b5bd6` N1b, the 0x33c8 entry admits 0x06 (the cull) with its stores proven (Sprint 17 F) [agent/s17-n1b-cull]
+- 2026-10-02 `2704979c` the mission music plays whole and in order [fix-vpk-stream-offsets]
+- 2026-10-02 `86be63e1` the flush-reason counter, the frame-drop breakdown, batch-by-value adopted [perf-step1-flush-reasons]
+- 2026-10-01 `03da0170` SOCOM II natively on macOS arm64, phase 1 (offline, boot to a mission) [macos-port]
+- 2026-10-01 `9abe5eee` Merge pull request #130: the web teaser as a local demo replaces web/ on main (the owner's word) [branch not named]
+  - 2026-10-01 `eebc70c2` merge main into the redotcom teaser (local demo) [branch not named]
+  - 2026-09-30 `7e352998` Merge branch 'agent/web-hotfix-look' into claude/web-viewer-playtest-fixes [agent/web-hotfix-look]
+  - 2026-09-30 `60bfc16d` Merge branch 'agent/web-fix-mpoff' into claude/web-viewer-playtest-fixes [agent/web-fix-mpoff]
+  - 2026-09-29 `32a6f66d` Merge branch 'agent/web-fix-players' into claude/web-viewer-playtest-fixes [agent/web-fix-players]
+  - 2026-09-29 `89e5df36` Merge branch 'agent/web-fix-classicdeath' into claude/web-viewer-playtest-fixes [agent/web-fix-classicdeath]
+  - 2026-09-29 `a377e0c7` Merge branch 'agent/web-fix-ui3' into claude/web-viewer-playtest-fixes [agent/web-fix-ui3]
+  - 2026-09-29 `8772af75` Merge branch 'agent/web-w3docs' into claude/web-viewer-playtest-fixes [agent/web-w3docs]
+  - 2026-09-29 `9c32d3fd` Merge branch 'agent/web-w3code' into claude/web-viewer-playtest-fixes [agent/web-w3code]
+  - 2026-09-29 `40b55155` Merge branch 'agent/web-fix-death' into claude/web-viewer-playtest-fixes [agent/web-fix-death]
+  - 2026-09-29 `5b340eb9` Merge branch 'agent/web-fix-score' into claude/web-viewer-playtest-fixes [agent/web-fix-score]
+  - 2026-09-29 `5908b2fc` Merge branch 'agent/web-fix-score' into claude/web-viewer-playtest-fixes [agent/web-fix-score]
+  - 2026-09-29 `9c4ddd67` Merge branch 'agent/web-fix-gdmg' into claude/web-viewer-playtest-fixes [agent/web-fix-gdmg]
+  - 2026-09-29 `90af9ec5` Merge claude/web-viewer-playtest-fixes (wave-1 launch fixes) into agent/web-fix-gdmg; protocol 6 [claude/web-viewer-playtest-fixes]
+  - 2026-09-29 `8c021e98` Merge branch 'agent/web-w2data' into claude/web-viewer-playtest-fixes [agent/web-w2data]
+  - 2026-09-29 `a894ab1e` Merge branch 'agent/web-w2camera' into claude/web-viewer-playtest-fixes [agent/web-w2camera]
+  - 2026-09-29 `d50f6581` Merge branch 'agent/web-fix-climb' into agent/web-w2camera (corpus kept, rebuilt at merge) [agent/web-fix-climb]
+  - 2026-09-29 `8532d5be` Merge branch 'agent/web-w2tools' into claude/web-viewer-playtest-fixes [agent/web-w2tools]
+  - 2026-09-29 `793ad888` Merge branch 'agent/web-w2render' into claude/web-viewer-playtest-fixes [agent/web-w2render]
+  - 2026-09-29 `2ad57261` Merge branch 'agent/web-fix-b13' into claude/web-viewer-playtest-fixes [agent/web-fix-b13]
+  - 2026-09-29 `b4eb6147` Merge branch 'agent/web-fix-b9' into claude/web-viewer-playtest-fixes [agent/web-fix-b9]
+  - 2026-09-29 `e535e80d` Merge branch 'agent/web-fix-b7' into claude/web-viewer-playtest-fixes [agent/web-fix-b7]
+  - 2026-09-29 `26111e4f` Merge branch 'agent/web-fix-b3' into claude/web-viewer-playtest-fixes [agent/web-fix-b3]
+  - 2026-09-29 `5cf5b08b` Merge branch 'agent/web-fix-b6' into claude/web-viewer-playtest-fixes [agent/web-fix-b6]
+  - 2026-09-29 `578f0d13` Merge branch 'agent/web-fix-b5' into claude/web-viewer-playtest-fixes [agent/web-fix-b5]
+  - 2026-09-29 `af0b5482` Merge branch 'agent/web-fix-b2' into claude/web-viewer-playtest-fixes [agent/web-fix-b2]
+  - 2026-09-29 `0bc5ee9c` Merge branch 'agent/web-fix-b10' into claude/web-viewer-playtest-fixes [agent/web-fix-b10]
+  - 2026-09-29 `4892502d` Merge branch 'agent/web-fix-b1' into claude/web-viewer-playtest-fixes [agent/web-fix-b1]
+  - 2026-09-29 `52f0fc27` Merge branch 'agent/web-site' into claude/web-viewer-playtest-fixes [agent/web-site]
+  - 2026-09-29 `1efbc8e2` Merge branch 'agent/web-mp' into claude/web-viewer-playtest-fixes [agent/web-mp]
+  - 2026-09-29 `5d2ccb21` Merge branch 'claude/web-motion' into claude/web-viewer-playtest-fixes [claude/web-motion]
+  - 2026-09-29 `ebf014ca` Merge branch 'claude/web-ui' into claude/web-viewer-playtest-fixes [claude/web-ui]
+  - 2026-09-29 `f8cd07fa` Merge branch 'claude/web-ui' into claude/web-viewer-playtest-fixes [claude/web-ui]
+  - 2026-09-29 `fff7e079` Merge branch 'claude/web-accuracy' into claude/web-viewer-playtest-fixes [claude/web-accuracy]
+  - 2026-09-29 `65988b49` Merge branch 'agent/web-docs' into claude/web-viewer-playtest-fixes [agent/web-docs]
+  - 2026-09-29 `8d870b9b` Merge branch 'agent/web-doors' into claude/web-viewer-playtest-fixes [agent/web-doors]
+  - 2026-09-29 `c421a424` Merge branch 'agent/web-doors' into claude/web-viewer-playtest-fixes [agent/web-doors]
+  - 2026-09-29 `2dc566cb` Merge branch 'claude/web-traversal' into claude/web-viewer-playtest-fixes [claude/web-traversal]
+  - 2026-09-29 `971de434` Merge branch 'claude/web-motion' into claude/web-viewer-playtest-fixes [claude/web-motion]
+  - 2026-09-29 `19372b10` Merge branch 'claude/web-viewer-playtest-fixes' into claude/web-motion [claude/web-viewer-playtest-fixes]
+  - 2026-09-29 `2aa46675` Merge branch 'agent/web-ammo' into claude/web-viewer-playtest-fixes [agent/web-ammo]
+  - 2026-09-29 `08302028` Merge branch 'claude/web-motion' into claude/web-viewer-playtest-fixes [claude/web-motion]
+  - 2026-09-29 `28e8fb9d` Merge branch 'claude/web-weapon' into claude/web-viewer-playtest-fixes [claude/web-weapon]
+  - 2026-09-29 `32dc6c80` Merge branch 'claude/web-accuracy' into claude/web-viewer-playtest-fixes [claude/web-accuracy]
+  - 2026-09-29 `68c5c58a` Merge branch 'claude/web-grenades' into claude/web-viewer-playtest-fixes [claude/web-grenades]
+  - 2026-09-29 `c1c73e5e` Merge branch 'claude/web-effects' into claude/web-viewer-playtest-fixes [claude/web-effects]
+  - 2026-09-29 `fc49a002` Merge branch 'claude/web-maps' into claude/web-viewer-playtest-fixes [claude/web-maps]
+  - 2026-09-29 `906af4af` Merge branch 'claude/web-effects' into claude/web-viewer-playtest-fixes [claude/web-effects]
+  - 2026-09-29 `d5004a18` Merge branch 'claude/web-audio' into claude/web-viewer-playtest-fixes [claude/web-audio]
+  - 2026-09-29 `200c0162` Merge branch 'claude/web-traversal' into claude/web-viewer-playtest-fixes [claude/web-traversal]
+  - 2026-09-29 `62922130` Merge branch 'claude/web-motion' into claude/web-viewer-playtest-fixes [claude/web-motion]
+  - 2026-09-29 `2362f32f` Merge branch 'claude/web-feelqa' into claude/web-viewer-playtest-fixes [claude/web-feelqa]
+  - 2026-09-29 `31befa45` Merge branch 'agent/web-mp' into claude/web-viewer-playtest-fixes [agent/web-mp]
+  - 2026-09-29 `7632812a` Merge branch 'claude/web-grenades' into claude/web-viewer-playtest-fixes [claude/web-grenades]
+  - 2026-09-29 `7cb913d4` Merge branch 'claude/web-effects' into claude/web-grenades [claude/web-effects]
+  - 2026-09-29 `7e57e1bd` Merge branch 'claude/web-effects' into claude/web-viewer-playtest-fixes [claude/web-effects]
+  - 2026-09-29 `c9c6cc3c` Merge web sprint 3 (multiplayer) into claude/web-viewer-playtest-fixes: the shared sim, net, remote players [branch not named]
+  - 2026-09-29 `8b5fa5b2` Merge branch 'claude/web-traversal' into claude/web-viewer-playtest-fixes [claude/web-traversal]
+  - 2026-09-29 `d247e611` Merge branch 'claude/web-weapon' into claude/web-viewer-playtest-fixes [claude/web-weapon]
+  - 2026-09-29 `61a85c19` merge claude/web-viewer-playtest-fixes into claude/web-weapon: no first person meets the pistol's no-scope rule [claude/web-viewer-playtest-fixes]
+  - 2026-09-29 `a17d31c2` Merge branch 'claude/web-ui' into claude/web-viewer-playtest-fixes [claude/web-ui]
+  - 2026-09-29 `51662f13` Merge branch 'claude/web-grenades' into claude/web-viewer-playtest-fixes [claude/web-grenades]
+  - 2026-09-29 `1fc83a43` Merge branch 'claude/web-motion' into claude/web-viewer-playtest-fixes [claude/web-motion]
+  - 2026-09-29 `c25ca479` Merge branch 'claude/web-maps' into claude/web-viewer-playtest-fixes [claude/web-maps]
+  - 2026-09-29 `7f698d81` Merge claude/web-effects (round 3): the pooled light passes, smoke wall, lit SEAL, ambient effects, casing names [claude/web-effects]
+  - 2026-09-29 `01b58982` Merge branch 'claude/web-weapon' into claude/web-viewer-playtest-fixes [claude/web-weapon]
+  - 2026-09-29 `f48c3b38` merge claude/web-viewer-playtest-fixes into claude/web-weapon: the sidearm's hang beside the walk's warm-up [claude/web-viewer-playtest-fixes]
+  - 2026-09-29 `9f4c70aa` Merge branch 'claude/web-maps' into claude/web-viewer-playtest-fixes [claude/web-maps]
+  - 2026-09-29 `56202b8c` Merge branch 'claude/web-weapon' into claude/web-viewer-playtest-fixes [claude/web-weapon]
+  - 2026-09-29 `fdf903d7` merge claude/web-viewer-playtest-fixes into claude/web-weapon: the pip beside the reticle sets; the Mark 23's piercing [claude/web-viewer-playtest-fixes]
+  - 2026-09-29 `92a77282` Merge branch 'claude/web-motion' into claude/web-viewer-playtest-fixes [claude/web-motion]
+  - 2026-09-29 `6448d07c` Merge branch 'claude/web-audio' into claude/web-viewer-playtest-fixes [claude/web-audio]
+  - 2026-09-29 `f00c45db` Merge branch 'claude/web-viewer-playtest-fixes' into claude/web-audio [claude/web-viewer-playtest-fixes]
+  - 2026-09-29 `6f0b2dc8` Merge branch 'claude/web-accuracy' into claude/web-viewer-playtest-fixes [claude/web-accuracy]
+  - 2026-09-29 `f70d85ea` Merge branch 'claude/web-feelqa' into claude/web-viewer-playtest-fixes [claude/web-feelqa]
+  - 2026-09-29 `3acc5fa4` Merge branch 'claude/web-grenades' into claude/web-viewer-playtest-fixes [claude/web-grenades]
+  - 2026-09-29 `d52428ed` Merge branch 'claude/web-maps' into claude/web-viewer-playtest-fixes [claude/web-maps]
+  - 2026-09-29 `1776cc7e` Merge branch 'claude/web-viewer-playtest-fixes' into claude/web-maps [claude/web-viewer-playtest-fixes]
+  - 2026-09-29 `315867d9` Merge branch 'claude/web-effects' into claude/web-viewer-playtest-fixes [claude/web-effects]
+  - 2026-09-29 `37ea8731` Merge branch 'claude/web-audio' into claude/web-viewer-playtest-fixes [claude/web-audio]
+  - 2026-09-29 `537e0772` Merge branch 'claude/web-motion' into claude/web-viewer-playtest-fixes [claude/web-motion]
+  - 2026-09-29 `4275caba` Merge branch 'claude/web-viewer-playtest-fixes' into claude/web-motion [claude/web-viewer-playtest-fixes]
+  - 2026-09-29 `707e8b21` Merge branch 'claude/web-hud' into claude/web-viewer-playtest-fixes [claude/web-hud]
+  - 2026-09-29 `4982342a` Merge branch 'claude/web-ui' into claude/web-viewer-playtest-fixes [claude/web-ui]
+  - 2026-09-29 `a3411519` Merge branch 'claude/web-traversal' into claude/web-viewer-playtest-fixes [claude/web-traversal]
+  - 2026-09-29 `567374fa` Merge branch 'claude/web-feelqa' into claude/web-viewer-playtest-fixes [claude/web-feelqa]
+  - 2026-09-29 `dd7a3719` Merge branch 'claude/web-viewer-playtest-fixes' into claude/web-feelqa [claude/web-viewer-playtest-fixes]
+  - 2026-09-29 `7093395d` Merge branch 'claude/web-grenades' into claude/web-viewer-playtest-fixes [claude/web-grenades]
+  - 2026-09-29 `a854de89` Merge branch 'claude/web-accuracy' into claude/web-viewer-playtest-fixes [claude/web-accuracy]
+  - 2026-09-29 `c35b7125` merge claude/web-viewer-playtest-fixes (00c242f4) into the accuracy round 3 [claude/web-viewer-playtest-fixes]
+  - 2026-09-29 `adfda4c6` Merge branch 'claude/web-feelqa' into claude/web-viewer-playtest-fixes [claude/web-feelqa]
+  - 2026-09-28 `0793bfb2` Merge branch 'claude/web-ui' into claude/web-viewer-playtest-fixes [claude/web-ui]
+  - 2026-09-28 `320f07cc` Merge branch 'claude/web-maps' into claude/web-viewer-playtest-fixes [claude/web-maps]
+  - 2026-09-28 `dc54009d` Merge branch 'claude/web-hud' into claude/web-viewer-playtest-fixes [claude/web-hud]
+  - 2026-09-28 `404199b4` Merge branch 'claude/web-effects' into claude/web-viewer-playtest-fixes [claude/web-effects]
+  - 2026-09-28 `af6da374` Merge branch 'claude/web-grenades' into claude/web-viewer-playtest-fixes [claude/web-grenades]
+  - 2026-09-28 `522552aa` Merge branch 'claude/web-feelqa' into claude/web-viewer-playtest-fixes [claude/web-feelqa]
+  - 2026-09-28 `6ae7c597` Merge branch 'claude/web-viewer-playtest-fixes' into claude/web-feelqa [claude/web-viewer-playtest-fixes]
+  - 2026-09-28 `58c0613d` Merge branch 'claude/web-accuracy' into claude/web-viewer-playtest-fixes [claude/web-accuracy]
+  - 2026-09-28 `0a3b5c26` one rifle record, the gun in the two-leg shot, the kick gated to the scope [claude/web-viewer-playtest-fixes]
+  - 2026-09-28 `cf94d4d4` Merge branch 'claude/web-traversal' into claude/web-viewer-playtest-fixes [claude/web-traversal]
+  - 2026-09-28 `bb6b1292` merge claude/web-viewer-playtest-fixes into the traversal: the moves on motion's walk, the HUD, the audio, the pad [claude/web-viewer-playtest-fixes]
+  - 2026-09-28 `36a77d95` Merge branch 'claude/web-motion' into claude/web-viewer-playtest-fixes [claude/web-motion]
+  - 2026-09-28 `7dbb3023` Merge branch 'claude/web-maps' into claude/web-viewer-playtest-fixes [claude/web-maps]
+  - 2026-09-28 `a781b39d` Merge branch 'claude/web-grenades' into claude/web-viewer-playtest-fixes [claude/web-grenades]
+  - 2026-09-28 `345d8897` Merge branch 'claude/web-motion' into claude/web-viewer-playtest-fixes [claude/web-motion]
+  - 2026-09-28 `d196fa5d` Merge branch 'claude/web-hud' into claude/web-viewer-playtest-fixes [claude/web-hud]
+  - 2026-09-28 `745168af` Merge branch 'claude/web-weapon' into claude/web-viewer-playtest-fixes [claude/web-weapon]
+  - 2026-09-28 `7272be92` Merge branch 'claude/web-audio' into claude/web-viewer-playtest-fixes [claude/web-audio]
+  - 2026-09-28 `261d5a0f` Merge branch 'claude/web-look' into claude/web-viewer-playtest-fixes [claude/web-look]
+  - 2026-09-28 `67fd012a` Merge branch 'claude/web-ui' into claude/web-viewer-playtest-fixes [claude/web-ui]
+  - 2026-09-28 `946f9a69` merge origin/main into the cloud sprint 2: one player [origin/main, main merged in]
+- 2026-09-30 `efe2f394` Merge pull request #119: Sprint 17 to main (1) -- batches 4 and 5 proved, C1 adopted [sprint-17]
+  - 2026-09-30 `fa543c74` the attach tests patch the host platform (Linux CI red on 32e265b4, issue #118) [agent/s17-i118-linux]
+  - 2026-09-30 `70049c95` drive.py finds the game by pid then exe name, never a browser tab (issue #118) [agent/s17-i118-window]
+  - 2026-09-29 `e230282c` N1, a native VU1 program at entry 0x33c8 behind PS2X_VU1_NATIVE_33C8 (Sprint 17 F) [agent/s17-n1-33c8]
+  - 2026-09-29 `ae63dc8f` the refusal tests force the dispatcher's XGKICK model (CI red on a0709bca) [agent/s17-refusal-tests]
+  - 2026-09-29 `84589d2e` the native VU1 refusal count behind PS2X_VU1_NATIVE_REFUSALS (Sprint 17 F) [agent/s17-vu1-refusals]
+  - 2026-09-29 `431b7d87` hostprof_diff skips stack lines, replay_bench resolves its exe (issues #116, #117) [agent/s17-tools-116-117]
+  - 2026-09-29 `6de159df` C2, the flag ring drained in one step behind PS2X_VU1_COMMIT_BATCH (Sprint 17 F1) [agent/s17-vu1-c2]
+  - 2026-09-29 `751ea0c4` PS2X_VU1_FMAC_ZERO_FAST defaults to 1, C1 adopted (Sprint 17 F1) [agent/s17-c1-default]
+  - 2026-09-29 `15e08e00` the VU1 product-sum's zero lanes on the fast path behind PS2X_VU1_FMAC_ZERO_FAST (F, C1) [agent/s17-vu1-c1]
+  - 2026-09-29 `7e961b0c` research 81 [agent/s17-vu1-scope]
+  - 2026-09-29 `54f1ca4a` card_save --check-host, the creator names the HOST (#111 Task 5 finding) [agent/s17-persona-icons]
+  - 2026-09-29 `fa894306` the [gs-loop] accounting of both threads under PS2X_GS_STATS; the frame-limit reading (F3) [agent/s17-f3]
+  - 2026-09-29 `d89923aa` the 989snd stream loop request (flag 4) honoured [agent/s17-a1-loop]
+  - 2026-09-29 `574a57a8` exit 74 means a foreign ELF this build cannot run; own-ELF restarts in-process (Q2 Step 5) [agent/s17-q2-step5]
+  - 2026-09-29 `100bad93` the mission-music instrument gains --stage lobby, the login held and captured (A1) [agent/s17-a1-lobby]
+  - 2026-09-29 `66638f65` #114 characterisation test [agent/s17-f1a3-hang]
+  - 2026-09-29 `7dad13e2` the card codec and the persona creator on the ONLINE page (#111, O25) [agent/persona-card]
+  - 2026-09-29 `9a15cd9d` research 80 [agent/s17-h1]
+  - 2026-09-29 `9c789f31` the GS recorder (PS2X_GS_RECORD) and the headless gs_replay_bench (R334 rung one) [agent/s17-replay-bench]
+  - 2026-09-28 `ddabdb9d` the recorder's Cmd flag and block uploads the replay file must carry [agent/s17-f1-knobs]
+  - 2026-09-29 `530fbbdf` F1 attempts 2 and 3 behind PS2X_GS_SETUP_FORMAT and PS2X_GS_DOUBLE_SWIZZLE (R334) [agent/s17-f1-knobs]
+  - 2026-09-29 `c440337d` the viewer's detail pass follows its fading LOD base (#113) [agent/i101-lod-detail]
+  - 2026-09-29 `46343c88` the PCSX2 masters guarded by image (r0001/r0004), B's port shift on both (#112) [agent/i112-pnach-masters]
+  - 2026-09-29 `f531cf55` merge main (f6499f0e) into sprint-17: PR #109's web sprint 2 'the player' (R333) and the feature label [branch not named]
+  - 2026-09-29 `9526951c` build.sh test skips the full Python suite in a linked worktree or under a queue (R334) [agent/s17-suite-guard]
+  - 2026-09-29 `4ba10327` hostprof_symbolize skips and counts a stacks histogram's stack lines (#95) [agent/i95-symbolize]
+  - 2026-09-28 `9937108f` the message-driven copies and indexes bounded at their handlers (reviewed PASS) [agent/medusa-rt2]
+  - 2026-09-28 `15abe1e3` the scheduler's reset restarts its host-clock anchor (Q2's display round, PASS) [agent/s17-q2b]
+  - 2026-09-28 `6f6cb55c` F1 attempt 1 [agent/s17-f1a]
+  - 2026-09-28 `2725e3ca` LoadExecPS2 of the game's own ELF restarts the guest in-process (Sprint 17 Q2 Steps 1-2, reviewed) [agent/s17-q2]
+  - 2026-09-28 `f6c3b8aa` sprint-17 (the network bounds) into agent/s17-q2 [branch not named]
+  - 2026-09-28 `239b137e` sprint-17 (F0 5b's shot queue) into agent/s17-q2 [branch not named]
+  - 2026-09-28 `45878fc3` the server's frame decode, relay caps and text fields bounded (reviewed, 82 xUnit) [agent/medusa-srv]
+  - 2026-09-28 `6a9d10c8` the network receive path bounded [agent/medusa-rt]
+  - 2026-09-28 `77400f25` main (b324dc50, web sprints 1 and 2) back into sprint-17 [main, main merged in]
+  - 2026-09-28 `fa680f3a` the screenshot encode off the GL thread, a shot queue (Sprint 17 F0 Step 5b, PASS) [agent/s17-f0b]
+  - 2026-09-28 `e332974c` submit_split.py scores the [gs-submit] line over a walk window (Sprint 17 F1 Step 0, PASS) [agent/s17-f1]
+  - 2026-09-28 `c19545e5` the chain guard [agent/s17-g1]
+  - 2026-09-28 `d1687656` the three instruments [agent/s17-f0]
+  - 2026-09-28 `63bc6da7` the online menus' harness scoped, one row per screen (Sprint 17 H1, reviewed PASS) [agent/s17-h1]
+  - 2026-09-28 `89926fe2` the story page's readability pass and the viewer's vendored design system 1.0.3 (R294, reviewed) [agent/ds-web]
+  - 2026-09-28 `df616cad` sprint-16's close record (d7bd44c0, main merged back) into sprint-17 at its open [branch not named]
+  - 2026-09-28 `0d983a5c` main (v0.16.0, d77b58c5) back into sprint-16 after the close [main, main merged in]
+- 2026-09-28 `6ef55579` Merge pull request #109: the cloud's web sprint 2 'the player' onto main (the owner's word, R333) [branch not named]
+  - 2026-09-28 `0fa13d15` the cloud branch's web sprint 2 'the player' onto main, the cloud's side on every collision (the owner's word) [branch not named]
+  - 2026-09-28 `f18376f5` the SEAL runs the game's clips on the mover; the shoulder camera and the aim view (W2.2b, W2.6) [agent/web-s2-play]
+  - 2026-09-28 `2decd679` the M4A1 SD drawn, the fire point per GetPutativeFirePointW, the shot; research 79 (W2.4) [agent/web-s2-weapon]
+  - 2026-09-28 `3b52f4cd` full controller support on the PS2 layout, fly and walk alike, a toast on connect (W2.7) [agent/web-s2-pad]
+  - 2026-09-28 `dd995b0b` the SEAL mesh, skeleton and gear decoded and drawn in the bind pose at slot A (W2.1) [agent/web-s2-char]
+  - 2026-09-28 `8652f5e0` the skeletal motion format read [agent/web-s2-motion]
+  - 2026-09-28 `06f156c9` the owner's main v0.16.0 and design-system merges [origin/claude/web-sprint-cloud-8wa72q]
+- 2026-09-28 `1fab66fc` the request label is feature, not enhancement (PR #106, checks green) [docs/feature-label]
+- 2026-09-28 `ee4cc01c` Merge pull request #102: web sprint 2, the SEAL in the world (with web sprint 1; reviewed; CI green) [branch not named]
+  - 2026-09-28 `24a448c7` the close's documents; web sprint 2 CLOSED (W2.9) [agent/web-s2-close]
+  - 2026-09-28 `08b65972` simple shooting [agent/web-s2-fire]
+  - 2026-09-28 `3db82b4c` the light stick for W2.2c by PCSX2 macros in a restored ini swap; half_fwd and crouch_walk [agent/web-s2-light]
+  - 2026-09-28 `5a068915` the game's third-person camera [agent/web-s2-cam]
+  - 2026-09-28 `7d901fe4` the SEAL speed probe, its fit and research 79's recipe for W2.2c (no run yet) [agent/web-s2-probe]
+  - 2026-09-28 `fb512a85` the walk at the game's speeds, ramp, stances and fall (W2.2b; W2.R9 on the stance roots) [agent/web-s2-move]
+  - 2026-09-28 `5e11dc52` the stand-in body [agent/web-s2-body]
+  - 2026-09-28 `826ae512` the reticle [agent/web-s2-ret]
+  - 2026-09-28 `f7f9a4b7` the open (Task 0) and the SEAL's tuning table off READERC.ZAR (web sprint 2, W2.2a) [agent/web-s2-tuning]
+  - 2026-09-28 `4ef754af` the panel folds behind a cog beside the brand; GitHub wears its mark (web sprint 2, W2.0) [agent/web-s2-chrome]
+  - 2026-09-28 `6e0cc3f6` Merge pull request #100: web sprint 1 'the engine's world' (main and the design system 1.0.3 merged in; reviewed; CI green) [branch not named]
+  - 2026-09-28 `c67dbd98` agent/ds-web (design system 1.0.3, shipped fonts) into web sprint 1 so the deployed viewer keeps tonight's fixes [branch not named]
+  - 2026-09-28 `f1829b08` main (v0.16.0, d77b58c5) into web sprint 1 [main, main merged in]
+  - 2026-09-28 `5e9a9ab5` the opening stand and the spawn slots on the probe's floor (web sprint 1, W1.4b) [agent/web-s1-stand]
+  - 2026-09-28 `4a98268f` the spawn facing turned 180 degrees [agent/web-s1-slots]
+  - 2026-09-28 `ea1bdf9a` the ISO source [agent/web-s1-iso]
+  - 2026-09-28 `88e13384` the ground probe and walk mode [agent/web-s1-walk]
+  - 2026-09-28 `85a93c7a` the engine's draw order behind a switch, regions deferred; the diamond ring (W1.2, W1.R8) [agent/web-s1-order]
+  - 2026-09-28 `f8a38266` the disc's spawn slots drawn as the spawn overlay (web sprint 1, W1.5b) [agent/web-s1-slots]
+  - 2026-09-28 `9917f1c5` AIMAPS.MPS decoded to its spawn list; research 75 (web sprint 1, W1.5) [agent/web-s1-aimaps]
+  - 2026-09-28 `32c85bda` the engine's grid [agent/web-s1-grid]
+  - 2026-09-28 `b66fad68` the detail texture pass bound by mp<N>_lib.rdr (web sprint 1, W1.6) [agent/web-s1-detail]
+  - 2026-09-28 `651fee59` LOD copies fade across their bands as DrawLOD scales them (web sprint 1, W1.3) [agent/web-s1-lod]
+
+## v0.18.0
+
+Tagged 2026-10-12 on `3ff74a11`.
+
+17 merges.
+
+- 2026-10-12 `3ff74a11` Merge pull request #138 from Scotho/sprint-18 [sprint-18] (via `cf449442`)
+  - 2026-10-12 `46d17f06` merge main (v0.17.0, the Sprint 17 close) into sprint-18: docs conflicts resolved, LATER 73-81 kept [branch not named]
+  - 2026-10-03 `7f1dd777` T10 the wizard skip, [UI] keys beside [DEV9/Eth] (Sprint 18 T10, R347) [agent/s18-wizard]
+  - 2026-10-03 `ce2fe007` pathFromUtf8 guard, per-client ONLINE title, knob checker L-literal (LATER 79/80) [agent/s18-later79]
+  - 2026-10-03 `c34777cc` Sprint 18's documents [agent/s18-t8]
+  - 2026-10-03 `29785ca6` merge sprint-17 into sprint-18: the live documents forward before T8 [sprint-17]
+  - 2026-10-03 `e39f640b` PLAY, DISC and ONLINE in the PCSX2 view; LAUNCH writes DEV9 + the pnach and starts PCSX2 (S18 T6) [agent/s18-ui2]
+  - 2026-10-02 `fcedc692` the project icon as the exe's resource, a reproducible .ico from our own crest (S18 T9, R346) [agent/s18-icon]
+  - 2026-10-02 `a0cce785` the client toggle, the rail per mode and the PCSX2 page (Sprint 18 T5) [agent/s18-ui1]
+  - 2026-10-02 `483fcf52` the extract-argv UTF-8 test joins with the platform separator (Linux CI green) [agent/s18-posix-fix]
+  - 2026-10-02 `641b61de` PCSX2 INSTALL [agent/s18-install]
+  - 2026-10-02 `74eac5ca` the PCSX2 files [agent/s18-files]
+  - 2026-10-02 `9ee48ba4` the client mode and the PCSX2 config [agent/s18-config]
+  - 2026-10-02 `39b4abba` server/README documents socom-dns beside the four Horizon units (Sprint 18 T8, server) [agent/s18-readme-dns]
+  - 2026-10-02 `b08937c0` socom-dns reads the box's muis.json shape (a dict of app-id lists) and exits with a message (T1) [agent/s18-dns-muis]
+  - 2026-10-02 `866faad1` socom-dns, the box's name service on 53/udp beside the Horizon units (Sprint 18 T1, code) [agent/s18-dns]
+- 2026-10-12 `a9a2e85e` Merge pull request #99 from Scotho/dependabot/github_actions/actions/checkout-7.0.1 [dependabot/github_actions/actions/checkout-7.0.1] (via `cf449442`)
 
 ## v0.17.0
 
 Tagged 2026-10-12 on `b4eaa61c`.
 
-225 merges.
+446 merges.
 
-- 2026-10-12 `b4eaa61c` Merge pull request #137 from Scotho/sprint-17 [sprint-17] (via `46d17f06`)
+- 2026-10-12 `b4eaa61c` Merge pull request #137 from Scotho/sprint-17 [sprint-17] (via `cf449442`)
   - 2026-10-11 `b16feba2` docs/research/h62, Harry62's work digested and mapped onto ours (R364), reviewed [agent/h62-digest]
   - 2026-10-11 `d3ee58a9` research/89 and the Sprint 19 RE spec (PROPOSED) and plan, Fable-reviewed [agent/s19-spec]
   - 2026-10-11 `1461ee49` the Sprint 17 close doc review's fixes (24 findings), reviewed PASS [agent/s17-close-docs]
@@ -48,16 +266,25 @@ Tagged 2026-10-12 on `b4eaa61c`.
   - 2026-10-03 `bfba8a98` #104 fragment Z floor + ZBUF format clamp from PCSX2 (LATER 84, knob PS2X_GS_ZFLOOR) [agent/s17-zfloor]
   - 2026-10-03 `4a63e7dd` upstream #265 pad bytes, #257 D_ENABLER mirror, #268 VCALLMSR (LATER 83) [agent/s17-upstream-ports]
   - 2026-10-03 `99d66e06` research/85 the PS2 recomp projects audit, LATER 82-95, the licence rule (Sprint 17) [agent/s17-research85]
-- 2026-10-11 `70c62146` Merge pull request #134 from Scotho/feat/macos-ci [feat/macos-ci] (via `46d17f06`)
-- 2026-10-09 `4ca3f4f4` Merge pull request #133 from Scotho/feat/macos-experimental [feat/macos-experimental] (via `46d17f06`)
-- 2026-10-02 `3ff16398` research/83 §7 the entry-0 split reading [agent/s17-entry0-record] (via `29785ca6`)
-- 2026-10-02 `7ebf6044` merge origin/main into sprint-17 after slice 2 (PR #131) [origin/main, main merged in] (via `29785ca6`)
-  - 2026-10-02 `a519c9bf` Merge pull request #131 from Scotho/slice2-s17-to-main [slice2-s17-to-main]
-- 2026-10-02 `c6f7ce2e` a stale-mutex breaker retries the mkdir at once (the smoke flake); slow suite green [agent/s17-lock-smoke-flake] (via `29785ca6`)
-- 2026-10-02 `60a2f175` run_gate clears a stage's old captures, a reused stamp mixes no runs (S17) [agent/s17-gate-stale-stamp] (via `29785ca6`)
-- 2026-10-01 `d2693750` the CI changes step prints a long file list without a pipe that can close (PR #130's 679) [agent/s17-ci-head-pipe] (via `29785ca6`)
-- 2026-10-01 `a6b68564` merge origin/main into sprint-17: the web teaser as a local demo replaces web/ (#130, the owner's word) [origin/main, main merged in] (via `29785ca6`)
-  - 2026-10-01 `be557831` Merge pull request #130: the web teaser as a local demo replaces web/ on main (the owner's word) [branch not named]
+  - 2026-10-02 `3ff16398` research/83 §7 the entry-0 split reading [agent/s17-entry0-record]
+  - 2026-10-02 `7ebf6044` merge origin/main into sprint-17 after slice 2 (PR #131) [origin/main, main merged in]
+- 2026-10-11 `70c62146` Merge pull request #134 from Scotho/feat/macos-ci [feat/macos-ci] (via `cf449442`)
+- 2026-10-09 `4ca3f4f4` Merge pull request #133 from Scotho/feat/macos-experimental [feat/macos-experimental] (via `cf449442`)
+- 2026-10-02 `a519c9bf` Merge pull request #131 from Scotho/slice2-s17-to-main [slice2-s17-to-main] (via `cf449442`)
+  - 2026-10-02 `c6f7ce2e` a stale-mutex breaker retries the mkdir at once (the smoke flake); slow suite green [agent/s17-lock-smoke-flake]
+  - 2026-10-02 `60a2f175` run_gate clears a stage's old captures, a reused stamp mixes no runs (S17) [agent/s17-gate-stale-stamp]
+  - 2026-10-01 `d2693750` the CI changes step prints a long file list without a pipe that can close (PR #130's 679) [agent/s17-ci-head-pipe]
+  - 2026-10-01 `a6b68564` merge origin/main into sprint-17: the web teaser as a local demo replaces web/ (#130, the owner's word) [origin/main, main merged in]
+  - 2026-10-01 `8a5b8b87` no warning clock on a matched image, the native lookup cached, entry-0 split by path [agent/s17-vu1-dispatch]
+  - 2026-10-01 `9083afd0` research/83 the entry-0 swarm and 0x3e; the entry-0 shape scorer (Sprint 17 F) [agent/s17-entry0-swarm]
+  - 2026-10-01 `4912bcff` build.sh, the chain and run_detached refuse while the launcher runs (three reds) [agent/s17-launcher-busy]
+  - 2026-10-01 `65a1cda0` PS2X_VU1_NATIVE_33C8 defaults to 1, N1c adopted (Sprint 17 F, R345) [agent/s17-n1c-default]
+  - 2026-09-30 `88b5f818` N2, the native 0x52 skinning pass behind PS2X_VU1_NATIVE_SKIN (Sprint 17 F) [agent/s17-n2-skin]
+  - 2026-09-30 `07a2f64a` the 0x33c8 entry admits the walk's two last-bone shapes, A and the 0x02 loop (S17 F) [agent/s17-n1c-shapes]
+  - 2026-09-30 `f630d5f1` the 0x33c8 entry admits 0x54 and 0x10 with their stores proven (Sprint 17 F, N1c) [agent/s17-n1c-linear]
+  - 2026-09-30 `f739d873` PS2X_VU1_DUMP_REFUSED dumps the programs native refused; the picker (S17 F) [agent/s17-n1c-dump-refused]
+  - 2026-09-30 `4a4cf5b4` N1b, the 0x33c8 entry admits 0x06 (the cull) with its stores proven (Sprint 17 F) [agent/s17-n1b-cull]
+- 2026-10-01 `be557831` Merge pull request #130: the web teaser as a local demo replaces web/ on main (the owner's word) [branch not named] (via `cf449442`)
   - 2026-10-01 `05480b90` merge main into the redotcom teaser (local demo) [branch not named]
   - 2026-09-30 `dc3df54c` Merge branch 'agent/web-hotfix-look' into claude/web-viewer-playtest-fixes [agent/web-hotfix-look]
   - 2026-09-30 `e5406330` Merge branch 'agent/web-fix-mpoff' into claude/web-viewer-playtest-fixes [agent/web-fix-mpoff]
@@ -169,16 +396,7 @@ Tagged 2026-10-12 on `b4eaa61c`.
   - 2026-09-28 `edf101cf` Merge branch 'claude/web-look' into claude/web-viewer-playtest-fixes [claude/web-look]
   - 2026-09-28 `79e7d4ed` Merge branch 'claude/web-ui' into claude/web-viewer-playtest-fixes [claude/web-ui]
   - 2026-09-28 `105b408f` merge origin/main into the cloud sprint 2: one player [origin/main, main merged in]
-- 2026-10-01 `8a5b8b87` no warning clock on a matched image, the native lookup cached, entry-0 split by path [agent/s17-vu1-dispatch] (via `29785ca6`)
-- 2026-10-01 `9083afd0` research/83 the entry-0 swarm and 0x3e; the entry-0 shape scorer (Sprint 17 F) [agent/s17-entry0-swarm] (via `29785ca6`)
-- 2026-10-01 `4912bcff` build.sh, the chain and run_detached refuse while the launcher runs (three reds) [agent/s17-launcher-busy] (via `29785ca6`)
-- 2026-10-01 `65a1cda0` PS2X_VU1_NATIVE_33C8 defaults to 1, N1c adopted (Sprint 17 F, R345) [agent/s17-n1c-default] (via `29785ca6`)
-- 2026-09-30 `88b5f818` N2, the native 0x52 skinning pass behind PS2X_VU1_NATIVE_SKIN (Sprint 17 F) [agent/s17-n2-skin]
-- 2026-09-30 `07a2f64a` the 0x33c8 entry admits the walk's two last-bone shapes, A and the 0x02 loop (S17 F) [agent/s17-n1c-shapes]
-- 2026-09-30 `f630d5f1` the 0x33c8 entry admits 0x54 and 0x10 with their stores proven (Sprint 17 F, N1c) [agent/s17-n1c-linear]
-- 2026-09-30 `f739d873` PS2X_VU1_DUMP_REFUSED dumps the programs native refused; the picker (S17 F) [agent/s17-n1c-dump-refused]
-- 2026-09-30 `4a4cf5b4` N1b, the 0x33c8 entry admits 0x06 (the cull) with its stores proven (Sprint 17 F) [agent/s17-n1b-cull]
-- 2026-09-30 `8248809e` Merge pull request #119: Sprint 17 to main (1) -- batches 4 and 5 proved, C1 adopted [sprint-17]
+- 2026-09-30 `8248809e` Merge pull request #119: Sprint 17 to main (1) -- batches 4 and 5 proved, C1 adopted [sprint-17] (via `cf449442`)
   - 2026-09-30 `e4dbc152` the attach tests patch the host platform (Linux CI red on 32e265b4, issue #118) [agent/s17-i118-linux]
   - 2026-09-30 `263b941d` drive.py finds the game by pid then exe name, never a browser tab (issue #118) [agent/s17-i118-window]
   - 2026-09-29 `44fb2d90` N1, a native VU1 program at entry 0x33c8 behind PS2X_VU1_NATIVE_33C8 (Sprint 17 F) [agent/s17-n1-33c8]
@@ -222,7 +440,7 @@ Tagged 2026-10-12 on `b4eaa61c`.
   - 2026-09-28 `d4863d14` the story page's readability pass and the viewer's vendored design system 1.0.3 (R294, reviewed) [agent/ds-web]
   - 2026-09-28 `d2fea276` sprint-16's close record (d7bd44c0, main merged back) into sprint-17 at its open [branch not named]
   - 2026-09-28 `420ec617` main (v0.16.0, d77b58c5) back into sprint-16 after the close [main, main merged in]
-- 2026-09-28 `f6499f0e` Merge pull request #109: the cloud's web sprint 2 'the player' onto main (the owner's word, R333) [branch not named]
+- 2026-09-28 `f6499f0e` Merge pull request #109: the cloud's web sprint 2 'the player' onto main (the owner's word, R333) [branch not named] (via `cf449442`)
   - 2026-09-28 `64c6cd3a` the cloud branch's web sprint 2 'the player' onto main, the cloud's side on every collision (the owner's word) [branch not named]
   - 2026-09-28 `ab3bf4d7` the SEAL runs the game's clips on the mover; the shoulder camera and the aim view (W2.2b, W2.6) [agent/web-s2-play]
   - 2026-09-28 `0cec524a` the M4A1 SD drawn, the fire point per GetPutativeFirePointW, the shot; research 79 (W2.4) [agent/web-s2-weapon]
@@ -230,8 +448,8 @@ Tagged 2026-10-12 on `b4eaa61c`.
   - 2026-09-28 `c636a8b2` the SEAL mesh, skeleton and gear decoded and drawn in the bind pose at slot A (W2.1) [agent/web-s2-char]
   - 2026-09-28 `5279e154` the skeletal motion format read [agent/web-s2-motion]
   - 2026-09-28 `7d59c5d3` the owner's main v0.16.0 and design-system merges [origin/claude/web-sprint-cloud-8wa72q]
-- 2026-09-28 `fb905d44` the request label is feature, not enhancement (PR #106, checks green) [docs/feature-label]
-- 2026-09-28 `b324dc50` Merge pull request #102: web sprint 2, the SEAL in the world (with web sprint 1; reviewed; CI green) [branch not named]
+- 2026-09-28 `fb905d44` the request label is feature, not enhancement (PR #106, checks green) [docs/feature-label] (via `cf449442`)
+- 2026-09-28 `b324dc50` Merge pull request #102: web sprint 2, the SEAL in the world (with web sprint 1; reviewed; CI green) [branch not named] (via `cf449442`)
   - 2026-09-28 `0b0ac0af` the close's documents; web sprint 2 CLOSED (W2.9) [agent/web-s2-close]
   - 2026-09-28 `69be57cc` simple shooting [agent/web-s2-fire]
   - 2026-09-28 `1a4d8278` the light stick for W2.2c by PCSX2 macros in a restored ini swap; half_fwd and crouch_walk [agent/web-s2-light]
@@ -255,14 +473,7 @@ Tagged 2026-10-12 on `b4eaa61c`.
   - 2026-09-28 `9e271cac` the engine's grid [agent/web-s1-grid]
   - 2026-09-28 `79e00a84` the detail texture pass bound by mp<N>_lib.rdr (web sprint 1, W1.6) [agent/web-s1-detail]
   - 2026-09-28 `2580b72e` LOD copies fade across their bands as DrawLOD scales them (web sprint 1, W1.3) [agent/web-s1-lod]
-
-## v0.16.0
-
-Tagged 2026-09-27 on `d77b58c5`.
-
-46 merges.
-
-- 2026-09-27 `d77b58c5` Merge pull request #97 from Scotho/sprint-16 [sprint-16]
+- 2026-09-27 `d77b58c5` Merge pull request #97 from Scotho/sprint-16 [sprint-16] (via `cf449442`)
   - 2026-09-27 `48e26736` merge(sprint-16): the main tree's 279a0766 (the owner's web session: the viewer's chrome on the s2u design system) [branch not named]
   - 2026-09-27 `0f22b555` merge(sprint-16): the main tree's d9dc8caa (the owner's web session: the viewer vendors the s2u design system) [branch not named]
   - 2026-09-27 `56992b66` merge(sprint-16): the main tree's 28a131a3 (the owner's story page on the s2u design system) into the controller branch [branch not named]
@@ -295,27 +506,20 @@ Tagged 2026-09-27 on `d77b58c5`.
   - 2026-09-27 `8865602f` tools/ restored by one flag from the D: backup, verified by a manifest (Sprint 16 X1) [agent/s16-x1]
   - 2026-09-27 `45cb1b93` merge(sprint-16): origin/main at ac173beb [branch not named]
   - 2026-09-27 `ac61f1a4` merge(sprint-16): origin/main at fbc905b2 [branch not named]
-- 2026-09-27 `a3e1c5db` Merge pull request #90 from Scotho/agent/s16-l1b (Sprint 16 L1b, #73) [agent/s16-l1b]
-- 2026-09-27 `a159a19d` Merge pull request #86 from Scotho/agent/launch-rev (#69, O4, O12; Sprint 16 R5's merge) [agent/launch-rev]
+- 2026-09-27 `a3e1c5db` Merge pull request #90 from Scotho/agent/s16-l1b (Sprint 16 L1b, #73) [agent/s16-l1b] (via `cf449442`)
+- 2026-09-27 `a159a19d` Merge pull request #86 from Scotho/agent/launch-rev (#69, O4, O12; Sprint 16 R5's merge) [agent/launch-rev] (via `cf449442`)
   - 2026-09-27 `f9d9bb3d` Merge remote-tracking branch 'origin/main' into agent/launch-rev [origin/main, main merged in]
-- 2026-09-27 `c6d49773` Merge pull request #89 from Scotho/agent/s16-l1-design (Sprint 16 L1a) [agent/s16-l1-design]
-- 2026-09-27 `994b99ca` Merge pull request #87 from Scotho/agent/s16-x3-r0004-leg (Sprint 16 X3) [agent/s16-x3-r0004-leg]
-- 2026-09-27 `17b8d719` Merge pull request #88 from Scotho/agent/s16-r2a-download (Sprint 16 R2a) [agent/s16-r2a-download]
-- 2026-09-27 `039fc569` Merge pull request #85 from Scotho/agent/s16-r3a-archives [agent/s16-r3a-archives]
-- 2026-09-27 `bb675dbd` Merge pull request #82 from Scotho/agent/s16-l2-tooltips [agent/s16-l2-tooltips]
-- 2026-09-27 `1d78ce01` Merge pull request #80 from Scotho/agent/web-viewer [agent/web-viewer]
-- 2026-09-27 `ac173beb` Merge pull request #84 from Scotho/agent/docs-review [agent/docs-review]
+- 2026-09-27 `c6d49773` Merge pull request #89 from Scotho/agent/s16-l1-design (Sprint 16 L1a) [agent/s16-l1-design] (via `cf449442`)
+- 2026-09-27 `994b99ca` Merge pull request #87 from Scotho/agent/s16-x3-r0004-leg (Sprint 16 X3) [agent/s16-x3-r0004-leg] (via `cf449442`)
+- 2026-09-27 `17b8d719` Merge pull request #88 from Scotho/agent/s16-r2a-download (Sprint 16 R2a) [agent/s16-r2a-download] (via `cf449442`)
+- 2026-09-27 `039fc569` Merge pull request #85 from Scotho/agent/s16-r3a-archives [agent/s16-r3a-archives] (via `cf449442`)
+- 2026-09-27 `bb675dbd` Merge pull request #82 from Scotho/agent/s16-l2-tooltips [agent/s16-l2-tooltips] (via `cf449442`)
+- 2026-09-27 `1d78ce01` Merge pull request #80 from Scotho/agent/web-viewer [agent/web-viewer] (via `cf449442`)
+- 2026-09-27 `ac173beb` Merge pull request #84 from Scotho/agent/docs-review [agent/docs-review] (via `cf449442`)
   - 2026-09-27 `82324b19` Merge remote-tracking branch 'origin/main' into agent/docs-review [origin/main, main merged in]
-- 2026-09-27 `fbc905b2` Merge pull request #83 from Scotho/agent/hook-delete-branch [agent/hook-delete-branch]
-- 2026-09-27 `d84ffbde` Merge pull request #10 from Scotho/dependabot/github_actions/actions/cache-6.1.0 [dependabot/github_actions/actions/cache-6.1.0]
-
-## v0.15.0
-
-Tagged 2026-09-27 on `10650369`.
-
-17 merges.
-
-- 2026-09-27 `10650369` Sprint 15: borrowed confidence, re-cut (#81) [sprint-15]
+- 2026-09-27 `fbc905b2` Merge pull request #83 from Scotho/agent/hook-delete-branch [agent/hook-delete-branch] (via `cf449442`)
+- 2026-09-27 `d84ffbde` Merge pull request #10 from Scotho/dependabot/github_actions/actions/cache-6.1.0 [dependabot/github_actions/actions/cache-6.1.0] (via `cf449442`)
+- 2026-09-27 `10650369` Sprint 15: borrowed confidence, re-cut (#81) [sprint-15] (via `cf449442`)
   - 2026-09-27 `8ae047c5` merge(sprint-15): the close's section 5 review fixes [branch not named]
   - 2026-09-27 `510ba0ee` merge(sprint-15): origin/main at ef199808 [branch not named]
   - 2026-09-27 `68eb6c25` merge(sprint-15): origin/main at b534bd3f [branch not named]
@@ -326,20 +530,13 @@ Tagged 2026-09-27 on `10650369`.
   - 2026-09-26 `f84f4f66` merge(sprint-15): T2 #67 the drag freeze [branch not named]
   - 2026-09-26 `6d5f53cc` merge(sprint-15): X1 the audio survey [branch not named]
   - 2026-09-26 `39d5c0ab` merge(sprint-15): R1 the audio confidence register [branch not named]
-- 2026-09-27 `ef199808` Merge pull request #79 from Scotho/agent/private-inputs [agent/private-inputs]
-- 2026-09-27 `b534bd3f` Merge pull request #78 from Scotho/agent/known-69 [agent/known-69]
-- 2026-09-26 `48dae28f` Merge pull request #77 from Scotho/agent/hazard-entry [agent/hazard-entry]
-- 2026-09-26 `715e8149` Merge pull request #76 from Scotho/agent/sitting-docs [agent/sitting-docs]
-- 2026-09-26 `24ffe56f` Merge pull request #9 from Scotho/dependabot/github_actions/actions/upload-artifact-7.0.1 [dependabot/github_actions/actions/upload-artifact-7.0.1]
-- 2026-09-26 `c1ea15d2` Merge pull request #8 from Scotho/dependabot/github_actions/actions/setup-python-7.0.0 [dependabot/github_actions/actions/setup-python-7.0.0]
-
-## v0.14.0
-
-Tagged 2026-09-26 on `200f3287`.
-
-48 merges.
-
-- 2026-09-26 `200f3287` Sprint 14: guards, not sentences (#68) [sprint-14]
+- 2026-09-27 `ef199808` Merge pull request #79 from Scotho/agent/private-inputs [agent/private-inputs] (via `cf449442`)
+- 2026-09-27 `b534bd3f` Merge pull request #78 from Scotho/agent/known-69 [agent/known-69] (via `cf449442`)
+- 2026-09-26 `48dae28f` Merge pull request #77 from Scotho/agent/hazard-entry [agent/hazard-entry] (via `cf449442`)
+- 2026-09-26 `715e8149` Merge pull request #76 from Scotho/agent/sitting-docs [agent/sitting-docs] (via `cf449442`)
+- 2026-09-26 `24ffe56f` Merge pull request #9 from Scotho/dependabot/github_actions/actions/upload-artifact-7.0.1 [dependabot/github_actions/actions/upload-artifact-7.0.1] (via `cf449442`)
+- 2026-09-26 `c1ea15d2` Merge pull request #8 from Scotho/dependabot/github_actions/actions/setup-python-7.0.0 [dependabot/github_actions/actions/setup-python-7.0.0] (via `cf449442`)
+- 2026-09-26 `200f3287` Sprint 14: guards, not sentences (#68) [sprint-14] (via `cf449442`)
   - 2026-09-26 `17400817` merge(sprint-14): Sprint 15 re-cut to value [branch not named]
   - 2026-09-26 `e760bc75` merge(sprint-14): docs/LATER.md [branch not named]
   - 2026-09-26 `d8b6075e` merge(sprint-14): the close's documentation review fixes [branch not named]
@@ -382,19 +579,12 @@ Tagged 2026-09-26 on `200f3287`.
   - 2026-09-26 `ddb1a503` build.sh consults the loop lock (exit 3 unless the holder's own child); a memory guard in run_detached (Sprint 14 G5) [agent/s14-g5]
   - 2026-09-26 `e2d0caf6` origin/main (6f5d98b3, PR #63 README's plainer front page) into sprint-14 [origin/main, main merged in]
   - 2026-09-26 `eeabc16d` origin/main (25828e1c, PR #62 the path stubs contained, #53 closed) into sprint-14; KNOWN's #53 row settled [origin/main, main merged in]
-- 2026-09-26 `b3dae300` recomp: each generated file declares only its callees; the recomp rewrites only changed files (#66) [branch not named]
-- 2026-09-26 `123dd1c5` fix(runtime): the CD group and g_iopHeapNext runtime-owned, not per-TU (#65) [branch not named]
-- 2026-09-26 `9b566459` fix(build_revision): --out reads the tree's map and reuses its current overlays (#64) [branch not named]
-- 2026-09-26 `6f5d98b3` docs(README): a plainer front page (#63) [branch not named]
-- 2026-09-26 `25828e1c` fix(stubs): contain the fopen and sceCdSearchFile path stubs (#62) [branch not named]
-
-## v0.13.0
-
-Tagged 2026-09-26 on `6a82caaa`.
-
-44 merges.
-
-- 2026-09-26 `6a82caaa` Sprint 13: nothing carried twice (#61) [sprint-13]
+- 2026-09-26 `b3dae300` recomp: each generated file declares only its callees; the recomp rewrites only changed files (#66) [branch not named] (via `cf449442`)
+- 2026-09-26 `123dd1c5` fix(runtime): the CD group and g_iopHeapNext runtime-owned, not per-TU (#65) [branch not named] (via `cf449442`)
+- 2026-09-26 `9b566459` fix(build_revision): --out reads the tree's map and reuses its current overlays (#64) [branch not named] (via `cf449442`)
+- 2026-09-26 `6f5d98b3` docs(README): a plainer front page (#63) [branch not named] (via `cf449442`)
+- 2026-09-26 `25828e1c` fix(stubs): contain the fopen and sceCdSearchFile path stubs (#62) [branch not named] (via `cf449442`)
+- 2026-09-26 `6a82caaa` Sprint 13: nothing carried twice (#61) [sprint-13] (via `cf449442`)
   - 2026-09-26 `263f15a1` Sprint 13 O2, #26: the chat step [agent/s13-o2]
   - 2026-09-25 `3804d10b` Sprint 13 V2, #32: the VRAM upload gate [agent/s13-v2]
   - 2026-09-25 `e9e7b4cc` Sprint 13 C4, #33 and #40: the three FTOI sites through Ps2VuFtoiScalar with the NaN rule; a J to a stub goes through the function table so the HLE stats see... [agent/s13-c4]
@@ -438,28 +628,14 @@ Tagged 2026-09-26 on `6a82caaa`.
   - 2026-09-25 `3cccb780` Sprint 13 R1: the archive split of the sprint file, HANDOFF and STATUS; R268's ceilings and the tag check in docmaint [agent/s13-r1]
   - 2026-09-25 `b1a91c36` Sprint 13 U1: research/63, the triage of 27 upstream PRs and the external-watch table [agent/s13-u1]
   - 2026-09-25 `5fadad9a` Sprint 13 V1: the title scorer holds every menu-window capture to the bar; research/64 [agent/s13-v1]
-
-## v0.12.0
-
-Tagged 2026-09-25 on `74fe2a9b`.
-
-7 merges.
-
-- 2026-09-25 `74fe2a9b` Sprint 12 to main [sprint-12]
+- 2026-09-25 `74fe2a9b` Sprint 12 to main [sprint-12] (via `cf449442`)
   - 2026-09-25 `30d4b74d` 173608a: Sprint 11 merged as v0.11.0 [origin/main, main merged in]
   - 2026-09-25 `7f71e928` 29bc22c: the accept-pins bed states its revision, the r0004 pin standard restored verbatim [origin/sprint-11]
   - 2026-09-25 `eb190a42` 7bd3c6e: the two upstream pick authors allowed in the leak ledger, the wrapper-path test [origin/sprint-11]
   - 2026-09-25 `deb288c2` d1c0a10: Sprint 11's close-out, the twelve-test CI fix, the python shim [origin/sprint-11]
   - 2026-09-25 `cb56fc83` Merge origin/sprint-11 (3bb866f: the ten upstream picks, the r0004 online harness) into sprint-12 before the local proof [origin/sprint-11]
   - 2026-09-24 `6d0e259c` Merge remote-tracking branch 'origin/sprint-11' into sprint-12 [origin/sprint-11]
-
-## v0.11.0
-
-Tagged 2026-09-25 on `173608af`.
-
-26 merges.
-
-- 2026-09-25 `173608af` Merge pull request #49 from Scotho/sprint-11 [sprint-11]
+- 2026-09-25 `173608af` Merge pull request #49 from Scotho/sprint-11 [sprint-11] (via `cf449442`)
   - 2026-09-25 `378d97d1` Merge branch 'agent/ci-fix' into sprint-11 [agent/ci-fix]
   - 2026-09-25 `3bb866f4` Merge branch 'agent/cherry' into sprint-11 [agent/cherry]
   - 2026-09-24 `2e84984a` Merge remote-tracking branch 'origin/main' into sprint-11 [origin/main, main merged in]
@@ -483,35 +659,28 @@ Tagged 2026-09-25 on `173608af`.
   - 2026-09-23 `c5c0764c` Merge branch 'agent/matcher' into sprint-11 [agent/matcher]
   - 2026-09-23 `0151783b` Merge branch 'agent/chat' into sprint-11 [agent/chat]
   - 2026-09-23 `45e5fce9` Merge branch 'agent/upstream' into sprint-11 [agent/upstream]
-- 2026-09-24 `e63f9ba9` Merge pull request #44 from Scotho/docs/readable-image-notes [docs/readable-image-notes]
-- 2026-09-24 `a548dd1a` Merge pull request #43 from Scotho/docs/scrub-main [docs/scrub-main]
-
-## v0.10.0
-
-Tagged 2026-09-23 on `f15acfab`.
-
-33 merges.
-
-- 2026-09-23 `f15acfab` Sprint 10 to main [sprint-10]
+- 2026-09-24 `e63f9ba9` Merge pull request #44 from Scotho/docs/readable-image-notes [docs/readable-image-notes] (via `cf449442`)
+- 2026-09-24 `a548dd1a` Merge pull request #43 from Scotho/docs/scrub-main [docs/scrub-main] (via `cf449442`)
+- 2026-09-23 `f15acfab` Sprint 10 to main [sprint-10] (via `cf449442`)
   - 2026-09-22 `e6855b53` main into sprint-10 after fix wave A slice 2 (PR #23) [main, main merged in]
-- 2026-09-22 `15e06e1a` Merge pull request #23 from Scotho/fixwaveB-to-main [fixwaveB-to-main]
+- 2026-09-22 `15e06e1a` Merge pull request #23 from Scotho/fixwaveB-to-main [fixwaveB-to-main] (via `cf449442`)
   - 2026-09-22 `76111c6f` main into sprint-10 after fix wave A slice 1 (PR #22) [main, main merged in]
-- 2026-09-22 `a36029b5` Merge pull request #22 from Scotho/fixwaveA-to-main [fixwaveA-to-main]
-- 2026-09-21 `a139c03c` Sprint 10 to main (7) [sprint-10]
+- 2026-09-22 `a36029b5` Merge pull request #22 from Scotho/fixwaveA-to-main [fixwaveA-to-main] (via `cf449442`)
+- 2026-09-21 `a139c03c` Sprint 10 to main (7) [sprint-10] (via `cf449442`)
   - 2026-09-21 `6c2e7388` Merge remote-tracking branch 'origin/main' into sprint-10 [origin/main, main merged in]
-- 2026-09-21 `ab58f0fc` Sprint 10 to main (6) [sprint-10]
+- 2026-09-21 `ab58f0fc` Sprint 10 to main (6) [sprint-10] (via `cf449442`)
   - 2026-09-21 `6946a93c` Merge remote-tracking branch 'origin/main' into sprint-10 [origin/main, main merged in]
-- 2026-09-21 `d0a4f568` the dev chain's record [branch not named]
-- 2026-09-21 `1839d85e` Sprint 10 to main (5) [sprint-10]
+- 2026-09-21 `d0a4f568` the dev chain's record [branch not named] (via `cf449442`)
+- 2026-09-21 `1839d85e` Sprint 10 to main (5) [sprint-10] (via `cf449442`)
   - 2026-09-21 `6dfa2c4d` the new-developer build chain closed: scripts/disc_to_elf.sh takes a stranger's ISO to the buildable ELF in one idempotent, self-verifying command (43 tests;... [agent/disc]
-- 2026-09-21 `9fb1a509` Sprint 10 to main (4) [sprint-10]
+- 2026-09-21 `9fb1a509` Sprint 10 to main (4) [sprint-10] (via `cf449442`)
   - 2026-09-21 `4afb802e` Q7's lock-light residuals: the console-replay case runs for real (the dump extracted from PCSX2's .gs captures), the Linux packaging branch tested on Windows... [agent/q7]
   - 2026-09-21 `6c9067f1` origin/main (PR #14, the third Sprint 10 slice) into sprint-10 [origin/main, main merged in]
-- 2026-09-21 `01c8f86d` Sprint 10 to main (3) [sprint-10]
+- 2026-09-21 `01c8f86d` Sprint 10 to main (3) [sprint-10] (via `cf449442`)
   - 2026-09-21 `5d9b7613` Q5 closed under the spec's stop rule: no headset button exists in lgaud's protocol (both listing passes negative, LGAUD.IRX decompiled for the first time); t... [agent/q5]
   - 2026-09-21 `0c172a6e` Q3, the mouse leaves the launcher and the game (its two knobs deleted with their code), the keyboard is menus and typing only for a player and the full gamep... [agent/q3]
   - 2026-09-21 `f2cf73bc` Q4, the rest of the launcher: the guide/window switch (XInputGetStateEx on Windows, BTN_MODE on Linux, a bindable second key), the game window's name, icon a... [agent/q4]
-- 2026-09-21 `b9a0e251` Sprint 10 to main (2) [sprint-10]
+- 2026-09-21 `b9a0e251` Sprint 10 to main (2) [sprint-10] (via `cf449442`)
   - 2026-09-21 `8ac0e357` Q2 Task 7's code: enforcement on, the eight switches to Flag, the pad on by default, the launcher's inherited environment filtered, the knobs line in the zip... [agent/flip]
   - 2026-09-21 `a7afbcc6` Q2 knob retirement, the mechanical tasks: the registry (149 rows), docs/KNOBS.md and its test, --dev and the [knobs] line, every read migrated in eight batch... [agent/knobs]
   - 2026-09-21 `3f27025c` Goal 9 Task 6: --prefilled, the harness logs in from the launcher's variables and presses ENTER instead of typing (17 tests; suite 1639 OK); the two driven l... [agent/g9t6]
@@ -522,9 +691,279 @@ Tagged 2026-09-23 on `f15acfab`.
   - 2026-09-21 `ac80085b` Q6, a latched render stall is bounded: past the cap the state-carrying commands are absorbed into the game's VRAM and re-anchored when the latch clears (ps2x... [agent/stall]
   - 2026-09-21 `a66bf5f3` Merge remote-tracking branch 'origin/main' into sprint-10 [origin/main, main merged in]
   - 2026-09-21 `dd48d73e` Q1b, the gate states what it measured (PIN lines, the committed standard scripts/parity/pins.json, refuse-to-score on drift, --accept-pins) [agent/gatepin]
-- 2026-09-21 `16f01333` allow Dependabot's commit identity in the leak check (PR #12) [branch not named]
-- 2026-09-21 `92b92c6d` Sprint 10 hardening to main [sprint-10]
+- 2026-09-21 `16f01333` allow Dependabot's commit identity in the leak check (PR #12) [branch not named] (via `cf449442`)
+- 2026-09-21 `92b92c6d` Sprint 10 hardening to main [sprint-10] (via `cf449442`)
   - 2026-09-21 `3850080e` origin/main into sprint-10 [origin/main, main merged in]
+
+## v0.16.0
+
+Tagged 2026-09-27 on `14532b62`.
+
+46 merges.
+
+- 2026-09-27 `14532b62` Merge pull request #97 from Scotho/sprint-16 [sprint-16]
+  - 2026-09-27 `1ec5bfa4` merge(sprint-16): the main tree's 279a0766 (the owner's web session: the viewer's chrome on the s2u design system) [branch not named]
+  - 2026-09-27 `68fb3296` merge(sprint-16): the main tree's d9dc8caa (the owner's web session: the viewer vendors the s2u design system) [branch not named]
+  - 2026-09-27 `eb2c813f` merge(sprint-16): the main tree's 28a131a3 (the owner's story page on the s2u design system) into the controller branch [branch not named]
+  - 2026-09-27 `eb8eca1c` merge(sprint-16): the main tree's 0cda431c (the doc-surfaces merge, R318-R320) into the controller branch [branch not named]
+  - 2026-09-27 `d423e4be` wiki + Announcements (R318-R319), revise-not-append (R320), doc-maintenance skill [agent/doc-surfaces]
+  - 2026-09-27 `9e72bb37` merge(sprint-16): the main tree's 84216bcf (the owner's session's merge of origin/sprint-16) into the controller branch [branch not named]
+  - 2026-09-27 `801f2c74` merge(sprint-16): origin/sprint-16 at 46b6121e [branch not named]
+  - 2026-09-27 `832a3c26` Merge pull request #92 from Scotho/agent/domain-socomunzipped [agent/domain-socomunzipped]
+  - 2026-09-27 `b1daa806` Merge pull request #93 from Scotho/agent/web-lod-last [agent/web-lod-last]
+  - 2026-09-27 `2d0f0b72` the [gs-submit] split and the render target served as a texture through any envelope (Sprint 16 F2) [agent/s16-f2]
+  - 2026-09-27 `4c575548` merge(sprint-16): the owner's servers ruling and story commits (c6450bcd) into the controller branch [branch not named]
+  - 2026-09-27 `1d195064` merge(sprint-16): the main tree's web-session commits (3bb6e986) into the controller branch [branch not named]
+  - 2026-09-27 `7af34d77` the canvas stays opaque, so the page never shows through the fog (Sprint 16, web) [agent/web-alpha]
+  - 2026-09-27 `c2690b27` plain RT frames from the socket to the persona recorder (Sprint 16 L1b, #73) [agent/s16-l1b-seam]
+  - 2026-09-27 `f7b91cbb` merge(sprint-16): the main tree's web-session commits (8166261c) into the controller branch [branch not named]
+  - 2026-09-27 `cae38946` _L (dynamically lit) chunk keys resolve, so MP7/MP62/MP83's props draw (Sprint 16, web) [agent/web-lit]
+  - 2026-09-27 `5d07e5bd` the viewer's build revision in the panel and the s2u design language (Sprint 16, web) [agent/web-ui]
+  - 2026-09-27 `8044e837` the keyboard's row origins and the persona-list focus walk (Sprint 16 L1b Step 0) [agent/s16-l1b-drv]
+  - 2026-09-27 `c557cb26` merge(sprint-16): the main tree's b8525708 (the owner's docs(web) move of research 71 and 72) into the controller branch [branch not named]
+  - 2026-09-27 `e5becbee` the capture offset from the recorder's first packet to the drive's own t0 (Sprint 16, LATER row 37) [agent/s16-l37]
+  - 2026-09-27 `a7286747` merge(sprint-16): origin/main at a3e1c5db [branch not named]
+  - 2026-09-27 `fb165b72` merge(sprint-16): origin/main at a159a19d [branch not named]
+  - 2026-09-27 `9c1da1b8` research/74 the first-run decrypt spike [agent/s16-r1a]
+  - 2026-09-27 `94626b77` merge(sprint-16): origin/main at c6d49773 [branch not named]
+  - 2026-09-27 `4bf2f2d6` a stream's AutoVol target scales its play-time volume, the -4 timer tested (Sprint 15 T1b round 3) [agent/s15-t1b]
+  - 2026-09-27 `08e114c2` merge(sprint-16): origin/main at 039fc569 [branch not named]
+  - 2026-09-27 `04ff34d4` R179 and R237 superseded by R310 [agent/s16-l1-r237]
+  - 2026-09-27 `78fcec24` snd_AutoVol steps in 7-bit integers on the IRX's schedule (Sprint 15 T1b, reviewed PASS 08:13Z) [agent/s15-t1b]
+  - 2026-09-27 `dfa00ec1` #32's bar restated, the issues audit exits 0 again (Sprint 16 F3 Step 0, socom-pc-42) [agent/s16-f3-words]
+  - 2026-09-27 `da97683e` tools/ restored by one flag from the D: backup, verified by a manifest (Sprint 16 X1) [agent/s16-x1]
+  - 2026-09-27 `93888383` merge(sprint-16): origin/main at ac173beb [branch not named]
+  - 2026-09-27 `66f597f6` merge(sprint-16): origin/main at fbc905b2 [branch not named]
+- 2026-09-27 `b6ef7dec` Merge pull request #90 from Scotho/agent/s16-l1b (Sprint 16 L1b, #73) [agent/s16-l1b]
+- 2026-09-27 `23e635df` Merge pull request #86 from Scotho/agent/launch-rev (#69, O4, O12; Sprint 16 R5's merge) [agent/launch-rev]
+  - 2026-09-27 `599c00b1` Merge remote-tracking branch 'origin/main' into agent/launch-rev [origin/main, main merged in]
+- 2026-09-27 `a9acda8b` Merge pull request #89 from Scotho/agent/s16-l1-design (Sprint 16 L1a) [agent/s16-l1-design]
+- 2026-09-27 `c5de42da` Merge pull request #87 from Scotho/agent/s16-x3-r0004-leg (Sprint 16 X3) [agent/s16-x3-r0004-leg]
+- 2026-09-27 `8332f6a3` Merge pull request #88 from Scotho/agent/s16-r2a-download (Sprint 16 R2a) [agent/s16-r2a-download]
+- 2026-09-27 `cfce1a1e` Merge pull request #85 from Scotho/agent/s16-r3a-archives [agent/s16-r3a-archives]
+- 2026-09-27 `e6977ec4` Merge pull request #82 from Scotho/agent/s16-l2-tooltips [agent/s16-l2-tooltips]
+- 2026-09-27 `d6e03733` Merge pull request #80 from Scotho/agent/web-viewer [agent/web-viewer]
+- 2026-09-27 `9100c8eb` Merge pull request #84 from Scotho/agent/docs-review [agent/docs-review]
+  - 2026-09-27 `e1253bfc` Merge remote-tracking branch 'origin/main' into agent/docs-review [origin/main, main merged in]
+- 2026-09-27 `d9cb56cf` Merge pull request #83 from Scotho/agent/hook-delete-branch [agent/hook-delete-branch]
+- 2026-09-27 `ef20bed1` Merge pull request #10 from Scotho/dependabot/github_actions/actions/cache-6.1.0 [dependabot/github_actions/actions/cache-6.1.0]
+
+## v0.15.0
+
+Tagged 2026-09-27 on `dcf437f4`.
+
+17 merges.
+
+- 2026-09-27 `dcf437f4` Sprint 15: borrowed confidence, re-cut (#81) [sprint-15]
+  - 2026-09-27 `813c5a1c` merge(sprint-15): the close's section 5 review fixes [branch not named]
+  - 2026-09-27 `32dabfae` merge(sprint-15): origin/main at ef199808 [branch not named]
+  - 2026-09-27 `0becd0b0` merge(sprint-15): origin/main at b534bd3f [branch not named]
+  - 2026-09-26 `b64f378e` merge(sprint-15): origin/main at 48dae28f [branch not named]
+  - 2026-09-26 `a6a4f5d5` merge(sprint-15): T1c the LLE-oracle harness landed under docs/research/assets/70-lle-oracle (the owner's word) [branch not named]
+  - 2026-09-26 `a07ece56` merge(sprint-15): T1 the LLE IOP as an oracle [branch not named]
+  - 2026-09-26 `65aae673` merge(sprint-15): origin/main at 715e8149 [branch not named]
+  - 2026-09-26 `6b5df727` merge(sprint-15): T2 #67 the drag freeze [branch not named]
+  - 2026-09-26 `b81b7cce` merge(sprint-15): X1 the audio survey [branch not named]
+  - 2026-09-26 `061a0a5b` merge(sprint-15): R1 the audio confidence register [branch not named]
+- 2026-09-27 `4eeed8a8` Merge pull request #79 from Scotho/agent/private-inputs [agent/private-inputs]
+- 2026-09-27 `fb199780` Merge pull request #78 from Scotho/agent/known-69 [agent/known-69]
+- 2026-09-26 `58974138` Merge pull request #77 from Scotho/agent/hazard-entry [agent/hazard-entry]
+- 2026-09-26 `d5e35ec3` Merge pull request #76 from Scotho/agent/sitting-docs [agent/sitting-docs]
+- 2026-09-26 `811748db` Merge pull request #9 from Scotho/dependabot/github_actions/actions/upload-artifact-7.0.1 [dependabot/github_actions/actions/upload-artifact-7.0.1]
+- 2026-09-26 `bbda7abd` Merge pull request #8 from Scotho/dependabot/github_actions/actions/setup-python-7.0.0 [dependabot/github_actions/actions/setup-python-7.0.0]
+
+## v0.14.0
+
+Tagged 2026-09-26 on `d7a8f9d8`.
+
+48 merges.
+
+- 2026-09-26 `d7a8f9d8` Sprint 14: guards, not sentences (#68) [sprint-14]
+  - 2026-09-26 `effa2ecf` merge(sprint-14): Sprint 15 re-cut to value [branch not named]
+  - 2026-09-26 `32f97a83` merge(sprint-14): docs/LATER.md [branch not named]
+  - 2026-09-26 `6f093659` merge(sprint-14): the close's documentation review fixes [branch not named]
+  - 2026-09-26 `e1d6408c` merge(sprint-14): the upstream register docs/UPSTREAM.md (bugs in the vendors' main only); the close chain's block [branch not named]
+  - 2026-09-26 `ac24d623` merge(sprint-14): E2 the fourth leg's tooling [branch not named]
+  - 2026-09-26 `4bbd4914` merge(sprint-14): W2 the merged chain as the gate unit [branch not named]
+  - 2026-09-26 `d1050011` merge(sprint-14): X1 the external sweep for Sprint 15 [branch not named]
+  - 2026-09-26 `1a748ba6` merge(sprint-14): E3 recompiler re-derivation in CI [branch not named]
+  - 2026-09-26 `d68981b6` merge(sprint-14): W1 the queue's WIP cap [branch not named]
+  - 2026-09-26 `91e468ad` merge(sprint-14): M2 token spend, local only [branch not named]
+  - 2026-09-26 `8463d67c` merge(sprint-14): D4 the circuit breaker [branch not named]
+  - 2026-09-26 `77fd51bb` merge(sprint-14): D3 the owner's sitting page [branch not named]
+  - 2026-09-26 `ecd0cd6b` merge(sprint-14): M1 the flow page [branch not named]
+  - 2026-09-26 `431dc9d7` merge(sprint-14): D5 PLAYTEST's build block written by the chain [branch not named]
+  - 2026-09-26 `aec110d1` merge(sprint-14): S3 the ceilings ratchet [branch not named]
+  - 2026-09-26 `636cf0a0` merge(sprint-14): origin/main at b3dae300 (PR #66, #57 open for the r0004 leg); E4's row and #56's note [branch not named]
+  - 2026-09-26 `33723b4b` merge(sprint-14): E4 gate freshness [branch not named]
+  - 2026-09-26 `c71cf2ec` one home each [agent/s14-s4]
+  - 2026-09-26 `08c0db73` the generated changelog from merge commits and tags; STATUS's log archived (S14 S1, R272) [agent/s14-s1]
+  - 2026-09-26 `f64a07d0` check 11, the read-first budget over HANDOFF, CLAUDE.md, CURRENT_SPRINT, the Log, STATUS (S14 I4) [agent/s14-i4]
+  - 2026-09-26 `ae538c2a` origin/main (123dd1c5, PR #65 the CD group and g_iopHeapNext runtime-owned, #51 closed) into sprint-14 [origin/main, main merged in]
+  - 2026-09-26 `81f5f846` HANDOFF transient under 6 KB [agent/s14-i3]
+  - 2026-09-26 `1514ee02` merge sprint-14 into agent/s14-i3: S2's commit-msg hook, D1's RULINGS page, D2's scope rule [sprint-14]
+  - 2026-09-26 `d1ff2a1d` the ruling scope rule in DOC_MAINTENANCE section 6; one counter line (Sprint 14 D2) [agent/s14-d2]
+  - 2026-09-26 `d6e8a120` the commit-msg hook caps the subject at 120 characters (Sprint 14 S2) [agent/s14-s2]
+  - 2026-09-26 `82984fcf` the generated rulings page with a status per ruling, held by --check (Sprint 14 D1) [agent/s14-d1]
+  - 2026-09-26 `a84d633d` Merge branch 'sprint-14' into agent/s14-d1 [sprint-14]
+  - 2026-09-26 `ed1a3a64` loop-iteration, agent-worktree, run-gate and sprint-close as project skills; LOOP_PROMPT a pointer, its text archived (Sprint 14 I2) [agent/s14-i2]
+  - 2026-09-26 `ceba0715` Merge branch 'sprint-14' into agent/s14-i2 [sprint-14]
+  - 2026-09-26 `0d61f3ac` KNOWN's section 4 moves verbatim to docs/HAZARDS.md by area; the citers re-pointed; the audit reads both (Sprint 14 I5, R270) [agent/s14-i5]
+  - 2026-09-26 `8c311efd` Merge branch 'sprint-14' into agent/s14-i5 [sprint-14]
+  - 2026-09-26 `db0f0732` the root CLAUDE.md under sixty lines [agent/s14-i1]
+  - 2026-09-26 `a670f6e6` the Edit/Write guard [agent/s14-g2]
+  - 2026-09-26 `4b533515` Merge branch 'sprint-14' into agent/s14-g2 [sprint-14]
+  - 2026-09-26 `41645256` the SessionEnd/Stop reaper [agent/s14-g3]
+  - 2026-09-26 `b7bc0088` origin/main (9b566459, PR #64 build_revision --out reads the tree's map and reuses current overlays, #56 closed) into sprint-14; KNOWN's #56 row settled [origin/main, main merged in]
+  - 2026-09-26 `ede09350` implementer and reviewer agent definitions under .claude/agents, with a test (Sprint 14 G4) [agent/s14-g4]
+  - 2026-09-26 `8d11a4cc` Merge branch 'sprint-14' into agent/s14-g4 [sprint-14]
+  - 2026-09-26 `5ef250f3` the Bash PreToolUse guard [agent/s14-g1]
+  - 2026-09-26 `ef6bd465` build.sh consults the loop lock (exit 3 unless the holder's own child); a memory guard in run_detached (Sprint 14 G5) [agent/s14-g5]
+  - 2026-09-26 `35a90838` origin/main (6f5d98b3, PR #63 README's plainer front page) into sprint-14 [origin/main, main merged in]
+  - 2026-09-26 `51dc24b4` origin/main (25828e1c, PR #62 the path stubs contained, #53 closed) into sprint-14; KNOWN's #53 row settled [origin/main, main merged in]
+- 2026-09-26 `9ce1bb57` recomp: each generated file declares only its callees; the recomp rewrites only changed files (#66) [branch not named]
+- 2026-09-26 `383b07f2` fix(runtime): the CD group and g_iopHeapNext runtime-owned, not per-TU (#65) [branch not named]
+- 2026-09-26 `644cccff` fix(build_revision): --out reads the tree's map and reuses its current overlays (#64) [branch not named]
+- 2026-09-26 `f7f82fd7` docs(README): a plainer front page (#63) [branch not named]
+- 2026-09-26 `fde22e2f` fix(stubs): contain the fopen and sceCdSearchFile path stubs (#62) [branch not named]
+
+## v0.13.0
+
+Tagged 2026-09-26 on `a7901219`.
+
+44 merges.
+
+- 2026-09-26 `a7901219` Sprint 13: nothing carried twice (#61) [sprint-13]
+  - 2026-09-26 `83d03499` Sprint 13 O2, #26: the chat step [agent/s13-o2]
+  - 2026-09-25 `21487c94` Sprint 13 V2, #32: the VRAM upload gate [agent/s13-v2]
+  - 2026-09-25 `0e593b64` Sprint 13 C4, #33 and #40: the three FTOI sites through Ps2VuFtoiScalar with the NaN rule; a J to a stub goes through the function table so the HLE stats see... [agent/s13-c4]
+  - 2026-09-25 `3904405b` Sprint 13 C2: the throwing stubs [agent/s13-c2]
+  - 2026-09-25 `bada7680` Sprint 13 close, DOC_MAINTENANCE §5: the 24 findings of the document truth read fixed [agent/s13-close5]
+  - 2026-09-25 `2f6af77e` Sprint 13 V3, #31: the premise was fixed on 2026-09-16 by 545b85a1 and never recorded; readGsImage no longer scans past the load packet into the caller's sta... [agent/s13-v3]
+  - 2026-09-25 `c0607351` Sprint 13 V4, the harness half: the mission stage's FRAME line (VBlank pacing over the scripted walk), an informational frame-time pin never compared (S13-R3... [agent/s13-v4]
+  - 2026-09-25 `053233e8` Sprint 13: the control rounds [agent/s13-rounds]
+  - 2026-09-25 `724152ff` Sprint 13 V7, #34: waitReadable holds the EE executor one guest tick at most [agent/s13-v7]
+  - 2026-09-25 `551bf555` Merge sprint-13 into agent/s13-v7 (C8's msifrpc move; V7's two hunks ported into socom2_msifrpc.cpp) [sprint-13]
+  - 2026-09-25 `60db2d7e` Sprint 13 C8: ps2HostProfStart weak in the runtime and g_ps2xTraceArmed defined once, the test stand-in file gone; the libpad2, msifrpc, lum and crypto handl... [agent/s13-c8]
+  - 2026-09-25 `91f635b5` Sprint 13 C3, the lock-free half: the after-return trap closed [agent/s13-c3]
+  - 2026-09-25 `92ac0efc` Sprint 13 N2, the lock-free half: build_revision --out keeps the names sidecar and the unresolved-names line is a warning build.sh surfaces (#48); the genera... [agent/s13-n2]
+  - 2026-09-25 `3340e08d` Sprint 13 V6: #27 was the login driver pressing before reading the relaunch form, not a lost password [agent/s13-v6]
+  - 2026-09-25 `7cc8ac79` Sprint 13 H2: the lock's ticket queue (#36), --wait in minutes (#35), run_detached --wait, ladder_job waits for the lock (#37), the quiet marker at the main... [agent/s13-h2]
+  - 2026-09-25 `55302e00` Sprint 13 O3: the hosted box's backup, health and off-box pull tracked under server/ops with every secret in an ignored env file, the build id served on /sta... [agent/s13-o3]
+  - 2026-09-25 `bd04f0fe` Sprint 13 N1: the runtime's own names into the sidecars as 31 Pass=hand rows (17 carried to r0004 at exact placements), research/50's four offsets named besi... [agent/s13-n1]
+  - 2026-09-25 `ee4a63ef` Sprint 13 C5: build products out of the source tree [agent/s13-c5]
+  - 2026-09-25 `04e65dcc` Sprint 13 C6: the supply chain pinned [agent/s13-c6]
+  - 2026-09-25 `003ce163` Sprint 13 H7: the fast lock-free subset, requirements.txt with CI installing from it, build.sh through python_env.sh, fix_ghidra_csv under test with its forc... [agent/s13-h7]
+  - 2026-09-25 `d84b9123` Sprint 13 C7: the dead configuration removed [agent/s13-c7]
+  - 2026-09-25 `eb6ca28d` Sprint 13 C1: CI compiles game_overrides_socom2.cpp and socom2_crypto.cpp and links the runner against a synthetic generated set on every code push; RED x3 a... [agent/s13-c1]
+  - 2026-09-25 `7e445769` Sprint 13 V8+S2: the launcher's wording defects (stranger rows 9-15, F53) with tests; a server name that does not resolve is a LAST RUN notice (S13-R9); revi... [agent/s13-v8]
+  - 2026-09-25 `e3c0062a` Sprint 13 U2: a guest path cannot leave the game, disc or memory-card folder [agent/s13-u2]
+  - 2026-09-25 `7b8aeb62` Sprint 13 C9: every Shipping and Switch knob's line names the code's effect, each cites its read site, a test ties them; NET_STATS corrected; review PASS WIT... [agent/s13-c9]
+  - 2026-09-25 `ce8e0e51` Sprint 13 S6: no private address as a tracked default [agent/s13-s6]
+  - 2026-09-25 `e03427f1` Sprint 13 S4: the story's five missing days [agent/s13-s4]
+  - 2026-09-25 `205b71fe` Sprint 13 U6: a server-to-client record that writes game memory, and one that reads it back, are refused on the client, every time; 899/899 tests; gate s13_u... [agent/s13-u6]
+  - 2026-09-25 `66801f56` Sprint 13 H1: a docs-only push starts no build run, the docs workflow runs the doc checks, the pull-request changes filter compares the merge base three-dot;... [agent/s13-h1]
+  - 2026-09-25 `6889f83f` Sprint 13 U4: the upstream drafts for O10 [agent/s13-u4]
+  - 2026-09-25 `4198aa45` Sprint 13 R6: the codex audit's six assignments dispositioned [agent/s13-r6]
+  - 2026-09-25 `0278aa6e` Sprint 13 U7: three upstream picks [agent/s13-u7]
+  - 2026-09-25 `a84aeef5` Sprint 13 R7: one home for the carry [agent/s13-r7]
+  - 2026-09-25 `54f6d893` Sprint 13 H4: the 28 uninvoked tools_py modules dispositioned [agent/s13-h4]
+  - 2026-09-25 `44d039f3` Sprint 13 R5: KNOWN read in full [agent/s13-r5]
+  - 2026-09-25 `b2e8671e` Sprint 13 H3: --accept-pins writes the standard only after a run whose every stage passed (S13-R5); every capture writes its PS2X_* environment beside itself... [agent/s13-h3]
+  - 2026-09-25 `07d84b4c` Sprint 13 R4: HUMAN_TASKS reduced to the owner's sitting [agent/s13-r4]
+  - 2026-09-25 `dc841ca1` Sprint 13 R3: the ruling record [agent/s13-r3]
+  - 2026-09-25 `d25f593a` Sprint 13 H6: six r0001 statics into the per-revision table with derived r0004 values, three left unplaced with their instruments refusing on r0004, a test t... [agent/s13-h6]
+  - 2026-09-25 `ed55a1ff` Sprint 13 R2+S1: DEVELOPING as current truth with a map of every tools_py module; README, INSTALL, FAQ, PLAYTEST, GIT_STRATEGY, LOOP_PROMPT, ROADMAP, STORY,... [agent/s13-r2]
+  - 2026-09-25 `907a3d7e` Sprint 13 R1: the archive split of the sprint file, HANDOFF and STATUS; R268's ceilings and the tag check in docmaint [agent/s13-r1]
+  - 2026-09-25 `c1efb46f` Sprint 13 U1: research/63, the triage of 27 upstream PRs and the external-watch table [agent/s13-u1]
+  - 2026-09-25 `a2afcae1` Sprint 13 V1: the title scorer holds every menu-window capture to the bar; research/64 [agent/s13-v1]
+
+## v0.12.0
+
+Tagged 2026-09-25 on `6caab6c3`.
+
+7 merges.
+
+- 2026-09-25 `6caab6c3` Sprint 12 to main [sprint-12]
+  - 2026-09-25 `65ddc62f` 173608a: Sprint 11 merged as v0.11.0 [origin/main, main merged in]
+  - 2026-09-25 `19bbae61` 29bc22c: the accept-pins bed states its revision, the r0004 pin standard restored verbatim [origin/sprint-11]
+  - 2026-09-25 `5b35258e` 7bd3c6e: the two upstream pick authors allowed in the leak ledger, the wrapper-path test [origin/sprint-11]
+  - 2026-09-25 `f1db2802` d1c0a10: Sprint 11's close-out, the twelve-test CI fix, the python shim [origin/sprint-11]
+  - 2026-09-25 `fe53b438` Merge origin/sprint-11 (3bb866f: the ten upstream picks, the r0004 online harness) into sprint-12 before the local proof [origin/sprint-11]
+  - 2026-09-24 `f6ceb8a4` Merge remote-tracking branch 'origin/sprint-11' into sprint-12 [origin/sprint-11]
+
+## v0.11.0
+
+Tagged 2026-09-25 on `93dab09e`.
+
+26 merges.
+
+- 2026-09-25 `93dab09e` Merge pull request #49 from Scotho/sprint-11 [sprint-11]
+  - 2026-09-25 `646aa47c` Merge branch 'agent/ci-fix' into sprint-11 [agent/ci-fix]
+  - 2026-09-25 `ccf1a701` Merge branch 'agent/cherry' into sprint-11 [agent/cherry]
+  - 2026-09-24 `c488b9ef` Merge remote-tracking branch 'origin/main' into sprint-11 [origin/main, main merged in]
+  - 2026-09-24 `1fad54e6` Merge branch 'agent/bugpipe' into sprint-11 [agent/bugpipe]
+  - 2026-09-24 `1f65a0de` Merge branch 'agent/audio-out' into sprint-11 [agent/audio-out]
+  - 2026-09-24 `56c17880` Merge branch 'agent/baggage' into sprint-11 [agent/baggage]
+  - 2026-09-23 `226973c1` Merge branch 'agent/issues' into sprint-11 [agent/issues]
+  - 2026-09-23 `0712ecc0` Task 13's committed half from agent/bugpipe (the label script with its test, the triage pointer in HANDOFF and HUMAN_TASKS) [branch not named]
+  - 2026-09-23 `b7839449` Merge branch 'agent/savestate' into sprint-11 [agent/savestate]
+  - 2026-09-23 `2368a539` Merge branch 'agent/chatrec' into sprint-11 [agent/chatrec]
+  - 2026-09-23 `16c8a489` Merge branch 'agent/recompfix' into sprint-11 [agent/recompfix]
+  - 2026-09-23 `a82800e6` Merge branch 'agent/r0004' into sprint-11 [agent/r0004]
+  - 2026-09-23 `8023d2d1` Merge branch 'agent/launcher' into sprint-11 [agent/launcher]
+  - 2026-09-23 `ef1a119d` Merge branch 'agent/linuxring' into sprint-11 [agent/linuxring]
+  - 2026-09-23 `4e836c99` Merge branch 'agent/revision' into sprint-11 [agent/revision]
+  - 2026-09-23 `3861eb41` Merge branch 'agent/links' into sprint-11 [agent/links]
+  - 2026-09-23 `f7f49b95` Merge branch 'agent/howbuilt' into sprint-11 [agent/howbuilt]
+  - 2026-09-23 `1385bda4` Merge branch 'agent/install' into sprint-11 [agent/install]
+  - 2026-09-23 `21b6fe1d` Merge branch 'agent/leak' into sprint-11 [agent/leak]
+  - 2026-09-23 `ea4f8305` Merge branch 'agent/server' into sprint-11 [agent/server]
+  - 2026-09-23 `eb4bf468` Merge branch 'agent/matcher' into sprint-11 [agent/matcher]
+  - 2026-09-23 `bd26cf6d` Merge branch 'agent/chat' into sprint-11 [agent/chat]
+  - 2026-09-23 `c374f2f0` Merge branch 'agent/upstream' into sprint-11 [agent/upstream]
+- 2026-09-24 `51bdb0f6` Merge pull request #44 from Scotho/docs/readable-image-notes [docs/readable-image-notes]
+- 2026-09-24 `df67614e` Merge pull request #43 from Scotho/docs/scrub-main [docs/scrub-main]
+
+## v0.10.0
+
+Tagged 2026-09-23 on `49fe9cfa`.
+
+33 merges.
+
+- 2026-09-23 `49fe9cfa` Sprint 10 to main [sprint-10]
+  - 2026-09-22 `f4cc8248` main into sprint-10 after fix wave A slice 2 (PR #23) [main, main merged in]
+- 2026-09-22 `c02b39cb` Merge pull request #23 from Scotho/fixwaveB-to-main [fixwaveB-to-main]
+  - 2026-09-22 `eee8cc6a` main into sprint-10 after fix wave A slice 1 (PR #22) [main, main merged in]
+- 2026-09-22 `d19aad64` Merge pull request #22 from Scotho/fixwaveA-to-main [fixwaveA-to-main]
+- 2026-09-21 `dd45087c` Sprint 10 to main (7) [sprint-10]
+  - 2026-09-21 `4ed57992` Merge remote-tracking branch 'origin/main' into sprint-10 [origin/main, main merged in]
+- 2026-09-21 `c7e21b7e` Sprint 10 to main (6) [sprint-10]
+  - 2026-09-21 `26ed9f20` Merge remote-tracking branch 'origin/main' into sprint-10 [origin/main, main merged in]
+- 2026-09-21 `fd4f5a4a` the dev chain's record [branch not named]
+- 2026-09-21 `56fa42c2` Sprint 10 to main (5) [sprint-10]
+  - 2026-09-21 `46e2abc6` the new-developer build chain closed: scripts/disc_to_elf.sh takes a stranger's ISO to the buildable ELF in one idempotent, self-verifying command (43 tests;... [agent/disc]
+- 2026-09-21 `bdca5647` Sprint 10 to main (4) [sprint-10]
+  - 2026-09-21 `923d73f3` Q7's lock-light residuals: the console-replay case runs for real (the dump extracted from PCSX2's .gs captures), the Linux packaging branch tested on Windows... [agent/q7]
+  - 2026-09-21 `8aa8570b` origin/main (PR #14, the third Sprint 10 slice) into sprint-10 [origin/main, main merged in]
+- 2026-09-21 `2717c588` Sprint 10 to main (3) [sprint-10]
+  - 2026-09-21 `8ba8c276` Q5 closed under the spec's stop rule: no headset button exists in lgaud's protocol (both listing passes negative, LGAUD.IRX decompiled for the first time); t... [agent/q5]
+  - 2026-09-21 `2d64468a` Q3, the mouse leaves the launcher and the game (its two knobs deleted with their code), the keyboard is menus and typing only for a player and the full gamep... [agent/q3]
+  - 2026-09-21 `d055665e` Q4, the rest of the launcher: the guide/window switch (XInputGetStateEx on Windows, BTN_MODE on Linux, a bindable second key), the game window's name, icon a... [agent/q4]
+- 2026-09-21 `66bdf532` Sprint 10 to main (2) [sprint-10]
+  - 2026-09-21 `55b44c6a` Q2 Task 7's code: enforcement on, the eight switches to Flag, the pad on by default, the launcher's inherited environment filtered, the knobs line in the zip... [agent/flip]
+  - 2026-09-21 `11e742a0` Q2 knob retirement, the mechanical tasks: the registry (149 rows), docs/KNOBS.md and its test, --dev and the [knobs] line, every read migrated in eight batch... [agent/knobs]
+  - 2026-09-21 `1d2458ed` Goal 9 Task 6: --prefilled, the harness logs in from the launcher's variables and presses ENTER instead of typing (17 tests; suite 1639 OK); the two driven l... [agent/g9t6]
+  - 2026-09-21 `8ebc764b` Goal 9's lock-free tasks: the OSK open handler named (FUN_0038d770, buffer 0x49ec70, caps 14/12), the prefill wrap, the config fields and environment, PLAYER... [agent/goal9]
+  - 2026-09-21 `a895f1d7` Q3b the mapping data path (one config-resolved table, defaults byte-for-byte today's, hash logged) and Goal 8 the CONTROLLER page's remapping UI (press-to-bi... [agent/input]
+  - 2026-09-21 `2b99deb7` origin/main (PR #12, the Dependabot identity allowance) into sprint-10 [origin/main, main merged in]
+  - 2026-09-21 `68c3c15e` the threaded fire-window flake fixed at its root: the simulated Clock runs its threads in lockstep, the endgames join through the injected wait (50 failed /... [agent/flake]
+  - 2026-09-21 `be478348` Q6, a latched render stall is bounded: past the cap the state-carrying commands are absorbed into the game's VRAM and re-anchored when the latch clears (ps2x... [agent/stall]
+  - 2026-09-21 `fa5212a0` Merge remote-tracking branch 'origin/main' into sprint-10 [origin/main, main merged in]
+  - 2026-09-21 `740ef7a8` Q1b, the gate states what it measured (PIN lines, the committed standard scripts/parity/pins.json, refuse-to-score on drift, --accept-pins) [agent/gatepin]
+- 2026-09-21 `125ccb71` allow Dependabot's commit identity in the leak check (PR #12) [branch not named]
+- 2026-09-21 `cd4e61db` Sprint 10 hardening to main [sprint-10]
+  - 2026-09-21 `74d11577` origin/main into sprint-10 [origin/main, main merged in]
 
 ## v0.9.0
 
