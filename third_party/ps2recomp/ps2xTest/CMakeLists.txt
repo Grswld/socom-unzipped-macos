@@ -58,6 +58,7 @@ add_library(ps2_test_lib STATIC
     src/gs_gl_flush_reasons_tests.cpp   # macOS perf step 1: flush reasons, pipeline states, frame percentiles
     src/vblank_period_tests.cpp   # macOS fork: PS2X_VBLANK_NTSC
     src/socom2_mouse_tests.cpp   # macOS fork: mouse look and aim-hold
+    src/socom2_kbm_tests.cpp   # macOS fork: keyboard-and-mouse play
     src/host_thread_qos_tests.cpp   # macOS fork: the game thread on the performance cores
     src/ps2_vu_tests.cpp
     src/ps2_gs_tests.cpp

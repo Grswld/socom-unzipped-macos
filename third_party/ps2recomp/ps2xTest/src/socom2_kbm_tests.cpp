@@ -1,0 +1,367 @@
+// Keyboard-and-mouse play (macOS fork, spec docs/superpowers/specs/2026-10-12-kbm-play-design.md).
+#include "MiniTest.h"
+#include "runtime/socom2_kbm_core.h"
+
+#include <set>
+#include <string>
+
+using namespace socom2_kbm;
+using launcher::mapping::kPs2Select;
+using launcher::mapping::kPs2L3;
+using launcher::mapping::kPs2R3;
+using launcher::mapping::kPs2Start;
+using launcher::mapping::kPs2Up;
+using launcher::mapping::kPs2Right;
+using launcher::mapping::kPs2Down;
+using launcher::mapping::kPs2Left;
+using launcher::mapping::kPs2L2;
+using launcher::mapping::kPs2R2;
+using launcher::mapping::kPs2L1;
+using launcher::mapping::kPs2R1;
+using launcher::mapping::kPs2Triangle;
+using launcher::mapping::kPs2Circle;
+using launcher::mapping::kPs2Cross;
+using launcher::mapping::kPs2Square;
+
+namespace
+{
+    std::set<int> g_down;   // the keys the predicate reports down
+    bool keyDown(int key) { return g_down.count(key) != 0; }
+
+    Inputs keys(std::initializer_list<int> down, uint8_t mouse = 0, int wheelUp = 0, int wheelDown = 0)
+    {
+        g_down = std::set<int>(down);
+        Inputs in;
+        in.isKeyDown = keyDown;
+        in.mouseButtons = mouse;
+        in.wheelUp = wheelUp;
+        in.wheelDown = wheelDown;
+        return in;
+    }
+
+    State freshState(const Settings &s)
+    {
+        State st;
+        st.speed.reset(s);
+        return st;
+    }
+
+    bool hasBinding(const std::vector<Binding> &table, int input, uint8_t action)
+    {
+        for (const Binding &b : table)
+            if (b.input == input && b.action == action)
+                return true;
+        return false;
+    }
+
+    constexpr uint8_t kLeftClick = 1u << 0;
+    constexpr uint8_t kRightClick = 1u << 1;
+    constexpr uint8_t kMiddleClick = 1u << 2;
+}
+
+void register_socom2_kbm_tests()
+{
+    MiniTest::Case("Socom2KbmNames", [](TestCase &tc)
+    {
+        tc.Run("inputs round-trip through their names: keys, modifiers, the mouse and the wheel", [](TestCase &t)
+        {
+            for (int input : {static_cast<int>('W'), 32, 257, 256, 340, 341, 290, kMouseLeft, kMouseRight, kMouseMiddle,
+                              kMouse4, kMouse5, kWheelUp, kWheelDown})
+                t.Equals(inputFromName(inputName(input)), input, "round trip of " + inputName(input));
+            t.Equals(inputFromName("W"), static_cast<int>('W'), "a capital letter names the key too");
+            t.Equals(inputFromName(" left_shift "), 340, "spaces around a name are ignored");
+            t.Equals(inputFromName("nonsense"), kUnknownInput, "an unknown name is refused");
+        });
+
+        tc.Run("actions: the sixteen PS2 buttons by libpad2 name, then the layer's own", [](TestCase &t)
+        {
+            t.Equals(actionFromName("r1"), static_cast<int>(kPs2R1), "r1");
+            t.Equals(actionFromName("triangle"), static_cast<int>(kPs2Triangle), "triangle");
+            t.Equals(actionFromName("speed_up"), static_cast<int>(kSpeedUp), "speed_up");
+            t.Equals(actionFromName("aim_hold"), static_cast<int>(kAimHold), "aim_hold");
+            for (int a = 0; a < kActionCount; ++a)
+                t.Equals(actionFromName(actionName(static_cast<uint8_t>(a))), a, std::string("round trip of ") + actionName(static_cast<uint8_t>(a)));
+            t.Equals(actionFromName("fly"), -1, "unknown action");
+        });
+    });
+
+    MiniTest::Case("Socom2KbmDefaults", [](TestCase &tc)
+    {
+        tc.Run("every PS2 button and every layer action has a game binding (the owner's 'every control'; Triangle by crouch/prone)", [](TestCase &t)
+        {
+            const Settings s = defaults();
+            for (int a = 0; a < kActionCount; ++a)
+            {
+                bool found = false;
+                for (const Binding &b : s.game)
+                    found = found || b.action == a || (a == kPs2Triangle && (b.action == kCrouch || b.action == kProne));
+                t.IsTrue(found, std::string("no game binding for ") + actionName(static_cast<uint8_t>(a)));
+            }
+        });
+
+        tc.Run("the preset-1 layout: fire, aim, jump, stance, reload, use, pause, TacMap", [](TestCase &t)
+        {
+            const Settings s = defaults();
+            t.IsTrue(hasBinding(s.game, kMouseLeft, kPs2R1), "left click fires");
+            t.IsTrue(hasBinding(s.game, kMouseRight, kAimHold), "right click aims");
+            t.IsTrue(hasBinding(s.game, kWheelUp, kSpeedUp) && hasBinding(s.game, kWheelDown, kSpeedDown), "the wheel steps speed");
+            t.IsTrue(hasBinding(s.game, ' ', kPs2Square), "space jumps");
+            t.IsTrue(hasBinding(s.game, 'C', kCrouch) && hasBinding(s.game, 341, kProne), "C crouches, ctrl goes prone");
+            t.IsTrue(hasBinding(s.game, 'R', kPs2R3), "R reloads");
+            t.IsTrue(hasBinding(s.game, 'F', kPs2Cross) && hasBinding(s.game, 257, kPs2Cross), "F and Enter use");
+            t.IsTrue(hasBinding(s.game, 256, kPs2Start), "Escape pauses");
+            t.IsTrue(hasBinding(s.game, 'M', kPs2Select), "M opens the TacMap");
+            t.IsTrue(hasBinding(s.menu, kMouseLeft, kPs2Cross) && hasBinding(s.menu, kMouseRight, kPs2Triangle), "menu clicks select and go back");
+            t.IsTrue(hasBinding(s.menu, kWheelUp, kPs2Up) && hasBinding(s.menu, kWheelDown, kPs2Down), "the menu wheel scrolls");
+        });
+
+        tc.Run("speed steps start at full and every step clears the dead zone", [](TestCase &t)
+        {
+            const Settings s = defaults();
+            t.Equals(s.start, static_cast<int>(s.steps.size()) - 1, "starts at the top step");
+            t.Equals(s.steps.back(), 1.0f, "the top step is full push");
+            for (float f : s.steps)
+                t.IsTrue(f >= kMinPush, "a step inside the dead zone");
+        });
+    });
+
+    MiniTest::Case("Socom2KbmFile", [](TestCase &tc)
+    {
+        tc.Run("the written defaults parse back to the defaults, with no error", [](TestCase &t)
+        {
+            const ParseResult r = parse(write(defaults()));
+            t.IsTrue(r.errors.empty(), "errors: " + (r.errors.empty() ? std::string() : r.errors.front()));
+            t.IsTrue(r.settings == defaults(), "the round trip changed the settings");
+            t.Equals(write(r.settings), write(defaults()), "and writes the same file again");
+        });
+
+        tc.Run("an empty file is the defaults", [](TestCase &t)
+        {
+            const ParseResult r = parse("");
+            t.IsTrue(r.errors.empty() && r.settings == defaults(), "empty file");
+        });
+
+        tc.Run("a line replaces one action's inputs and leaves the rest; an empty value unbinds", [](TestCase &t)
+        {
+            const ParseResult r = parse("[game]\nr1 = mouse_left, key:70\njump_is_square = x\nsquare = \n");
+            t.IsTrue(hasBinding(r.settings.game, kMouseLeft, kPs2R1) && hasBinding(r.settings.game, 70, kPs2R1), "r1 rebound to two inputs");
+            bool square = false;
+            for (const Binding &b : r.settings.game)
+                square = square || b.action == kPs2Square;
+            t.IsFalse(square, "square unbound");
+            t.IsTrue(hasBinding(r.settings.game, 'R', kPs2R3), "an action the file does not name keeps its default");
+            t.Equals(r.errors.size(), static_cast<size_t>(1), "the unknown action is one error");
+            t.IsTrue(!r.errors.empty() && r.errors[0].rfind("line 3:", 0) == 0, "the error names its line");
+        });
+
+        tc.Run("a line with an unknown input is ignored whole and reported", [](TestCase &t)
+        {
+            const ParseResult r = parse("[game]\nr1 = mouse_left, warp_drive\n");
+            t.Equals(r.errors.size(), static_cast<size_t>(1), "one error");
+            t.IsTrue(r.settings.game == defaults().game, "r1 kept its default");
+        });
+
+        tc.Run("speed: steps sorted, the start 1-based and clamped, a step in the dead zone raised to the floor", [](TestCase &t)
+        {
+            ParseResult r = parse("[speed]\nsteps = 1.0, 0.5, 0.2\nstart = 2\nindicator = always\n");
+            t.Equals(r.settings.steps.size(), static_cast<size_t>(3), "three steps");
+            t.Equals(r.settings.steps.front(), kMinPush, "0.2 raised to the floor");
+            t.Equals(r.settings.steps.back(), 1.0f, "sorted");
+            t.Equals(r.settings.start, 1, "start 2 is index 1");
+            t.IsTrue(r.settings.indicator == Indicator::Always, "indicator");
+            t.Equals(r.errors.size(), static_cast<size_t>(1), "the raised step is reported");
+            r = parse("[speed]\nstart = 9\n");
+            t.Equals(r.settings.start, static_cast<int>(defaults().steps.size()) - 1, "start clamped to the top");
+            r = parse("[speed]\nsteps = 0.5, fast\n");
+            t.IsTrue(r.settings.steps == defaults().steps && r.errors.size() == 1, "a bad list keeps the default steps");
+        });
+
+        tc.Run("mouse settings are carried only when set; bad sections and lines are reported", [](TestCase &t)
+        {
+            ParseResult r = parse("[mouse]\nsensitivity = 1.5\ninvert_y = 1\n[nope]\nx = y\nstray\n");
+            t.IsTrue(r.settings.hasSens && r.settings.sens == 1.5f, "sensitivity");
+            t.IsTrue(r.settings.hasInvertY && r.settings.invertY, "invert");
+            t.IsFalse(r.settings.hasAimSens, "aim sensitivity unset");
+            t.Equals(r.errors.size(), static_cast<size_t>(2), "unknown section + the line without '='");
+            r = parse("r1 = mouse_left\n");
+            t.Equals(r.errors.size(), static_cast<size_t>(1), "a setting before any section");
+        });
+    });
+
+    MiniTest::Case("Socom2KbmEnable", [](TestCase &tc)
+    {
+        tc.Run("on unless scripted; the knob wins either way", [](TestCase &t)
+        {
+            t.IsTrue(enabledFor(nullptr, false), "interactive: on");
+            t.IsFalse(enabledFor(nullptr, true), "scripted: off");
+            t.IsTrue(enabledFor("1", true), "scripted with PS2X_KBM=1: on");
+            t.IsFalse(enabledFor("0", false), "PS2X_KBM=0: off");
+        });
+    });
+
+    MiniTest::Case("Socom2KbmSpeed", [](TestCase &tc)
+    {
+        tc.Run("the wheel steps the walk speed down and up, clamped at both ends", [](TestCase &t)
+        {
+            const Settings s = defaults();
+            State st = freshState(s);
+            PadOut o = apply(s, Context::Game, keys({'W'}), st);
+            t.Equals(o.axis[3], static_cast<uint8_t>(0x00), "full forward at the top step");
+            o = apply(s, Context::Game, keys({'W'}, 0, 0, 2), st);
+            t.IsTrue(o.stepChanged, "two notches down change the step");
+            t.Equals(st.speed.step(), 2, "step 3 of 5");
+            t.Equals(o.axis[3], axisByte(-0.70f), "W at 0.70");
+            o = apply(s, Context::Game, keys({'W'}, 0, 0, 9), st);
+            t.Equals(st.speed.step(), 0, "clamped at the bottom");
+            t.Equals(o.axis[3], axisByte(-0.40f), "W at the lowest step");
+            o = apply(s, Context::Game, keys({'W'}, 0, 0, 1), st);
+            t.IsFalse(o.stepChanged, "no change below the bottom");
+            o = apply(s, Context::Game, keys({'S'}, 0, 1, 0), st);
+            t.Equals(o.axis[3], axisByte(0.55f), "one notch up: S at 0.55");
+        });
+
+        tc.Run("the lowest step still moves: its push clears the measured dead zone (0.33)", [](TestCase &t)
+        {
+            const Settings s = defaults();
+            State st = freshState(s);
+            apply(s, Context::Game, keys({}, 0, 0, 9), st);
+            const PadOut o = apply(s, Context::Game, keys({'W'}), st);
+            t.IsTrue(128 - o.axis[3] >= 46, "deflection at least 46 of 128 (0.36)");
+        });
+
+        tc.Run("run holds full push whatever the step; a diagonal keeps the step's length", [](TestCase &t)
+        {
+            const Settings s = defaults();
+            State st = freshState(s);
+            apply(s, Context::Game, keys({}, 0, 0, 2), st);   // 0.70
+            PadOut o = apply(s, Context::Game, keys({'W', 340}), st);
+            t.Equals(o.axis[3], static_cast<uint8_t>(0x00), "shift: full");
+            o = apply(s, Context::Game, keys({'W', 'D'}), st);
+            const float d = 0.70f / std::sqrt(2.0f);
+            t.Equals(o.axis[3], axisByte(-d), "diagonal forward component");
+            t.Equals(o.axis[2], axisByte(d), "diagonal right component");
+            o = apply(s, Context::Game, keys({'A', 'D'}), st);
+            t.Equals(o.axis[2], static_cast<uint8_t>(0x80), "opposite keys cancel");
+            t.IsFalse(o.moving, "nothing moves");
+        });
+
+        tc.Run("a speed key steps once per press, not once per read", [](TestCase &t)
+        {
+            Settings s = parse("[game]\nspeed_down = minus\n").settings;
+            State st = freshState(s);
+            apply(s, Context::Game, keys({45}), st);
+            apply(s, Context::Game, keys({45}), st);
+            apply(s, Context::Game, keys({45}), st);
+            t.Equals(st.speed.step(), s.start - 1, "held for three reads: one step");
+            apply(s, Context::Game, keys({}), st);
+            apply(s, Context::Game, keys({45}), st);
+            t.Equals(st.speed.step(), s.start - 2, "released and pressed again: a second step");
+        });
+
+        tc.Run("speed never steps in a menu, even when the file binds it there", [](TestCase &t)
+        {
+            const Settings s = parse("[menu]\nspeed_down = wheel_down, minus\n").settings;
+            State st = freshState(s);
+            apply(s, Context::Menu, keys({45}, 0, 0, 3), st);
+            t.Equals(st.speed.step(), s.start, "unchanged");
+        });
+
+        tc.Run("the indicator shows the step for 2.5 s after a change, always, or never", [](TestCase &t)
+        {
+            Settings s = defaults();
+            t.Equals(indicatorLine(s, 2, 1.0), std::string("SPEED 3/5  70%"), "shown after a change");
+            t.Equals(indicatorLine(s, 2, 3.0), std::string(), "hidden later");
+            s.indicator = Indicator::Always;
+            t.Equals(indicatorLine(s, 4, 99.0), std::string("SPEED 5/5  100%"), "always");
+            s.indicator = Indicator::Off;
+            t.Equals(indicatorLine(s, 4, 0.0), std::string(), "off");
+        });
+    });
+
+    MiniTest::Case("Socom2KbmButtons", [](TestCase &tc)
+    {
+        tc.Run("game: keys and mouse buttons are held as long as they are down", [](TestCase &t)
+        {
+            const Settings s = defaults();
+            State st = freshState(s);
+            for (int i = 0; i < 3; ++i)
+            {
+                const PadOut o = apply(s, Context::Game, keys({'R', ' '}, kLeftClick), st);
+                t.IsTrue(o.button[kPs2R1] && o.button[kPs2R3] && o.button[kPs2Square], "R1, R3 and Square held");
+            }
+            const PadOut o = apply(s, Context::Game, keys({}, kRightClick | kMiddleClick), st);
+            t.IsTrue(o.aimHold, "right click is aim-hold, not a button");
+            t.IsTrue(o.button[kPs2Up], "middle click is D-pad Up");
+            t.IsFalse(o.button[kPs2R1], "R1 released");
+        });
+
+        tc.Run("stance: crouch is a light Triangle, prone a full one, and full wins", [](TestCase &t)
+        {
+            const Settings s = defaults();
+            State st = freshState(s);
+            PadOut o = apply(s, Context::Game, keys({'C'}), st);
+            t.IsTrue(o.button[kPs2Triangle], "crouch presses Triangle");
+            t.Equals(o.trianglePressure, kLightPressure, "light");
+            o = apply(s, Context::Game, keys({341}), st);
+            t.Equals(o.trianglePressure, kFullPressure, "prone is full");
+            o = apply(s, Context::Game, keys({'C', 341}), st);
+            t.Equals(o.trianglePressure, kFullPressure, "both: full wins");
+            o = apply(s, Context::Game, keys({}), st);
+            t.IsFalse(o.button[kPs2Triangle], "released");
+        });
+
+        tc.Run("menu: a click or a notch is one press -- held two reads, released two", [](TestCase &t)
+        {
+            const Settings s = defaults();
+            State st = freshState(s);
+            std::vector<int> cross;
+            cross.push_back(apply(s, Context::Menu, keys({}, kLeftClick), st).button[kPs2Cross]);
+            for (int i = 0; i < 5; ++i)
+                cross.push_back(apply(s, Context::Menu, keys({}, kLeftClick), st).button[kPs2Cross]);   // still held
+            t.IsTrue(cross == std::vector<int>({1, 1, 0, 0, 0, 0}), "one press for one click held down");
+            std::vector<int> down;
+            down.push_back(apply(s, Context::Menu, keys({}, 0, 0, 2), st).button[kPs2Down]);
+            for (int i = 0; i < 8; ++i)
+                down.push_back(apply(s, Context::Menu, keys({}), st).button[kPs2Down]);
+            t.IsTrue(down == std::vector<int>({1, 1, 0, 0, 1, 1, 0, 0, 0}), "two notches: two presses");
+        });
+
+        tc.Run("menu: keys are held as before, and the right click goes back", [](TestCase &t)
+        {
+            const Settings s = defaults();
+            State st = freshState(s);
+            PadOut o = apply(s, Context::Menu, keys({264, 257}), st);
+            t.IsTrue(o.button[kPs2Down] && o.button[kPs2Cross], "arrow down and Enter");
+            o = apply(s, Context::Menu, keys({}, kRightClick), st);
+            t.IsTrue(o.button[kPs2Triangle], "right click: Triangle (back)");
+            t.IsFalse(o.aimHold, "no aim-hold in a menu");
+        });
+
+        tc.Run("a button held across a context change is not a fresh press", [](TestCase &t)
+        {
+            const Settings s = defaults();
+            State st = freshState(s);
+            apply(s, Context::Game, keys({}, kLeftClick), st);   // firing
+            const PadOut o = apply(s, Context::Menu, keys({}, kLeftClick), st);   // the pause menu opens
+            t.IsFalse(o.button[kPs2Cross], "no select from the held fire button");
+        });
+
+        tc.Run("an input bound only in the menu, held across the change, is not a fresh press either", [](TestCase &t)
+        {
+            const Settings s = parse("[menu]\nsquare = mouse_4\n").settings;
+            State st = freshState(s);
+            apply(s, Context::Game, keys({}, 1u << 3), st);   // mouse_4 held in the game, where it is unbound
+            const PadOut o = apply(s, Context::Menu, keys({}, 1u << 3), st);
+            t.IsFalse(o.button[kPs2Square], "no Square from the held button");
+        });
+
+        tc.Run("a pulse queued in a menu does not land in the game", [](TestCase &t)
+        {
+            const Settings s = defaults();
+            State st = freshState(s);
+            apply(s, Context::Menu, keys({}, 0, 0, 3), st);   // three notches queued
+            const PadOut o = apply(s, Context::Game, keys({}), st);
+            t.IsFalse(o.button[kPs2Down], "cleared on the context change");
+        });
+    });
+}

@@ -64,6 +64,7 @@ void register_runtime_seams_tests();         // Sprint 13 Task C8 (audit F22)
 void register_socom2_net_bounds_tests();     // runtime/socom2_net_bounds.h
 void register_socom2_msg_bounds_tests();     // runtime/socom2_msg_bounds.h
 void register_socom2_mouse_tests();          // macOS fork: mouse look and aim-hold
+void register_socom2_kbm_tests();            // macOS fork: keyboard-and-mouse play
 void register_host_thread_qos_tests();       // macOS fork: runtime/host_thread_qos.h
 void register_vblank_period_tests();        // macOS fork: PS2X_VBLANK_NTSC
 void reset_ps2_test_function_table();
@@ -168,6 +169,7 @@ int main()
     register_socom2_net_bounds_tests();
     register_socom2_msg_bounds_tests();
     register_socom2_mouse_tests();
+    register_socom2_kbm_tests();
     register_host_thread_qos_tests();
     register_vblank_period_tests();
     int res = MiniTest::Run();
