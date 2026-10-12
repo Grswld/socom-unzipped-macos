@@ -101,7 +101,7 @@ Screenshots from the project's own builds (native Windows, OpenGL renderer):
 | A build of the community's r0004 revision passes the same checks and plays a round on the test server | Works |
 | Launcher: disc check, video and controller settings, the personas on your memory cards | Works |
 | Two people playing each other | Not yet |
-| The game's full frame rate in missions (the VBlank pacing holds at the console's 16.7 ms; the game itself draws about 25 frames a second against its 30) | In progress |
+| The game's full frame rate in missions (the VBlank pacing holds near the console's 16.7 ms, 17.2 at the v0.17.0 gate; the game itself draws about 25 frames a second against its 30) | In progress |
 | Audio (the mission's ambient bed 7-10 dB short of the console; unexplained dips in the online menus' music) | In progress |
 | Voice: the game does not send your voice yet | Not yet |
 | Playing on a community server (the launcher installing the r0004 update; the community preset stays greyed until then) | Not yet |
@@ -110,17 +110,17 @@ Screenshots from the project's own builds (native Windows, OpenGL renderer):
 | macOS (Apple Silicon): community port by Grswld, offline, no launcher (`docs/MACOS.md`) | Experimental |
 | Any disc other than the NTSC r0001 release | Not yet |
 
-As of 2026-10-11 the game boots from your own disc to the title, through the menus and into the missions, with a pad
+As of 2026-10-12 the game boots from your own disc to the title, through the menus and into the missions, with a pad
 (the keyboard walks the menus), and renders through OpenGL at up to four times the console's resolution. Online login,
 the lobby and full rounds work on the project's test server, so far only between copies of the game driven by the test
 harness on one machine (no round has been played between two different networks); a build of the community's r0004
 revision passes the same checks and plays a round there too. The launcher lists the personas on your memory cards,
-read from the game's own persona file, and a persona it writes to a card is one the game reads (#73). Version 0.16.0
+read from the game's own persona file, and a persona it writes to a card is one the game reads (#73). Version 0.17.0
 is the latest tag. Still ahead: a program-only download that builds the game's image from your disc on first run, the
 launcher installing the community's r0004 update itself, and a frame-rate bar. Not yet: playing on a community
 server (the launcher's community preset stays greyed until the update installs), the game's full frame rate in
 missions, a finished Linux client (it boots in a virtual machine, never yet on a real GPU), and any disc other than
-the NTSC r0001 release. In a mission the guest's VBlank pacing now holds at the console's 16.7 ms (16.7-17.1 on the
+the NTSC r0001 release. In a mission the guest's VBlank pacing now holds at the console's 16.7 ms (16.7-17.2 on the
 gate since 2026-09-28), but the game's own work on its main thread limits it to about 25 frames a second against the
 30 it targets (`docs/KNOWN.md`, the row "The game thread's own work is what limits the mission's frame rate").
 **macOS (Apple Silicon) is experimental:** a community port by Grswld, who reports it booting the game offline to

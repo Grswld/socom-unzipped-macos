@@ -1,7 +1,7 @@
 # Project status — "Current state" below is kept current; the dated log that stood under it is archived
 
 ## Current state (keep it short; update when it changes)
-- **2026-10-11 -- Sprint 17 ("sixty and the way back") is CLOSING (R351); Sprint 18 (the PCSX2 door) is OPEN.** Sprint 17's last merged chain is green: `s17_adopt_chain2` on `b1b3f023` (2026-10-04). Sprint 18's T0/T7 run in R352's window or are carried (R359). Next: Sprint 19, the reverse-engineering sprint (R360). Live state: `docs/CURRENT_SPRINT.md`.
+- **2026-10-12 -- Sprint 17 ("sixty and the way back") is CLOSED (R351) and goes to main as `v0.17.0`; Sprint 18 (the PCSX2 door) is OPEN.** The close chain is ALL GREEN on `ed519ae5` (2026-10-12 07:04Z): gate 3/3, PINS MATCH (13), HELDOUT 12/12, FRAME 17.20 / 18.18 ms, SYNCV 24.5/s. Sprint 18's T0/T7 run in R352's window (R359); Sprint 19 is the reverse-engineering sprint (R360).
 - Older state bullets: the twenty that stood under the one above (2026-09-19 to 2026-09-25 early) became dated
   entries of the log on 2026-09-25, verbatim (Sprint 13 Task R1, R268); that log is
   `docs/archive/STATUS-log-to-2026-09-26.md` since 2026-09-26 (R272). This block has a byte ceiling

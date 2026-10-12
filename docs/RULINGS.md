@@ -2,16 +2,17 @@
 
 > **Generated -- do not edit.** Written by `python -m tools_py.rulings` from the ruling records `tools_py/docmaint.py` reads for checks 9 and 10 (`ruling_records()`: the definitions in the plans, the sprint file and `docs/archive/`, the ledger rows and the vacancy notes), plus the sprint-local `S12-R<n>` and `S13-R<n>` definitions in the same documents. Change the source and regenerate; `python -m tools_py.rulings --check` exits 1 when this file is stale. The status rules are the module's docstring; the conventions are `docs/DOC_MAINTENANCE.md` section 4.
 
-398 rulings (359 global, 39 sprint-local): 390 active, 5 superseded, 1 retracted, 1 withdrawn, 1 vacant.
+399 rulings (360 global, 39 sprint-local): 391 active, 5 superseded, 1 retracted, 1 withdrawn, 1 vacant.
 
 *Home* is where the ruling is written: its definition, else its ledger row, else its vacancy note. *The line* is its first sentence, cut at 160 characters.
 
 ## Global (R<n>), newest first
 
-359 rulings.
+360 rulings.
 
 | Number | Date | Status | The line | Home |
 |---|---|---|---|---|
+| R367 | 2026-10-12 | active | #59, #42, #32 and #26, each carried twice, leave milestone 7 for the backlog uncarried, so the milestone closes empty; keeping or closing each is the owner's q… | `docs/superpowers/plans/2026-09-27-sprint-17.md` **R367** |
 | R366 | -- | active | (2026-10-11 23:09Z, the owner's word, O33(b); Sprint 18 T7) -- one real PCSX2 INSTALL from GitHub is granted: the launcher's INSTALL fetches PCSX2 v2.8.2's rel… | `docs/superpowers/plans/2026-09-27-sprint-17.md` **R366** |
 | R365 | 2026-10-11 | active | the spec is APPROVED with D-a..D-i at their defaults, D-d as R364 amends it, and D-h amended: when the redotcom export (`re/exports/`) is finished it is handed… | `docs/superpowers/plans/2026-10-11-sprint-19-re-foundation.md` **R365** |
 | R364 | 2026-10-11 | active | all of Harry62's work comes into the project, credited as "h62": his raw work (the `.ide`, the return set, the label CSVs, his scripts and object notes) stays… | `docs/superpowers/plans/2026-10-11-sprint-19-re-foundation.md` **R364** |
@@ -147,7 +148,7 @@
 | R232 | -- | active | the four DNAS cipher addresses are recorded rather than derived. | `docs/archive/sprints-7-12/2026-09-21-sprint-10-disc-to-elf.md` **R232** |
 | R231 | -- | active | a difference in the image's *shape* is a note, not a refusal. | `docs/archive/sprints-7-12/2026-09-21-sprint-10-disc-to-elf.md` **R231** |
 | R230 | -- | active | the expectations file holds sha256 digests of whole game files, in the tree. | `docs/archive/sprints-7-12/2026-09-21-sprint-10-disc-to-elf.md` **R230** |
-| R229 | -- | vacant | deliberately vacant: no ruling was ever issued under this number. | `docs/CURRENT_SPRINT.md` ledger R229 |
+| R229 | -- | vacant | deliberately vacant: no ruling was ever issued under this number. | `docs/archive/CURRENT_SPRINT-closed-sprint-16.md` ledger R229 |
 | R228 | -- | active | the synthetic Linux packaging test asserts the executable bit on Linux only. | `docs/archive/sprints-7-12/2026-09-21-sprint-10-q7-residuals.md` **R228** |
 | R227 | -- | active | the stub helpers live in namespace `stub_support` with a global using-directive in the header. | `docs/archive/sprints-7-12/2026-09-21-sprint-10-q7-residuals.md` **R227** |
 | R226 | -- | active | the microphone resampler walks the product `phase + step * k`, not a running sum, and reports what it consumed. | `docs/archive/sprints-7-12/2026-09-21-sprint-10-q7-residuals.md` **R226** |
@@ -167,7 +168,7 @@
 | R212 | -- | active | the switch is a binding, in BUTTONS, with OFF beside it; the guide by default. | `docs/archive/sprints-7-12/2026-09-21-sprint-10-q4-launcher-rest.md` **R212** |
 | R211 | -- | active | while the game runs the pad drives the launcher NEVER, in front or behind; the switch is the one button the gate passes. | `docs/archive/sprints-7-12/2026-09-21-sprint-10-q4-launcher-rest.md` **R211** |
 | R210 | -- | active | The keyboard's gameplay mapping — the WASD/IJKL sticks and the keys bound to L1/R1/L2/R2/L3/R3 — is honoured only in developer mode (`PS2X_DEV=1` / `--dev`), w… | `docs/archive/sprints-7-12/2026-09-21-sprint-10-q3-mouse-leaves-keyboard-narrowed.md` **R210** |
-| R209 | -- | active | "Q2's Task 8 VM ring deferred to the sprint close, CI is the Linux ring, the VM stays off" | `docs/CURRENT_SPRINT.md` ledger R209 |
+| R209 | -- | active | "Q2's Task 8 VM ring deferred to the sprint close, CI is the Linux ring, the VM stays off" | `docs/archive/CURRENT_SPRINT-closed-sprint-16.md` ledger R209 |
 | R208 | 2026-09-21 | active | The `[knobs]` line never writes a credential's value: `PS2X_SOCOM2_LOGIN_PASS` is printed as `[redacted]`, in developer mode too. | `docs/archive/sprints-7-12/2026-09-20-sprint-9-goal-3-knob-retirement.md` **R208** |
 | R207 | -- | active | Every Path-kind knob is constrained to the portable folder, or refused -- but not in this pass. | `docs/archive/sprints-7-12/2026-09-20-sprint-9-goal-3-knob-retirement.md` **R207** |
 | R206 | -- | active | The two helpers `SchedTrace.cpp` grew after the plan (`envOn`, `envMsToNs`) are migrated under rule 2 like the plan's seven, and a check that no non-literal… | `docs/archive/sprints-7-12/2026-09-20-sprint-9-goal-3-knob-retirement.md` **R206** |

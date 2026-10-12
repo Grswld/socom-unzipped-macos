@@ -1,6 +1,6 @@
 # Documentation maintenance — the classes, the registry, and the sprint-close review
 
-**Last full review: 2026-09-28 (Sprint 16 close; §5 by a read-only agent's table, 38 findings, the blocking ones fixed in `40defd7b` and Sprint 14's block archived; §7 by a read-only agent's table, the audit clean, four issues carried to Sprint 17 and two to the backlog, two opened, the milestone closed, the backlog regenerated, R271's breaker applied as R321).** Next: at the next sprint's close, by its controller.
+**Last full review: 2026-10-12 (Sprint 17 close; §5 by a read-only agent's table, 23 findings, every one fixed in the close-out commit -- stale pointers to the moved Sprint 16 block, the last green chain, the suite counts, README's 16.7-17.1 ms range and its latest tag, KNOWN rows 134/136/137/143/175 -- and Sprint 16's block archived; §7 the audit clean, seven issues carried to the backlog, four twice-carried moved there under R367 (O36), #91 retitled, milestone 7 closed, the backlog regenerated, no breaker row).** Next: at the next sprint's close, by its controller.
 
 > **The first review under this schema, 2026-09-23 (Sprint 10's close), and what it changed.** Step 1: `docmaint`
 > OK. Step 2: every L document read for truth by a read-only agent against the tree and the night's ledgers — 56
@@ -145,6 +145,7 @@ document gets a class, and an unclassified document is one nobody has decided th
 | `docs/archive/CURRENT_SPRINT-closed-sprint-13.md` | **A** | — | Cut 2026-09-27 (the Sprint 15 close, §5 step 5): the Sprint 13 CLOSED block, verbatim, so the live file keeps two CLOSED blocks under its ceiling. The ruling counter and check 10 read it |
 | `docs/archive/CURRENT_SPRINT-closed-sprint-14.md` | **A** | — | Cut 2026-09-28 (the Sprint 16 close, §5 step 5): the Sprint 14 CLOSED block, verbatim, so the live file keeps two CLOSED blocks under its ceiling. The ruling counter and check 10 read it |
 | `docs/archive/CURRENT_SPRINT-closed-sprint-15.md` | **A** | — | Cut 2026-10-01 (the Sprint 18 open; §5 step 5, the ceiling rule): the Sprint 15 CLOSED block, verbatim, moved when the live file passed its 33,000-byte ceiling with the second open branch in its header; the live file keeps one CLOSED block (Sprint 16). The rulings R282-R297 stay in their plans. |
+| `docs/archive/CURRENT_SPRINT-closed-sprint-16.md` | **A** | — | Cut 2026-10-12 (the Sprint 17 close; §5 step 5, the ceiling rule): the Sprint 16 CLOSED block, verbatim; the live file keeps one CLOSED block (Sprint 17). The rulings R299-R321 stay in the Sprint 16 plan. |
 | `docs/archive/HANDOFF-reference-to-2026-09-13.md` | **A** | — | |
 | `docs/archive/HANDOFF-2026-09-08.md` | **A** | — | Banded 2026-09-22 |
 | `docs/archive/HANDOFF-AUDIT-2026-09-14.md` | **A** | — | Banded 2026-09-22 |
