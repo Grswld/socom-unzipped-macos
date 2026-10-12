@@ -18,9 +18,13 @@
 //   socom_unzipped_launcher.exe --server-status                  print the hosted server's status line, no window
 //   socom_unzipped_launcher.exe --fetch-patch <dest> <bytes> <sha256>   download the r0004 package and check it,
 //                                                                no window (loopback tests only until R2: R293)
+//   socom_unzipped_launcher.exe --install-pcsx2 <dir>           Sprint 18 T4: INSTALL without the window -- the official
+//                                                                PCSX2 release, verified, extracted into <dir>/pcsx2/
+//   socom_unzipped_launcher.exe --pcsx2-status <exe>            the PCSX2 version line, data root and BIOS folder, no window
 //
 // This file is setup, the loop and the page dispatch. Everything drawn lives in src/ui/.
 #include "launcher/bug_report.h"
+#include "launcher/client_mode.h"     // Sprint 18 T5: launcher.json, the client the window drives
 #include "launcher/diagnostics.h"
 #include "launcher/iso9660.h"
 #include "launcher/launcher_config.h"
@@ -28,6 +32,9 @@
 #include "launcher/menu_sounds.h"
 #include "launcher/mic_devices.h"
 #include "launcher/patch_fetch.h"
+#include "launcher/pcsx2_config.h"    // Sprint 18 T5: config.pcsx2.json
+#include "launcher/pcsx2_files.h"     // Sprint 18 T4: --pcsx2-status reads PCSX2's data root
+#include "launcher/pcsx2_install.h"   // Sprint 18 T4: --install-pcsx2
 #include "launcher/personas.h"   // Sprint 16 L1b (#73): the ledgers beside the cards
 #include "launcher/sha256.h"
 #include "ps2x/app_icon_embedded.h"   // Sprint 10 Q4: the window icon both executables wear
@@ -52,6 +59,7 @@
 
 #include <algorithm>
 #include <chrono>
+#include <cctype>
 #include <cmath>
 #include <cstdint>
 #include <cstdio>
@@ -67,6 +75,14 @@
 #include <string>
 #include <thread>
 #include <vector>
+
+#ifdef _WIN32
+#include <share.h>       // Sprint 18 T5: _wfsopen's _SH_DENYRW, the INSTALL lock
+#else
+#include <fcntl.h>
+#include <sys/file.h>    // Sprint 18 T5: flock, the INSTALL lock
+#include <unistd.h>
+#endif
 
 namespace fs = std::filesystem;
 
@@ -133,7 +149,19 @@ namespace
         std::string message;
     };
 
-    DiscStatus checkDisc(const std::string &isoPath)
+    // Sprint 18 T6 review: the active client's ISO as a file -- the PCSX2 client's UTF-8 string through pathFromUtf8, the
+    // native client's as path(std::string) reads it (the form its config.json and the game's environment have). LATER 79:
+    // a PCSX2 string that is not UTF-8 is an empty path, so checkDisc answers "no disc set" instead of the launcher dying.
+    fs::path activeIsoFile(const ui::App &app)
+    {
+        if (app.mode == launcher::ClientMode::Pcsx2)
+            return launcher::pathFromUtf8(app.pcsx2.isoPath);
+        return fs::path(app.config.isoPath);
+    }
+
+    // Sprint 18 T6 review: by file path -- activeIsoFile makes it from the active client's string (the PCSX2 client's
+    // UTF-8 through pathFromUtf8; the native client's as it always was), so a non-ASCII folder opens by its wide name.
+    DiscStatus checkDisc(const fs::path &isoPath)
     {
         DiscStatus st;
         st.checked = true;
@@ -142,7 +170,7 @@ namespace
             st.message = ui::kDiscNotChosen;
             return st;
         }
-        iso9660::Reader read = iso9660::fileReader(isoPath);
+        iso9660::Reader read = iso9660::fileReaderAt(isoPath);
         if (!read)
         {
             st.message = ui::kDiscCannotOpen;
@@ -492,6 +520,677 @@ namespace
         return 0;
     }
 
+    // INSTALL's swap (the T4 re-review). An update must not cost the player a memory card or a BIOS: PCSX2 keeps them
+    // inside its own folder in a portable install, the spec's R-C keeps "their updates intact" and R-F makes the
+    // BIOS, the cards and the settings PCSX2's own pages -- so the launcher keeps the player's data by default (the
+    // reviewer's judgement; no owner ruling needed). A FIXED set of folders is carried, by a manifest written before
+    // the first move, and no path in here deletes one of them.
+    namespace pcsx2swap
+    {
+        // PCSX2's player-data folders (its portable layout). A release that brings one of these names has its files
+        // merged into the player's folder, the player's files winning on a name clash.
+        constexpr const char *kPlayerFolders[] = {"bios",     "memcards", "inis",         "sstates", "snaps",
+                                                  "cheats",   "patches",  "covers",       "gamesettings",
+                                                  "cache",    "textures", "logs",         "videos"};
+        constexpr const char *kManifest = ".carry";   // in pcsx2.old: the folders the swap is moving into pcsx2.new
+
+        bool isPlayerFolder(const std::string &name)
+        {
+            for (const char *p : kPlayerFolders)
+                if (name == p)
+                    return true;
+            return false;
+        }
+
+        bool writeManifest(const fs::path &aside, const std::vector<std::string> &names)
+        {
+            std::ofstream out(aside / kManifest, std::ios::binary | std::ios::trunc);
+            for (const std::string &n : names)
+                out << n << "\n";
+            out.flush();
+            return static_cast<bool>(out);
+        }
+
+        // The manifest's names -- only names of the fixed set, so a damaged file can never point anywhere else.
+        std::vector<std::string> readManifest(const fs::path &aside)
+        {
+            std::vector<std::string> names;
+            std::ifstream in(aside / kManifest, std::ios::binary);
+            for (std::string line; std::getline(in, line);)
+            {
+                while (!line.empty() && (line.back() == '\r' || line.back() == ' '))
+                    line.pop_back();
+                if (isPlayerFolder(line))
+                    names.push_back(line);
+            }
+            return names;
+        }
+
+        // pcsx2.old/<name> moved whole into pcsx2.new/<name>. A release copy of that name is renamed out of the way
+        // first and its files then merged in where the player has none of that name. False with `why` set; what was
+        // moved is where recover() looks for it.
+        bool carry(const fs::path &aside, const fs::path &staging, const std::string &name, std::string &why)
+        {
+            const fs::path from = aside / name;
+            const fs::path to = staging / name;
+            const fs::path release = staging / (name + ".release-copy");
+            std::error_code ec;
+            const bool releaseHasIt = fs::exists(to, ec);
+            if (releaseHasIt)
+            {
+                fs::remove_all(release, ec);   // the release's own files only (pcsx2.new holds nothing of the player's yet)
+                ec.clear();
+                fs::rename(to, release, ec);
+                if (ec)
+                {
+                    why = "could not make room for the player's " + name + " in the new install (" + ec.message() + ")";
+                    return false;
+                }
+            }
+            fs::rename(from, to, ec);
+            if (ec)
+            {
+                why = "could not carry " + name + " from " + from.string() + " into the new install (" + ec.message() + ")";
+                return false;
+            }
+            if (releaseHasIt)
+            {
+                std::vector<fs::path> entries;
+                for (fs::directory_iterator it(release, ec), end; !ec && it != end; it.increment(ec))
+                    entries.push_back(it->path());
+                for (const fs::path &e : entries)
+                {
+                    std::error_code mv;
+                    if (!fs::exists(to / e.filename(), mv))
+                        fs::rename(e, to / e.filename(), mv);   // the player's file of the same name wins
+                }
+                fs::remove_all(release, ec);
+            }
+            return true;
+        }
+
+        // pcsx2.old after a complete swap: everything but the manifest, then the manifest, then the folder -- so a
+        // clean-up that stops half-way still has its manifest for recover() to read.
+        void removeAside(const fs::path &aside)
+        {
+            std::error_code ec;
+            std::vector<fs::path> entries;
+            for (fs::directory_iterator it(aside, ec), end; !ec && it != end; it.increment(ec))
+                if (it->path().filename() != kManifest)
+                    entries.push_back(it->path());
+            for (const fs::path &e : entries)
+                fs::remove_all(e, ec);
+            fs::remove(aside / kManifest, ec);
+            fs::remove(aside, ec);
+        }
+
+        // An interrupted swap put right, before INSTALL deletes anything. "" when there was nothing to do or it is done;
+        // otherwise the refusal, naming the folder and the path, and nothing deleted.
+        //  - pcsx2 absent, pcsx2.old present: every manifest folder in pcsx2.new goes back into pcsx2.old, then
+        //    pcsx2.old becomes pcsx2 again (the run died, or rolled back, mid-swap).
+        //  - both present: the swap finished and its clean-up stopped; pcsx2.old is removed only when it holds none of
+        //    the player folders.
+        std::string recover(const fs::path &target, const fs::path &staging, const fs::path &aside)
+        {
+            std::error_code ec;
+            if (!fs::is_directory(aside, ec))
+                return {};
+            if (!fs::exists(target, ec))
+            {
+                for (const std::string &name : readManifest(aside))
+                {
+                    const fs::path back = aside / name;
+                    const fs::path held = staging / name;
+                    if (fs::exists(back, ec) || !fs::exists(held, ec))
+                        continue;
+                    ec.clear();
+                    fs::rename(held, back, ec);
+                    if (ec)
+                        return "the player folder " + name + " is in " + held.string() + " and could not be moved back into " +
+                               aside.string() + " (" + ec.message() + "); nothing was deleted -- move it there, then INSTALL again";
+                }
+                fs::remove(aside / kManifest, ec);
+                ec.clear();
+                fs::rename(aside, target, ec);
+                if (ec)
+                    return "the earlier install is in " + aside.string() + " and could not be renamed back to " +
+                           target.string() + " (" + ec.message() + "); nothing was deleted";
+                return {};
+            }
+            for (const char *name : kPlayerFolders)
+                if (fs::exists(aside / name, ec))
+                    return std::string("the earlier install's ") + name + " folder is still in " + aside.string() +
+                           " beside a complete " + target.string() + "; nothing was deleted -- move what you need out of " +
+                           aside.string() + " and remove it, then INSTALL again";
+            removeAside(aside);
+            return {};
+        }
+    }
+
+    // --install-pcsx2 <dir>: Sprint 18 T4 (R341), INSTALL without the window, for tools_py/tests/
+    // test_launcher_pcsx2_install.py (against a loopback stand-in release) and for T5's button to call the same
+    // steps: the latest-release JSON -> the -windows-x64-Qt.7z asset (on github.com: assetUrlAllowed) -> the download
+    // (redirects only github.com -> *.githubusercontent.com) -> its size and the API's sha256
+    // (patchfetch::verifyPackage) -> the system tar.exe -> portable.txt and the version marker.
+    // T4 review 1, atomic: all of that happens in a fresh sibling <dir>/pcsx2.new; only a complete, marked release is
+    // swapped in (pcsx2 -> pcsx2.old, pcsx2.new -> pcsx2, pcsx2.old removed). The player's folders of an earlier install
+    // (pcsx2swap::kPlayerFolders: memcards, bios, inis, ...) move across in the swap by manifest; anything else of the
+    // old release does not. Every refusal is one sentence after "NOT INSTALLED.", exit 1: an existing pcsx2 is left
+    // exactly as it was, and pcsx2.new is removed only when it holds nothing of the player's.
+    // Sprint 18 T5 (the T4 leftover): one INSTALL at a time per folder -- the window's worker and the headless form
+    // alike. The lock is an open handle on <dir>/pcsx2.install.lock that nothing else may open (Windows: no sharing;
+    // POSIX: flock), so a crashed run leaves no stale lock behind: the system closes the handle with the process.
+    constexpr const char *kInstallLockName = "pcsx2.install.lock";
+
+    class InstallLock
+    {
+    public:
+        InstallLock() = default;
+        InstallLock(const InstallLock &) = delete;
+        InstallLock &operator=(const InstallLock &) = delete;
+        ~InstallLock() { release(); }
+
+        bool acquire(const fs::path &home)
+        {
+            release();
+            std::error_code ec;
+            fs::create_directories(home, ec);
+            m_path = home / kInstallLockName;
+#ifdef _WIN32
+            m_file = _wfsopen(m_path.wstring().c_str(), L"wb", _SH_DENYRW);
+            return m_file != nullptr;
+#else
+            m_fd = ::open(m_path.c_str(), O_CREAT | O_RDWR | O_CLOEXEC, 0644);
+            if (m_fd < 0)
+                return false;
+            if (::flock(m_fd, LOCK_EX | LOCK_NB) != 0)
+            {
+                ::close(m_fd);
+                m_fd = -1;
+                return false;
+            }
+            return true;
+#endif
+        }
+
+        void release()
+        {
+#ifdef _WIN32
+            if (m_file != nullptr)
+            {
+                std::fclose(m_file);
+                m_file = nullptr;
+                // Another INSTALL that opened it since holds it unshared, and then this removal simply fails.
+                std::error_code ec;
+                fs::remove(m_path, ec);
+            }
+#else
+            // Never unlinked on POSIX: a waiter's flock on the old inode would no longer exclude a new opener.
+            if (m_fd >= 0)
+            {
+                ::close(m_fd);
+                m_fd = -1;
+            }
+#endif
+        }
+
+    private:
+        fs::path m_path;
+#ifdef _WIN32
+        FILE *m_file = nullptr;
+#else
+        int m_fd = -1;
+#endif
+    };
+
+    constexpr const char *kInstallBusy = "another INSTALL is running in this folder; wait for it to finish";
+
+    // Sprint 18 T5 (the T4 leftover): an INSTALL interrupted inside its swap is put right when the launcher starts, not
+    // only after the next successful release query -- offline, the earlier install would otherwise stay in pcsx2.old.
+    // Under the lock, so it never runs beneath a live INSTALL. "" when there was nothing to do or it is done.
+    std::string recoverPcsx2Install(const fs::path &home, bool &busy)
+    {
+        busy = false;
+        namespace pi = launcher::pcsx2install;
+        const fs::path target = pi::installDir(home);
+        fs::path staging = target;
+        staging += ".new";
+        fs::path aside = target;
+        aside += ".old";
+        std::error_code ec;
+        if (!fs::is_directory(aside, ec))
+            return {};
+        InstallLock lock;
+        if (!lock.acquire(home))
+        {
+            busy = true;
+            return {};
+        }
+        return pcsx2swap::recover(target, staging, aside);
+    }
+
+    // What INSTALL tells whoever runs it: the headless form prints every line; the window's worker turns the phases
+    // and the byte count into the PCSX2 page's progress (ui::Pcsx2InstallUi).
+    struct InstallSink
+    {
+        enum class Phase
+        {
+            Fetching,
+            Downloading,   // `what` is the asset's name, `total` its size from the release
+            Extracting,
+            Done           // `what` is the tag
+        };
+        std::function<void(const std::string &line)> say;
+        std::function<void(Phase phase, const std::string &what, uint64_t total)> phase;
+        std::function<void(uint64_t soFar, uint64_t total)> bytes;
+    };
+
+    int installPcsx2(const fs::path &home, const InstallSink &sink)
+    {
+        namespace pi = launcher::pcsx2install;
+        namespace pf = launcher::patchfetch;
+        auto say = [&](const std::string &line)
+        {
+            if (sink.say)
+                sink.say(line);
+        };
+        auto phase = [&](InstallSink::Phase p, const std::string &what, uint64_t total)
+        {
+            if (sink.phase)
+                sink.phase(p, what, total);
+        };
+        const char *userAgent = "SOCOM-Unzipped-Launcher/1.0";   // httpRequest's own; GitHub's API requires one
+        const fs::path target = pi::installDir(home);
+        fs::path staging = target;
+        staging += ".new";
+        fs::path aside = target;
+        aside += ".old";
+        std::error_code ec;
+        // An earlier run stopped inside its swap: its manifest says which player folders are in pcsx2.new, and they go
+        // back before anything is deleted. A move that fails is a refusal, never a deletion. Sprint 18 T5: before the
+        // release query, so an interrupted install is put right even when GitHub cannot be reached.
+        {
+            const std::string stuck = pcsx2swap::recover(target, staging, aside);
+            if (!stuck.empty())
+            {
+                say("NOT INSTALLED. " + stuck);
+                return 1;
+            }
+        }
+
+        const std::string api = pi::releasesApi(ps2x::knob(pi::kReleasesApiEnv));
+        phase(InstallSink::Phase::Fetching, api, 0);
+        say("asking " + api + " for the latest PCSX2 release");
+        const win32glue::HttpResult answer = win32glue::httpRequest("GET", api, "", 20000);
+        if (answer.status == 0)
+        {
+            say("NOT INSTALLED. The release query failed: " + answer.error);
+            return 1;
+        }
+        pi::Release release;
+        std::string why;
+        if (!pi::parseLatestRelease(answer.body, release, why))
+        {
+            // An error body names its own reason (the API's "message": a rate limit); the status says the rest.
+            say("NOT INSTALLED. " + why + (answer.status != 200 ? " (HTTP " + std::to_string(answer.status) + ")" : std::string()));
+            return 1;
+        }
+        if (answer.status != 200)
+        {
+            say("NOT INSTALLED. GitHub answered HTTP " + std::to_string(answer.status) + " to the release query");
+            return 1;
+        }
+        if (!pi::assetUrlAllowed(api, release.url))
+        {
+            say("NOT INSTALLED. The release names its download at " + release.url + ", which is not where " +
+                release.assetName + " may come from");
+            return 1;
+        }
+
+        const fs::path archive = staging / "pcsx2.7z.new";
+        auto refuse = [&](const std::string &sentence)
+        {
+            std::error_code rm;
+            fs::remove_all(staging, rm);
+            say("NOT INSTALLED. " + sentence);
+            return 1;
+        };
+        fs::remove_all(staging, ec);   // recover() above has emptied it of anything of the player's
+        ec.clear();
+        fs::create_directories(staging, ec);
+        if (ec)
+            return refuse("could not create " + staging.string() + " (" + ec.message() + ")");
+
+        phase(InstallSink::Phase::Downloading, release.assetName, release.bytes);
+        say("downloading " + release.assetName + " (" + std::to_string(static_cast<unsigned long long>(release.bytes)) +
+            " bytes) from " + release.url);
+        int lastPercent = -1;
+        const auto progress = [&](uint64_t soFar, int64_t contentLength)
+        {
+            const uint64_t total = contentLength > 0 ? static_cast<uint64_t>(contentLength) : release.bytes;
+            if (sink.bytes)
+                sink.bytes(soFar, total);
+            if (total == 0)
+                return;
+            const int percent = static_cast<int>(std::min<uint64_t>(100, soFar * 100 / total));
+            if (percent / 5 > lastPercent / 5 || lastPercent < 0)
+            {
+                lastPercent = percent;
+                say("  " + std::to_string(percent - percent % 5) + "%");
+            }
+        };
+        const win32glue::DownloadResult got =
+            win32glue::httpDownloadFollowing(release.url, archive, userAgent, 600000, progress, pi::redirectAllowed);
+        if (!got.error.empty())
+            return refuse("The download failed: " + got.error);
+        const pf::Verdict verdict = pf::verifyPackage(archive, release.bytes, release.sha256);   // a refusal deletes it
+        if (!verdict.ok)
+            return refuse("The download is not the release GitHub described: " + verdict.reason);
+
+        phase(InstallSink::Phase::Extracting, release.assetName, release.bytes);
+        const char *systemRoot = std::getenv("SystemRoot");
+        const fs::path extractLog = staging / "extract.log";
+        std::string runError;
+        const int rc = win32glue::runAndWait(pi::extractArgv(systemRoot != nullptr ? systemRoot : "", archive, staging),
+                                             extractLog, 300000, runError);
+        if (rc != 0)
+        {
+            // The log outlives pcsx2.new, which a refusal removes: it is kept beside the launcher.
+            std::error_code cp;
+            fs::copy_file(extractLog, home / "pcsx2_extract.log", fs::copy_options::overwrite_existing, cp);
+            return refuse(rc < 0 ? runError : "tar.exe exited " + std::to_string(rc) + "; see pcsx2_extract.log");
+        }
+        fs::remove(extractLog, ec);
+        fs::remove(archive, ec);
+        if (!fs::is_regular_file(staging / pi::kExeName, ec))
+        {
+            // The release has carried its files at the top level; should one ever wrap them in a folder, the one
+            // folder holding pcsx2-qt.exe is moved up -- unless it holds a folder of its own name (T4 review 4): moving
+            // that child up would land on the wrapper itself.
+            for (fs::directory_iterator it(staging, ec), end; !ec && it != end; it.increment(ec))
+            {
+                const fs::path sub = it->path();
+                if (!it->is_directory(ec) || !fs::is_regular_file(sub / pi::kExeName, ec))
+                    continue;
+                if (fs::exists(sub / sub.filename(), ec))
+                    return refuse("the archive wraps its files in " + sub.filename().string() +
+                                  ", which holds a folder of its own name; it is not moved up");
+                std::vector<fs::path> children;
+                for (fs::directory_iterator c(sub, ec), cend; !ec && c != cend; c.increment(ec))
+                    children.push_back(c->path());
+                for (const fs::path &child : children)
+                {
+                    std::error_code mv;
+                    fs::rename(child, staging / child.filename(), mv);
+                    if (mv)
+                        return refuse("could not move " + child.filename().string() + " out of the archive's folder (" +
+                                      mv.message() + ")");
+                }
+                fs::remove_all(sub, ec);
+                break;
+            }
+        }
+        if (!fs::is_regular_file(staging / pi::kExeName, ec))
+            return refuse(std::string("the archive held no ") + pi::kExeName);
+        {
+            std::ofstream(staging / "portable.txt", std::ios::binary);
+            std::ofstream marker(staging / pi::kVersionMarker, std::ios::binary | std::ios::trunc);
+            marker << release.tag << "\n";
+            if (!marker)
+                return refuse(std::string("could not write ") + pi::kVersionMarker);
+        }
+
+        // The swap. pcsx2 -> pcsx2.old; the manifest pcsx2.old/.carry names the player folders present, written BEFORE
+        // the first one moves; each is moved whole into pcsx2.new (the release's own copy of that name merged into it,
+        // the player's files winning); pcsx2.new -> pcsx2; pcsx2.old removed, its manifest last. Until pcsx2.new
+        // becomes pcsx2, a failure is rolled back by the manifest (pcsx2swap::recover); a folder that cannot be moved
+        // back is a refusal naming it, and pcsx2.new is then left alone -- never deleted with a player folder inside.
+        const char *testFail = ps2x::knob("PS2X_LAUNCHER_PCSX2_TEST_FAIL");   // the roll-back tests' fault injection
+        const std::string failAt = testFail != nullptr ? testFail : "";
+        const bool hadOld = fs::exists(target, ec);
+        auto rollBack = [&](const std::string &sentence)
+        {
+            const std::string stuck = pcsx2swap::recover(target, staging, aside);
+            if (!stuck.empty())
+            {
+                say("NOT INSTALLED. " + sentence + "; " + stuck);
+                return 1;
+            }
+            return refuse(sentence + "; the earlier install is untouched");
+        };
+        if (hadOld)
+        {
+            ec.clear();
+            fs::rename(target, aside, ec);
+            if (ec)
+                return refuse("the PCSX2 at " + target.string() + " could not be moved aside (" + ec.message() +
+                              "): is PCSX2 running? Close it and INSTALL again; the earlier install is untouched");
+            std::vector<std::string> names;
+            for (const char *name : pcsx2swap::kPlayerFolders)
+                if (fs::is_directory(aside / name, ec))
+                    names.push_back(name);
+            if (!pcsx2swap::writeManifest(aside, names))
+                return rollBack("could not write the carry list in " + aside.string());
+            for (size_t i = 0; i < names.size(); ++i)
+            {
+                std::string why;
+                if (failAt == "carry" && i == 1)
+                    return rollBack("the carry of " + names[i] + " failed (test)");
+                if (!pcsx2swap::carry(aside, staging, names[i], why))
+                    return rollBack(why);
+            }
+        }
+        ec.clear();
+        if (failAt == "final-rename")
+            ec = std::make_error_code(std::errc::permission_denied);
+        else
+            fs::rename(staging, target, ec);
+        if (ec)
+        {
+            const std::string sentence = "could not move the new install to " + target.string() + " (" + ec.message() + ")";
+            return hadOld ? rollBack(sentence) : refuse(sentence);
+        }
+        if (hadOld)
+            pcsx2swap::removeAside(aside);
+        phase(InstallSink::Phase::Done, release.tag, release.bytes);
+        say("installed PCSX2 " + release.tag + " at " + target.string());
+        return 0;
+    }
+
+    // --install-pcsx2 <dir>: installPcsx2 with every line on stdout, under the folder's INSTALL lock.
+    int installPcsx2Headless(const fs::path &home)
+    {
+        InstallLock lock;
+        if (!lock.acquire(home))
+        {
+            std::printf("NOT INSTALLED. %s\n", kInstallBusy);
+            return 1;
+        }
+        InstallSink sink;
+        sink.say = [](const std::string &line)
+        {
+            std::printf("%s\n", line.c_str());
+            std::fflush(stdout);
+        };
+        return installPcsx2(home, sink);
+    }
+
+    // --pcsx2-status <exe>: the version line (the marker INSTALL wrote, or "your own copy"), PCSX2's data root (beside
+    // a portable exe, else <Documents>/PCSX2 -- Documents as PCSX2 reads it, win32glue::documentsDir: the known folder,
+    // which OneDrive can move) and its BIOS folder's file count.
+    int pcsx2StatusHeadless(const fs::path &exe)
+    {
+        namespace pi = launcher::pcsx2install;
+        std::error_code ec;
+        if (!fs::is_regular_file(exe, ec))
+        {
+            std::printf("no PCSX2 at %s\n", exe.string().c_str());
+            return 1;
+        }
+        const fs::path exeDir = exe.parent_path();
+        std::printf("%s\n", pi::versionLine(exe.string(), readText(exeDir / pi::kVersionMarker)).c_str());
+        const bool portable = fs::exists(exeDir / "portable.txt", ec) || fs::exists(exeDir / "portable.ini", ec);
+        const fs::path root = launcher::pcsx2files::dataRoot(exeDir, portable, win32glue::documentsDir());
+        std::printf("data root: %s%s\n", root.string().c_str(), portable ? " (portable)" : "");
+        const fs::path bios = root / "bios";
+        int files = 0;
+        for (fs::directory_iterator it(bios, ec), end; !ec && it != end; it.increment(ec))
+            files += it->is_regular_file(ec) ? 1 : 0;
+        std::printf("BIOS folder: %s (%d file%s)\n", bios.string().c_str(), files, files == 1 ? "" : "s");
+        return 0;
+    }
+
+    // Sprint 18 T5: what the PCSX2 page shows about app.pcsx2.pcsx2Exe -- asked of the disk at start, after SELECT and
+    // after INSTALL, never by the page. The BIOS count is the regular files of 1 MiB or more in <dataRoot>/bios (a PS2
+    // BIOS dump is 4 MiB; PCSX2's own .nvm and .mec beside it are not counted). The adapter is the one PCSX2 will bind.
+    void probePcsx2(ui::App &app)
+    {
+        namespace pi = launcher::pcsx2install;
+        ui::Pcsx2Status s;
+        std::error_code ec;
+        const fs::path exe = launcher::pathFromUtf8(app.pcsx2.pcsx2Exe);   // T6 review: the PCSX2 client's paths are UTF-8
+        // LATER 79: an exe string that is not UTF-8 is an empty path -- no PCSX2 found, the page's none.
+        if (!app.pcsx2.pcsx2Exe.empty() && !exe.empty() && fs::is_regular_file(exe, ec))
+        {
+            s.exeFound = true;
+            const fs::path exeDir = exe.parent_path();
+            s.versionLine = pi::versionLine(launcher::utf8Of(exe), readText(exeDir / pi::kVersionMarker));
+            const bool portable = fs::exists(exeDir / "portable.txt", ec) || fs::exists(exeDir / "portable.ini", ec);
+            // T6 review: Documents as PCSX2 reads it (the known folder, which OneDrive's Known Folder Move relocates),
+            // never %USERPROFILE%\Documents by assumption -- else the BIOS is counted in a folder PCSX2 never opens.
+            const fs::path root = launcher::pcsx2files::dataRoot(exeDir, portable, win32glue::documentsDir());
+            s.dataRoot = launcher::utf8Of(root);
+            s.biosDir = launcher::utf8Of(root / "bios");
+            for (fs::directory_iterator it(root / "bios", ec), end; !ec && it != end; it.increment(ec))
+            {
+                std::error_code fe;
+                if (it->is_regular_file(fe) && it->file_size(fe) >= 1024u * 1024u)
+                    ++s.biosFiles;
+            }
+        }
+        s.adapters = win32glue::listAdapters();
+        const std::string picked = pi::pickAdapter(s.adapters, app.pcsx2.ethDevice);
+        for (const pi::Adapter &a : s.adapters)
+            if (a.guid == picked)
+                s.adapterName = a.name;
+        app.pcsx2Status = s;
+    }
+
+    // Sprint 18 T6 (R344 = R-F): the PCSX2 view's LAUNCH. The disk is asked again (an exe moved, a BIOS dropped in since
+    // the last probe); the refusal is launchBlockedReasonPcsx2's one sentence, the server's name resolved only when
+    // nothing before it refuses (it is last in the precedence, so the answer is the same and a missing disc costs no
+    // lookup). Then config.pcsx2.json -- never config.json (R-A) -- and the two writes R-F allows: PCSX2.ini's [UI]
+    // wizard keys (R347) and [DEV9/Eth], merged key by key, and the guarded pnach, each only when its bytes differ (the old file kept once as
+    // .bak-<stamp>); a PCSX2 the launcher installed also gets its memcards/ and bios/ folders. True when PCSX2 started;
+    // `emulog` is where PCSX2 writes its own log, for the LAST RUN line when it exits.
+    bool launchPcsx2(ui::App &app, const fs::path &dir, win32glue::GameProcess &game, std::string &emulog)
+    {
+        namespace pf = launcher::pcsx2files;
+        namespace pi = launcher::pcsx2install;
+        probePcsx2(app);
+        const std::string iso = ui::activeIsoPath(app);
+        std::string reason = launcher::launchBlockedReasonPcsx2(app.running, !iso.empty(), app.discOk, app.discMessage,
+                                                                app.pcsx2Status.exeFound, app.pcsx2Status.biosFiles, std::string());
+        pf::DnsPick dns;
+        if (reason.empty())
+        {
+            dns = pf::dnsServerFor(app.pcsx2, win32glue::resolveIpv4);
+            reason = launcher::launchBlockedReasonPcsx2(app.running, !iso.empty(), app.discOk, app.discMessage,
+                                                        app.pcsx2Status.exeFound, app.pcsx2Status.biosFiles, dns.error);
+        }
+        if (!reason.empty())
+        {
+            app.setStatus(reason);
+            return false;
+        }
+
+        if (writeText(dir / launcher::kPcsx2ConfigFile, launcher::pcsx2ToJson(app.pcsx2)))
+            app.pcsx2Dirty = false;
+        else
+            std::fprintf(stderr, "[launcher] could not write %s\n", launcher::kPcsx2ConfigFile);
+
+        const fs::path exe = launcher::pathFromUtf8(app.pcsx2.pcsx2Exe);
+        const fs::path exeDir = exe.parent_path();
+        std::error_code ec;
+        const bool portable = fs::exists(exeDir / pf::kPortableMarker, ec) || fs::exists(exeDir / "portable.ini", ec);
+        // T6 review: the same Documents probePcsx2 counted the BIOS in (the known folder), so the ini and the pnach land
+        // in the folder PCSX2 reads.
+        const fs::path root = pf::dataRoot(exeDir, portable, win32glue::documentsDir());
+        const std::string stamp = win32glue::stamp();
+        std::string err;
+        const fs::path ini = root / "inis" / pf::kIniName;
+        const std::string adapter = pi::pickAdapter(win32glue::listAdapters(), app.pcsx2.ethDevice);
+        // T10 (R347): PCSX2 2.8.2 runs its first-run wizard even under -batch, and the wizard rewrites the whole ini,
+        // our [DEV9/Eth] included (research/85 section 7). So [UI] SettingsVersion = 1 and SetupWizardIncomplete = false
+        // are merged first, then [DEV9/Eth], on the same text: one write, one .bak. T0/T7 check the emulog's DEV9 lines
+        // on the first boot; the merge reruns on every LAUNCH in any case.
+        const std::string merged = pf::mergeIniSection(pf::mergeIniSection(readText(ini), "UI", pf::uiKeys()), "DEV9/Eth",
+                                                       pf::dev9Keys(dns.ip, adapter));
+        pf::writeIfDifferent(ini, merged, stamp, err);
+        if (err.empty())
+            pf::writeIfDifferent(root / "patches" / pf::kPnachName, pf::kPnachMaster, stamp, err);
+        if (!err.empty())
+        {
+            app.setStatus("PCSX2 not started: " + err);
+            std::fprintf(stderr, "[launcher] pcsx2: %s\n", err.c_str());
+            return false;
+        }
+        // A managed install (the exe under <launcher>/pcsx2): the folders PCSX2 reads the cards and the BIOS from.
+        // Never in a PCSX2 the player selected (R-F: only the two writes there).
+        const fs::path managed = fs::weakly_canonical(pi::installDir(dir), ec);
+        const fs::path rel = fs::weakly_canonical(exeDir, ec).lexically_relative(managed);
+        if (!managed.empty() && !rel.empty() && *rel.begin() != "..")
+        {
+            fs::create_directories(root / "memcards", ec);
+            fs::create_directories(root / "bios", ec);
+        }
+
+        // Every string UTF-8, as startProcess takes them (T6 review): the exe and the ISO as stored, the folders narrowed.
+        if (!win32glue::startProcess(app.pcsx2.pcsx2Exe, launcher::pcsx2Args(iso), launcher::utf8Of(exeDir),
+                                     launcher::utf8Of(dir / "logs"), game))
+        {
+            app.setStatus("PCSX2 not started: " + game.error);
+            return false;
+        }
+        emulog = launcher::utf8Of(root / "logs" / "emulog.txt");
+        std::fprintf(stderr, "[launcher] pcsx2: started %s (DNS %s, adapter %s); its output in %s\n", app.pcsx2.pcsx2Exe.c_str(),
+                     dns.ip.c_str(), adapter.empty() ? "none" : adapter.c_str(), game.logPath.c_str());
+        app.setStatus("PCSX2 started");
+        app.exitLine.clear();
+        return true;
+    }
+
+    // Sprint 18 T5: the PCSX2 page's INSTALL, on a worker thread (the REPORT page's pattern): the worker writes the
+    // page's progress here under the mutex, and the loop copies it into App once a frame.
+    struct InstallShared
+    {
+        std::mutex mutex;
+        ui::Pcsx2InstallUi ui;
+        std::string lastLine;   // the last thing INSTALL said: a refusal's sentence when it fails
+    };
+
+    std::string megabytes(uint64_t bytes)
+    {
+        char out[32];
+        std::snprintf(out, sizeof(out), "%.1f", static_cast<double>(bytes) / 1.0e6);   // decimal MB: 25,670,075 bytes is "25.7"
+        return out;
+    }
+
+    // The sentence a phase shows on the PCSX2 page.
+    std::string installSentence(const ui::Pcsx2InstallUi &u, const std::string &asset)
+    {
+        using S = ui::Pcsx2InstallUi::State;
+        switch (u.state)
+        {
+        case S::Fetching: return "fetching the release list";
+        case S::Downloading:
+            return "downloading " + asset + (u.total > 0 ? ": " + megabytes(u.bytes) + " of " + megabytes(static_cast<uint64_t>(u.total)) + " MB"
+                                                         : ": " + megabytes(u.bytes) + " MB");
+        case S::Extracting: return "extracting";
+        default: return u.message;
+        }
+    }
+
     // ---- the chrome around the pages ----------------------------------------------------------------------
 
     // ---- the launcher's own title bar (there is no OS caption above it) -----------------------------------
@@ -549,9 +1248,10 @@ namespace
         const char *state = app.running ? "RUNNING" : (app.discOk ? "READY" : "NOT READY");
         const char *name = pageName(app.nav.page);
         TopBarText measured;
-        measured.markRight = subX + textWidth(ctx, "UNZIPPED", 13.0f, Face::Bold, 0.10f);
+        // Sprint 18 T5: the client toggle sits right of the mark, so the page tab is centred clear of it too.
+        measured.markRight = std::max(subX + textWidth(ctx, "UNZIPPED", 13.0f, Face::Bold, 0.10f), l.clientPcsx2.right());
         measured.statusW = textWidth(ctx, state, 14.0f, Face::Bold, 0.06f);
-        measured.showPill = app.dirty;
+        measured.showPill = app.dirty || app.pcsx2Dirty;   // either client's file
         measured.tabW.push_back(textWidth(ctx, name, 13.0f, Face::Bold, 0.12f));
         // The ink, not the line box: what a reader lines up is the capitals, and the face's ascent above
         // them is not its descender space below (Sprint 9 P4). The bar hands the measurements over exactly
@@ -571,6 +1271,27 @@ namespace
         text(ctx, "SOCOM II", Vec2{markX, markY}, 15.0f, theme::gold, Face::Bold, 0.08f);
         text(ctx, "UNZIPPED", Vec2{subX, places.markSubY}, 13.0f, theme::dim, Face::Bold, 0.10f);
 
+        // Sprint 18 T5 (R339 = R-A): the client toggle, NATIVE | PCSX2, on every page. Its cells are the rail nodes
+        // railLayout adds (focus.cpp), on ChromeLayout's rects; a click or an activation asks the loop to switch.
+        {
+            const launcher::ClientMode modes[2] = {launcher::ClientMode::Native, launcher::ClientMode::Pcsx2};
+            const Rect cells[2] = {l.clientNative, l.clientPcsx2};
+            const char *labels[2] = {"NATIVE", "PCSX2"};
+            // Sprint 18 T6 (the T5 review's item 3): held while an INSTALL or a game runs -- drawn under a veil, its tip
+            // the reason (tipNow), and the loop refuses the press with the same sentence.
+            const bool held = !clientSwitchRefusalFor(app).empty();   // T6 review, item 4: the loop's own question
+            for (int i = 0; i < 2; ++i)
+            {
+                if (radioCell(ctx, cells[i], labels[i], clientCellId(modes[i]), app.mode == modes[i]) && app.mode != modes[i])
+                {
+                    app.requestClientMode = modes[i];
+                    app.requestClientModeSet = true;
+                }
+                if (held && app.mode != modes[i])
+                    fillRect(ctx, cells[i], theme::alpha(theme::ground, 170));
+            }
+        }
+
         // The page tab: where you are, without taking a click.
         if (!places.tab.empty())
             textCenteredIn(ctx, name, places.tab[0], 13.0f, theme::alpha(theme::caption, 150), Face::Bold, 0.12f);
@@ -585,8 +1306,8 @@ namespace
         // exactly the measured width, so its left edge IS the centred position.
         text(ctx, state, Vec2{places.status.x, places.statusY}, 14.0f, theme::text, Face::Bold, 0.06f);
 
-        // UNSAVED: only when there is something to save, and clicking it saves.
-        if (app.dirty)
+        // UNSAVED: only when there is something to save, and clicking it saves (Sprint 18 T5: either client's file).
+        if (app.dirty || app.pcsx2Dirty)
         {
             const bool over = hover == ChromeHit::UnsavedPill;
             fillRound(ctx, l.pill, l.pill.h * 0.5f, over ? theme::mix(theme::panelHi, theme::gold, 0.25f) : theme::panel);
@@ -612,6 +1333,9 @@ namespace
         drawImage(ctx, g_logo, Rect{head.x + 8.0f, head.y + 8.0f, head.w - 16.0f, head.h - 16.0f}, Rgba{0xFF, 0xFF, 0xFF, 0xFF});
         for (const Node &n : rail)
         {
+            launcher::ClientMode cell;
+            if (clientCellMode(n.id, cell))
+                continue;   // Sprint 18 T5: the client toggle is in the list, and drawTopBar draws it
             const bool current = n.page == app.nav.page;
             const bool live = hovered(ctx, n.r) || focused(ctx, n.id);
             if (current)
@@ -701,6 +1425,21 @@ namespace
         }
     }
 
+    // Issue #74's line for `id` on the current page. Sprint 18 T6 (the T5 review's item 3): while the client toggle is
+    // held (an INSTALL, a running game) its cells' line is the reason, so hovering or focusing it says why it is greyed.
+    std::string tipNow(const ui::App &app, const std::string &id)
+    {
+        launcher::ClientMode cell;
+        if (ui::clientCellMode(id, cell))
+        {
+            const std::string held = ui::clientSwitchRefusalFor(app);
+            if (!held.empty())
+                return held;
+        }
+        return ui::tipFor(app.nav.page, id,
+                          ui::TipState{&app.config, ui::glyphFamilyFor(app.pad.name), &app.bind, &app.pcsx2Status.adapterName});
+    }
+
     void drawBar(const ui::Ctx &ctx, ui::App &app, const std::vector<ui::Node> &nodes)
     {
         using namespace ui;
@@ -708,8 +1447,11 @@ namespace
         fillRect(ctx, bar, theme::panel);
         fillRect(ctx, Rect{0.0f, bar.y, bar.w, 2.0f}, theme::line);
 
-        const std::string profile = app.config.profile.empty() ? std::string("player") : app.config.profile;
-        text(ctx, "PROFILE", Vec2{metrics::margin, bar.y + 10.0f}, 13.0f, theme::dim, Face::Bold);
+        // Sprint 18 T6 (R339 = R-A): the profile is the native client's (its card folder); the PCSX2 view names its client.
+        const bool pcsx2 = app.mode == launcher::ClientMode::Pcsx2;
+        const std::string profile = pcsx2 ? std::string("PCSX2")
+                                          : (app.config.profile.empty() ? std::string("player") : app.config.profile);
+        text(ctx, pcsx2 ? "CLIENT" : "PROFILE", Vec2{metrics::margin, bar.y + 10.0f}, 13.0f, theme::dim, Face::Bold);
         text(ctx, profile.c_str(), Vec2{metrics::margin, bar.y + 26.0f}, 19.0f, theme::text, Face::Bold);
 
         const bool onPlay = app.nav.page == Page::Play;
@@ -721,8 +1463,7 @@ namespace
         // moves (StatusWatch), when it shows alone and the tip waits. Not on the rail, not while typing, not while
         // the pad is being listened to (the prompts are the whole story then).
         const bool quiet = app.nav.onRail() || !app.activeField.empty() || app.bind.state == BindFlow::State::Listening;
-        const std::string tip =
-            quiet ? std::string() : tipFor(app.nav.page, app.nav.focus, TipState{&app.config, glyphFamilyFor(app.pad.name), &app.bind});
+        const std::string tip = quiet ? std::string() : tipNow(app, app.nav.focus);
         // The columns come from the slot, so the slot the test measures is the one drawn (tips.h, kBar*).
         const Rect slot = footerTipSlot(app.frame);
         const float statusX = slot.x;
@@ -755,7 +1496,7 @@ namespace
         }
         drawPrompts(ctx, app, promptsX, bar.y + 12.0f, 26.0f);
 
-        const std::string blocked = launchBlockedReason(app.discOk, app.running, app.config.isoPath.empty(), app.discMessage);
+        const std::string blocked = launchBlockedNow(app);   // Sprint 18 T6: the active client's reason
         if (onPlay)
         {
             // PLAY has its own large LAUNCH; a second one here would be the same button twice. The state of
@@ -779,7 +1520,7 @@ namespace
         using namespace ui;
         if (!hover.shows(ctx.time))
             return;
-        const std::string line = tipFor(app.nav.page, hover.id, TipState{&app.config, glyphFamilyFor(app.pad.name), &app.bind});
+        const std::string line = tipNow(app, hover.id);
         const Rect control = rectOf(nodes, hover.id);
         if (line.empty() || !drawable(control))
             return;
@@ -820,7 +1561,7 @@ namespace
         const std::string help = helpFor(app.nav.focus);
         if (help.empty())
         {
-            const char *title = pageTitle(app.nav.page);
+            const char *title = pageTitle(app.nav.page, app.mode);   // LATER 80: the line per client
             const char *dash = std::strstr(title, "-- ");
             const std::string sub = dash != nullptr ? std::string(dash + 3) : std::string(title);
             const float room = band.right() - 30.0f - afterName;
@@ -872,6 +1613,7 @@ namespace
         case ui::Page::Online: ui::drawOnlinePage(ctx, app, nodes); break;
         case ui::Page::Report: ui::drawReportPage(ctx, app, nodes); break;
         case ui::Page::About: ui::drawAboutPage(ctx, app, nodes); break;
+        case ui::Page::Pcsx2: ui::drawPcsx2Page(ctx, app, nodes); break;   // Sprint 18 T5
         }
     }
 
@@ -996,6 +1738,21 @@ namespace
         app.layout.customServer = false;   // the default preset owns the address
         // Sprint 10 Q4: the AUDIO page's line under the sounds toggle, as a first run with a verified disc shows it.
         app.menuSoundsStatus = "from your disc: cache/menu_sounds/8c1f2a9b4d3e7f60";
+        // Sprint 18 T5: a PCSX2 INSTALL put beside the launcher, one BIOS dump in its folder, two adapters (invented
+        // values; the walk never probes the disk or the network).
+        app.pcsx2 = launcher::Pcsx2Config{};
+        app.pcsx2.pcsx2Exe = "C:\\games\\socom2\\pcsx2\\pcsx2-qt.exe";
+        app.pcsx2.isoPath = app.config.isoPath;   // Sprint 18 T6: the PCSX2 view's DISC (its own key; the same invented file)
+        app.pcsx2Status = ui::Pcsx2Status{};
+        app.pcsx2Status.exeFound = true;
+        app.pcsx2Status.versionLine = "PCSX2 v2.8.2 (installed by the launcher)";
+        app.pcsx2Status.dataRoot = "C:\\games\\socom2\\pcsx2";
+        app.pcsx2Status.biosDir = "C:\\games\\socom2\\pcsx2\\bios";
+        app.pcsx2Status.biosFiles = 1;
+        app.pcsx2Status.adapters = {{"{95852BA5-54B5-4A50-A84D-8ED1B927EDD9}", "Ethernet", true},
+                                    {"{1C3E7A2B-0D4F-4E6A-9B8C-2F5D6E7A8B9C}", "Wi-Fi", true}};
+        app.pcsx2Status.adapterName = "Ethernet";
+        app.install = ui::Pcsx2InstallUi{};
     }
 
     // ---- Sprint 10 Q4: the launcher's own cues, out of the player's disc -------------------------------------
@@ -1067,11 +1824,11 @@ namespace
         }
         if (!app.discOk)
         {
-            app.menuSoundsStatus = app.config.isoPath.empty() ? "no disc set yet: silent until one is (DISC page)"
+            app.menuSoundsStatus = ui::activeIsoPath(app).empty() ? "no disc set yet: silent until one is (DISC page)"
                                                               : "the disc did not verify: silent";
             return;
         }
-        const iso9660::Reader read = iso9660::fileReader(app.config.isoPath);
+        const iso9660::Reader read = iso9660::fileReaderAt(activeIsoFile(app));   // Sprint 18 T6: the verified disc
         const std::string key = ms::isoKey(read);
         if (key.empty())
         {
@@ -1118,6 +1875,10 @@ int main(int argc, char **argv)
         return createPersonaHeadless(argv[2], argv[3], argc > 4 ? argv[4] : nullptr, argc > 5 ? fs::path(argv[5]) : dir);
     if (argc > 4 && std::strcmp(argv[1], "--fetch-patch") == 0)
         return fetchPatchHeadless(fs::path(argv[2]), argv[3], argv[4]);
+    if (argc > 2 && std::strcmp(argv[1], "--install-pcsx2") == 0)
+        return installPcsx2Headless(fs::path(argv[2]));
+    if (argc > 2 && std::strcmp(argv[1], "--pcsx2-status") == 0)
+        return pcsx2StatusHeadless(fs::path(argv[2]));
     if (argc > 1 && std::strcmp(argv[1], "--server-status") == 0)
     {
         const std::string line = br::statusLine(fetchStats());
@@ -1155,12 +1916,26 @@ int main(int argc, char **argv)
     if (argc > 1 && std::strcmp(argv[1], "--selftest") == 0)
     {
         std::printf("config: %s\n", configPath.string().c_str());
-        const DiscStatus st = checkDisc(config.isoPath);
+        const DiscStatus st = checkDisc(fs::path(config.isoPath));
         std::printf("disc: %s -> %s\n", config.isoPath.c_str(), st.message.c_str());
         for (const std::string &kv : launcher::environmentFor(config))
             std::printf("env: %s\n", kv.c_str());
         for (const std::string &line : launcher::selftestExitLines())
             std::printf("%s\n", line.c_str());
+        // Sprint 18 T6: the client and the PCSX2 client's file, read and never written here (R-A: config.json is the
+        // file this selftest writes, as it always has).
+        std::printf("client: %s\n", launcher::clientModeId(launcher::parseClientMode(readText(dir / launcher::kClientModeFile))));
+        const fs::path pcsx2ConfigPath = dir / launcher::kPcsx2ConfigFile;
+        std::printf("pcsx2 config: %s\n", pcsx2ConfigPath.string().c_str());
+        launcher::Pcsx2Config pcsx2Config;
+        {
+            const std::string text = readText(pcsx2ConfigPath);
+            if (!text.empty() && !launcher::pcsx2FromJson(text, pcsx2Config))
+                std::fprintf(stderr, "%s is malformed; using the defaults\n", launcher::kPcsx2ConfigFile);
+        }
+        std::printf("pcsx2 exe: %s\n", pcsx2Config.pcsx2Exe.empty() ? "none" : pcsx2Config.pcsx2Exe.c_str());
+        // The T6 review: the Documents folder a non-portable PCSX2 keeps its data under (the known folder).
+        std::printf("pcsx2 documents: %s\n", launcher::utf8Of(win32glue::documentsDir()).c_str());
         return writeText(configPath, launcher::toJson(config)) ? 0 : 1;
     }
 
@@ -1284,6 +2059,10 @@ int main(int argc, char **argv)
 
     win32glue::GameProcess game;
     std::string lastLog;
+    // Sprint 18 T6: the process in `game` is PCSX2 (the PCSX2 view's LAUNCH), and where PCSX2 writes its own log -- its
+    // exit is pcsx2ExitLine's, not the native game's exit table.
+    bool gameIsPcsx2 = false;
+    std::string pcsx2Emulog;
     long long lastExitRaw = 0;
     bool haveLastExit = false;
     std::unique_ptr<launcher::MicDevices> mic;
@@ -1296,7 +2075,21 @@ int main(int argc, char **argv)
     else
     {
         app.gameRevisionsInstalled = gameRevisionsInstalled;   // Task 11 (the walk fixes it per shot instead)
-        const DiscStatus st = checkDisc(app.config.isoPath);
+        // Sprint 18 T5 (R339 = R-A): the client (launcher.json) and the PCSX2 client's own settings (config.pcsx2.json).
+        // Neither is written here: a file is written when its own settings change, never because the other's did.
+        // Sprint 18 T6: read before the disc check, which runs on the active client's ISO.
+        app.mode = launcher::parseClientMode(readText(dir / launcher::kClientModeFile));
+        {
+            const std::string text = readText(dir / launcher::kPcsx2ConfigFile);
+            if (!text.empty() && !launcher::pcsx2FromJson(text, app.pcsx2))
+                std::fprintf(stderr, "%s is malformed; using the defaults\n", launcher::kPcsx2ConfigFile);
+            // R343 = R-E: the PCSX2 client plays r0001 this sprint; a file naming another version reads as r0001 (as
+            // config.json's clamp above reads a missing build), and the file is not rewritten for it.
+            if (!launcher::gameRevisionAvailable(launcher::gameRevisionIndex(app.pcsx2.gameRevision),
+                                                 ui::revisionsOffered(launcher::ClientMode::Pcsx2, gameRevisionsInstalled)))
+                app.pcsx2.gameRevision = launcher::kGameRevisions[0].id;
+        }
+        const DiscStatus st = checkDisc(activeIsoFile(app));
         app.discChecked = st.checked;
         app.discOk = st.ok;
         app.discMessage = st.message;
@@ -1307,11 +2100,39 @@ int main(int argc, char **argv)
         app.meterOn = meterOn;
         refreshMenuSounds(menu, app, dir);
         readPersonas(app, dir);
+        // The T4 leftover: an INSTALL that stopped inside its swap is put right now, online or not.
+        {
+            bool busy = false;
+            const std::string stuck = recoverPcsx2Install(dir, busy);
+            if (!stuck.empty())
+            {
+                app.install.state = ui::Pcsx2InstallUi::State::Failed;
+                app.install.message = "NOT INSTALLED. " + stuck;
+                std::fprintf(stderr, "[launcher] pcsx2: %s\n", stuck.c_str());
+            }
+            else if (busy)
+                std::fprintf(stderr, "[launcher] pcsx2: an INSTALL is running in this folder; its recovery is its own\n");
+        }
+        probePcsx2(app);
     }
 
     // Sprint 9 Goal 8: the two requests this window ever makes, each on its own worker.
     Worker<ReportOutcome> reportJob;
     Worker<std::string> statsJob;
+    // Sprint 18 T5: INSTALL, on its own worker, holding the folder's lock while it runs.
+    Worker<int> installJob;
+    auto installShared = std::make_shared<InstallShared>();
+    auto installLock = std::make_shared<InstallLock>();
+    // Sprint 18 T5: config.pcsx2.json is written where config.json is (LAUNCH, the UNSAVED pill, close, a client switch)
+    // -- only when its own settings changed (R339 = R-A: one client's change never writes the other's file).
+    auto savePcsx2 = [&]()
+    {
+        if (!app.pcsx2Dirty)
+            return;
+        if (!writeText(dir / launcher::kPcsx2ConfigFile, launcher::pcsx2ToJson(app.pcsx2)))
+            std::fprintf(stderr, "[launcher] could not write %s\n", launcher::kPcsx2ConfigFile);
+        app.pcsx2Dirty = false;
+    };
     br::Inputs reportIn;
     double statsAskedAt = -1000.0;
     ui::Page previousPage = ui::Page::Play;
@@ -1343,8 +2164,18 @@ int main(int argc, char **argv)
     {
         const int sizes[2][2] = {{1100, 700}, {800, 520}};
         for (const auto &size : sizes)
-            for (int i = 0; i < ui::kPageCount; ++i)
-                shots.push_back(Shot{ui::pageAt(i), size[0], size[1], ""});
+            for (const ui::Page page : ui::pagesFor(launcher::ClientMode::Native))
+                shots.push_back(Shot{page, size[0], size[1], ""});
+        // Sprint 18 T5: the PCSX2 client -- its page at both sizes, INSTALL half way through its download, and PLAY
+        // under the PCSX2 rail with the toggle on PCSX2.
+        shots.push_back(Shot{ui::Page::Pcsx2, 1100, 700, ""});
+        shots.push_back(Shot{ui::Page::Pcsx2, 800, 520, ""});
+        shots.push_back(Shot{ui::Page::Pcsx2, 1100, 700, "_installing"});
+        shots.push_back(Shot{ui::Page::Play, 1100, 700, "_pcsx2"});
+        // Sprint 18 T6 review: the PCSX2 view of ONLINE (the presets, r0001 with r0004 greyed under kPcsx2RevisionNote,
+        // ADDRESS, the personas caption) and of DISC (its own ISO).
+        shots.push_back(Shot{ui::Page::Online, 1100, 700, "_pcsx2"});
+        shots.push_back(Shot{ui::Page::Disc, 1100, 700, "_pcsx2"});
         shots.push_back(Shot{ui::Page::Controller, 1100, 700, "_playstation"});
         // R139: the crouch shortcut on each control -- the row, the trade's line, and the mark on the drawing.
         shots.push_back(Shot{ui::Page::Controller, 1100, 700, "_crouch_l3"});
@@ -1445,6 +2276,16 @@ int main(int argc, char **argv)
                     app.padSlots.push_back(i);
                 }
             app.running = game.running();
+            if (!app.running && game.process && gameIsPcsx2)
+            {
+                // Sprint 18 T6: PCSX2 closed -- its exit code and its own log, on PLAY's LAST RUN line.
+                const int code = static_cast<int>(game.exitCode());
+                game.close();
+                gameIsPcsx2 = false;
+                app.exitLine = launcher::pcsx2ExitLine(code, pcsx2Emulog);
+                app.setStatus(app.exitLine);
+                meterOn = !app.config.micDevice.empty() && mic->startMeter(app.config.micDevice);
+            }
             if (!app.running && game.process)
             {
                 // Sprint 9 Goal 1: every ending has a sentence (ps2x/exit_codes.h), and a non-fatal notice
@@ -1467,7 +2308,9 @@ int main(int argc, char **argv)
                                                            GetMonitorHeight(GetCurrentMonitor()));
             app.layout.padChoices = static_cast<int>(app.padLabels.size());
             app.layout.micChoices = static_cast<int>(app.micLabels.size());
-            const launcher::ServerPreset *preset = launcher::findServerPreset(app.config.serverPreset);
+            // Sprint 18 T6: the active client's preset owns ADDRESS (or Custom leaves it to the player).
+            const launcher::ServerPreset *preset = launcher::findServerPreset(
+                app.mode == launcher::ClientMode::Pcsx2 ? app.pcsx2.serverPreset : app.config.serverPreset);
             app.layout.customServer = preset == nullptr || preset->address[0] == '\0';
         }
 
@@ -1477,6 +2320,16 @@ int main(int argc, char **argv)
         // ADVANCED capture would show a section that says "in use" over nothing at all.
         app.layout.advancedOpen = app.advancedOpen || ui::advancedForced(app.config);
         app.layout.gameRevisionsInstalled = app.gameRevisionsInstalled;   // Task 11: a greyed cell is drawn, never focusable
+        // Sprint 18 T5: the client's rail and pages; INSTALL's button is no node while it runs.
+        if (!app.fake)
+        {
+            std::lock_guard<std::mutex> lock(installShared->mutex);
+            if (installJob.busy())
+                app.install = installShared->ui;
+        }
+        app.layout.mode = app.mode;
+        app.layout.pcsx2Installing = app.install.running();
+        app.installJobBusy = !app.fake && installJob.busy();   // T6 review, item 4: the toggle's one predicate
         // Sprint 10 Goal 8: the CONTROLLER page's section, and whether a bind dialog has replaced its controls.
         app.layout.padButtons = app.padSection == 1;
         app.layout.padDialogButtons = ui::dialogButtonCount(app.bind);
@@ -1497,7 +2350,7 @@ int main(int argc, char **argv)
         // A page the last frame's draw asked for (a rail click, a PLAY row's CHANGE) lands here, before
         // the frame's list is built, so the list and the page never disagree (focus.h, Nav::request).
         nav.applyRequest(graph);
-        const std::vector<ui::Node> rail = ui::railLayout(window);
+        const std::vector<ui::Node> rail = ui::railLayout(window, app.mode);
         std::vector<ui::Node> nodes = ui::layoutFor(nav.page, window, app.layout);
         if (graph.find(nav.focus) == nullptr)
             nav.focus = ui::railId(nav.page);   // the list under the focus changed (a pad was unplugged)
@@ -1558,7 +2411,7 @@ int main(int argc, char **argv)
                 ctx.click = false;
                 break;
             case ui::ChromeHit::UnsavedPill:
-                if (app.dirty)
+                if (app.dirty || app.pcsx2Dirty)
                     app.requestSave = true;
                 ctx.click = false;
                 break;
@@ -1823,10 +2676,11 @@ int main(int argc, char **argv)
                     nav.back(graph);
                     cueBack = true;
                 }
+                // Sprint 18 T5: the shoulder tabs walk this client's rail, not the page enum.
                 if (padWants.pagePrev)
-                    nav.goTo(graph, ui::pageAt(ui::pageIndex(nav.page) - 1));
+                    nav.goTo(graph, ui::pageBeside(app.mode, nav.page, -1));
                 if (padWants.pageNext)
-                    nav.goTo(graph, ui::pageAt(ui::pageIndex(nav.page) + 1));
+                    nav.goTo(graph, ui::pageBeside(app.mode, nav.page, 1));
                 if (padWants.launch)
                     app.requestLaunch = true;
                 if (IsKeyPressed(KEY_F5))
@@ -1899,10 +2753,18 @@ int main(int argc, char **argv)
         // (a focus the input moved, an activation, an adjust, back) until the mouse moves again, so a box never
         // sits over the pad's focus ring. Never under --screenshot, and not while the pad is being listened to.
         const bool steered = (nav.focus != focusBefore && !ctx.click) || ctx.activate || ctx.adjust != 0 || cueBack;
+        // Sprint 18 T5: the client toggle's two cells carry their lines on hover too.
+        std::vector<ui::Node> hoverNodes = nodes;
+        for (const ui::Node &n : rail)
+        {
+            launcher::ClientMode cell;
+            if (ui::clientCellMode(n.id, cell))
+                hoverNodes.push_back(n);
+        }
         hoverTip.frame(mouseMovedNow, steered,
-                       !app.fake && app.bind.state != ui::BindFlow::State::Listening ? ui::nodeAt(nodes, ctx.mouse) : std::string(),
+                       !app.fake && app.bind.state != ui::BindFlow::State::Listening ? ui::nodeAt(hoverNodes, ctx.mouse) : std::string(),
                        ctx.time);
-        drawHoverTip(ctx, app, nodes, hoverTip);
+        drawHoverTip(ctx, app, hoverNodes, hoverTip);
         EndDrawing();
 
         // ---- Sprint 10 Q4: the cues, from what the frame did. One per frame, in this order: a refused LAUNCH
@@ -1921,7 +2783,7 @@ int main(int argc, char **argv)
                 for (const ui::Node &n : rail)
                     clicked = clicked || n.r.contains(ctx.mouse);
             }
-            const bool refused = app.requestLaunch && (app.running || !app.discOk);
+            const bool refused = app.requestLaunch && !ui::launchBlockedNow(app).empty();   // Sprint 18 T6: either client
             if (refused)
                 menu.play(ms::Cue::Refuse);
             else if (cueBack)
@@ -1937,17 +2799,31 @@ int main(int argc, char **argv)
         {
             if (app.requestBrowse)
             {
-                const std::string chosen = win32glue::browseForIso();
+                std::string chosen = win32glue::browseForIso();   // UTF-8 (T6 review)
+                // The native client keeps its path in the form it always has (the ANSI code page: the game's environment
+                // and config.json's earlier files read it so); the PCSX2 client keeps UTF-8, end to end.
+                if (!chosen.empty() && app.mode == launcher::ClientMode::Native)
+                {
+                    try
+                    {
+                        chosen = launcher::pathFromUtf8(chosen).string();
+                    }
+                    catch (const std::exception &)
+                    {
+                        app.setStatus("that path has characters the native client cannot pass to the game: move the image");
+                        chosen.clear();
+                    }
+                }
                 if (!chosen.empty())
                 {
-                    app.config.isoPath = chosen;
-                    app.dirty = true;
+                    ui::activeIsoPath(app) = chosen;   // Sprint 18 T6: the active client's disc (R-A)
+                    ui::markActiveDirty(app);
                     app.requestVerify = true;
                 }
             }
             if (app.requestVerify)
             {
-                const DiscStatus st = checkDisc(app.config.isoPath);
+                const DiscStatus st = checkDisc(activeIsoFile(app));
                 app.discChecked = st.checked;
                 app.discOk = st.ok;
                 app.discMessage = st.message;
@@ -2025,9 +2901,179 @@ int main(int argc, char **argv)
             }
             if (app.requestSave)
             {
-                writeText(configPath, launcher::toJson(app.config, app.personas.rows));
+                // Sprint 18 T5: the pill lights for either file and saves the one (or two) that changed.
+                if (app.dirty || !app.pcsx2Dirty)
+                    writeText(configPath, launcher::toJson(app.config, app.personas.rows));
                 app.dirty = false;
+                savePcsx2();
                 app.setStatus("settings saved");
+            }
+
+            // ---- Sprint 18 T5 (R339 = R-A): the client toggle, and the PCSX2 page's SELECT, OPEN FOLDER and INSTALL ----
+            // Sprint 18 T6 (the T5 review's item 3): not while an INSTALL or a game runs -- the toggle is drawn greyed, its
+            // tip says why, and a press that reaches here anyway is refused with the same sentence.
+            const std::string switchRefused = ui::clientSwitchRefusalFor(app);
+            if (app.requestClientModeSet && app.requestClientMode != app.mode && !switchRefused.empty())
+                app.setStatus(switchRefused);
+            else if (app.requestClientModeSet && app.requestClientMode != app.mode)
+            {
+                // Review Focus 5: a dirty file is saved first, and the other file is never written.
+                if (app.dirty)
+                {
+                    writeText(configPath, launcher::toJson(app.config, app.personas.rows));
+                    app.dirty = false;
+                }
+                savePcsx2();
+                // T6 review, item 3: the mode, and LAST RUN and the disc verdict cleared (they were the other client's).
+                ui::switchClientState(app, app.requestClientMode);
+                if (!writeText(dir / launcher::kClientModeFile, launcher::clientModeJson(app.mode)))
+                    std::fprintf(stderr, "[launcher] could not write %s\n", launcher::kClientModeFile);
+                graph = ui::FocusGraph::build(window, app.layout);
+                nav.goTo(graph, ui::Page::Play);
+                // Sprint 18 T6: the disc check follows the client -- each has its own ISO (R-A), and LAUNCH, PLAY and the
+                // top bar's lamp read the verdict for the one now active.
+                const DiscStatus st = checkDisc(activeIsoFile(app));
+                app.discChecked = st.checked;
+                app.discOk = st.ok;
+                app.discMessage = st.message;
+                refreshMenuSounds(menu, app, dir);
+                app.setStatus(app.mode == launcher::ClientMode::Pcsx2 ? "PCSX2 client: your disc in PCSX2"
+                                                                      : "native client: the PC build of SOCOM II");
+            }
+            if (app.requestBrowsePcsx2)
+            {
+                std::string chosen = win32glue::browseForPcsx2();
+                // Sprint 18 T6 (the T5 review's item 4): pcsx2-qt.exe only. The dialog's filter offers nothing else, and a
+                // name typed into it past the filter is refused here.
+                {
+                    std::string leaf = launcher::utf8Of(launcher::pathFromUtf8(chosen).filename());
+                    for (char &ch : leaf)
+                        ch = static_cast<char>(std::tolower(static_cast<unsigned char>(ch)));
+                    if (!chosen.empty() && leaf != launcher::pcsx2install::kExeName)
+                    {
+                        app.setStatus(std::string("that is not ") + launcher::pcsx2install::kExeName +
+                                      ": pick the pcsx2-qt.exe in your PCSX2 folder");
+                        chosen.clear();
+                    }
+                }
+                if (!chosen.empty())
+                {
+                    app.pcsx2.pcsx2Exe = chosen;
+                    app.pcsx2Dirty = true;
+                    probePcsx2(app);
+                    app.setStatus(app.pcsx2Status.exeFound ? app.pcsx2Status.versionLine : "that file cannot be read");
+                }
+            }
+            if (app.requestOpenBios && !app.pcsx2Status.biosDir.empty())
+            {
+                // PCSX2 makes the folder on its first boot; the player needs it before that, to put the dump in.
+                std::error_code ec;
+                fs::create_directories(launcher::pathFromUtf8(app.pcsx2Status.biosDir), ec);
+                if (ec)
+                    app.setStatus("could not create " + app.pcsx2Status.biosDir + " (" + ec.message() + ")");
+                else
+                {
+                    // openFolder takes the ANSI form (its other callers' paths are the launcher's own folders).
+                    std::string folder = app.pcsx2Status.biosDir;
+                    try
+                    {
+                        folder = launcher::pathFromUtf8(app.pcsx2Status.biosDir).string();
+                    }
+                    catch (const std::exception &)
+                    {
+                    }
+                    win32glue::openFolder(folder);
+                }
+            }
+            if (app.requestInstallPcsx2 && !installJob.busy() && !app.install.running())
+            {
+                if (!installLock->acquire(dir))
+                {
+                    app.install = ui::Pcsx2InstallUi{};
+                    app.install.state = ui::Pcsx2InstallUi::State::Failed;
+                    app.install.message = std::string("NOT INSTALLED. ") + kInstallBusy;
+                }
+                else
+                {
+                    {
+                        std::lock_guard<std::mutex> lock(installShared->mutex);
+                        installShared->ui = ui::Pcsx2InstallUi{};
+                        installShared->ui.state = ui::Pcsx2InstallUi::State::Fetching;
+                        installShared->ui.message = installSentence(installShared->ui, "");
+                        installShared->lastLine.clear();
+                        app.install = installShared->ui;
+                    }
+                    const std::shared_ptr<InstallShared> shared = installShared;
+                    const fs::path home = dir;
+                    installJob.start([shared, home]()
+                    {
+                        using S = ui::Pcsx2InstallUi::State;
+                        std::string asset;
+                        InstallSink sink;
+                        sink.say = [shared](const std::string &line)
+                        {
+                            std::fprintf(stderr, "[launcher] pcsx2: %s\n", line.c_str());
+                            std::lock_guard<std::mutex> lock(shared->mutex);
+                            shared->lastLine = line;
+                        };
+                        sink.phase = [shared, &asset](InstallSink::Phase p, const std::string &what, uint64_t total)
+                        {
+                            std::lock_guard<std::mutex> lock(shared->mutex);
+                            ui::Pcsx2InstallUi &u = shared->ui;
+                            switch (p)
+                            {
+                            case InstallSink::Phase::Fetching: u.state = S::Fetching; break;
+                            case InstallSink::Phase::Downloading:
+                                u.state = S::Downloading;
+                                asset = what;
+                                u.bytes = 0;
+                                u.total = total > 0 ? static_cast<int64_t>(total) : -1;
+                                break;
+                            case InstallSink::Phase::Extracting: u.state = S::Extracting; break;
+                            case InstallSink::Phase::Done:
+                                u.state = S::Done;
+                                u.message = "installed PCSX2 " + what;
+                                break;
+                            }
+                            u.message = installSentence(u, asset);
+                        };
+                        sink.bytes = [shared, &asset](uint64_t soFar, uint64_t total)
+                        {
+                            std::lock_guard<std::mutex> lock(shared->mutex);
+                            ui::Pcsx2InstallUi &u = shared->ui;
+                            u.bytes = soFar;
+                            if (total > 0)
+                                u.total = static_cast<int64_t>(total);
+                            u.message = installSentence(u, asset);
+                        };
+                        const int rc = installPcsx2(home, sink);
+                        if (rc != 0)
+                        {
+                            std::lock_guard<std::mutex> lock(shared->mutex);
+                            shared->ui.state = S::Failed;
+                            shared->ui.message = shared->lastLine.empty() ? std::string("NOT INSTALLED.") : shared->lastLine;
+                        }
+                        return rc;
+                    });
+                }
+            }
+            {
+                int installRc = 0;
+                if (installJob.poll(installRc))
+                {
+                    installLock->release();
+                    {
+                        std::lock_guard<std::mutex> lock(installShared->mutex);
+                        app.install = installShared->ui;
+                    }
+                    if (installRc == 0)
+                    {
+                        app.pcsx2.pcsx2Exe = launcher::utf8Of(launcher::pcsx2install::installDir(dir) / launcher::pcsx2install::kExeName);
+                        app.pcsx2Dirty = true;
+                        probePcsx2(app);
+                    }
+                    app.setStatus(app.install.message);
+                }
             }
             if (app.requestDiagnostics)
             {
@@ -2138,6 +3184,21 @@ int main(int argc, char **argv)
                     break;
                 }
             }
+            // Sprint 18 T6: the PCSX2 view's LAUNCH starts PCSX2 (launchPcsx2: the refusal's sentence, config.pcsx2.json,
+            // [UI] and [DEV9/Eth], the pnach, the managed folders, the process) -- never the native game, never config.json.
+            if (app.requestLaunch && app.mode == launcher::ClientMode::Pcsx2)
+            {
+                if (app.install.running() || installJob.busy())
+                    app.setStatus("an INSTALL is running: LAUNCH when it finishes");
+                else if (!app.running && launchPcsx2(app, dir, game, pcsx2Emulog))
+                {
+                    gameIsPcsx2 = true;
+                    app.running = true;
+                    mic->stopMeter();   // Review F8's rule for the native game: one process at a time holds the microphone
+                    meterOn = false;
+                }
+                app.requestLaunch = false;
+            }
             if (app.requestLaunch && !app.running && app.discOk)
             {
                 // The review, finding 4: a pick made while the last game ran goes first on its card now, before this
@@ -2151,6 +3212,7 @@ int main(int argc, char **argv)
                 }
                 writeText(configPath, launcher::toJson(app.config, app.personas.rows));
                 app.dirty = false;
+                savePcsx2();   // Sprint 18 T5: and the PCSX2 client's file, when it changed
                 mic->stopMeter();   // Review F8: two processes must not hold the same microphone
                 meterOn = false;
                 // Sprint 16 L1b (#73): the environment from the selection -- no PS2X_SOCOM2_LOGIN_PASS for a persona
@@ -2191,6 +3253,7 @@ int main(int argc, char **argv)
         app.requestMicChanged = app.requestMicRescan = false;
         app.requestCreatePersona = false;
         app.requestPersonaFirst = -1;
+        app.requestClientModeSet = app.requestInstallPcsx2 = app.requestBrowsePcsx2 = app.requestOpenBios = false;
 
         // PS2X_LAUNCHER_SHOT=<file>: the REAL window, with its own chrome, at whatever size it opened at --
         // a GDI or BitBlt grab of a GL window comes back white on this machine, so the launcher takes it.
@@ -2220,6 +3283,18 @@ int main(int argc, char **argv)
                 resizeWaits = 0;
                 shotPendingPage = ui::pageIndex(shot.page);
                 shotPendingFocus.clear();
+                // Sprint 18 T5: the client each shot is in, and INSTALL's fixed progress for the one that shows it. Set on
+                // every shot, as the walk reuses one App.
+                app.mode = (shot.page == ui::Page::Pcsx2 || std::strcmp(shot.suffix, "_pcsx2") == 0) ? launcher::ClientMode::Pcsx2
+                                                                                                     : launcher::ClientMode::Native;
+                app.install = ui::Pcsx2InstallUi{};
+                if (std::strcmp(shot.suffix, "_installing") == 0)
+                {
+                    app.install.state = ui::Pcsx2InstallUi::State::Downloading;
+                    app.install.bytes = 12400000u;
+                    app.install.total = 25670075;
+                    app.install.message = installSentence(app.install, "pcsx2-v2.8.2-windows-x64-Qt.7z");
+                }
                 {
                     // Sprint 9 Goal 8: canned states, no request made.
                     const std::string suffix = shot.suffix;
@@ -2390,7 +3465,10 @@ int main(int argc, char **argv)
     }
 
     if (!app.fake)
+    {
         writeText(configPath, launcher::toJson(app.config, app.personas.rows));
+        savePcsx2();   // Sprint 18 T5: only when the PCSX2 client's settings changed
+    }
     if (mic)
         mic->stopMeter();
     game.close();
@@ -2404,5 +3482,23 @@ int main(int argc, char **argv)
     // A request still in flight: the window is gone already, and each join is bounded by its request's timeout.
     reportJob.join();
     statsJob.join();
+    // Sprint 18 T5: an INSTALL still running is waited for (its download's own timeout bounds it): stopping it mid-swap
+    // would leave the work to the next start's recovery. A success still lands in config.pcsx2.json.
+    while (installJob.busy())
+    {
+        int rc = 1;
+        if (installJob.poll(rc))
+        {
+            if (rc == 0)
+            {
+                app.pcsx2.pcsx2Exe = launcher::utf8Of(launcher::pcsx2install::installDir(dir) / launcher::pcsx2install::kExeName);
+                app.pcsx2Dirty = true;
+                savePcsx2();
+            }
+            break;
+        }
+        std::this_thread::sleep_for(std::chrono::milliseconds(100));
+    }
+    installLock->release();
     return 0;
 }

@@ -19,6 +19,10 @@
 #include "ui/pad_render.h"
 #include "ui/theme.h"
 #include "ui/tips.h"   // issue #74: the tooltips
+#include "launcher/client_mode.h"   // Sprint 18 T5: the rail per client
+#include "launcher/pcsx2_config.h"  // Sprint 18 T6: kPcsx2RevisionNote, the greyed r0004 cell in PCSX2 mode
+#include "launcher/pcsx2_files.h"   // Sprint 18 T6 review: documentsDirRule, PCSX2's Documents
+#include "ui/pages.h"   // Sprint 18 T6 review: App's client-switch state (inline, nothing drawn by the tests)
 #include "font_advances.h"   // issue #74: the footer tip, measured in the launcher's face
 #include "ps2x/host_window.h"   // Sprint 10 Q4: the game window's chrome holds the launcher's palette
 #ifndef _WIN32
@@ -875,12 +879,12 @@ void register_launcher_tests()
             // The rail itself walks up and down and stops at its ends.
             t.Equals(g.move("rail.play", ui::Dir::Down), std::string("rail.disc"), "the rail walks down");
             t.Equals(g.move("rail.disc", ui::Dir::Up), std::string("rail.play"), "and up");
-            t.Equals(g.move("rail.play", ui::Dir::Up), std::string("rail.play"), "the top of the rail stays put");
+            t.Equals(g.move("rail.play", ui::Dir::Up), std::string("bar.client.native"), "above the rail's top is the client toggle (S18 T5)");
             t.Equals(g.move("rail.about", ui::Dir::Down), std::string("rail.about"), "and so does the bottom");
 
             // Sprint 9 Goal 8: REPORT A BUG sits after ONLINE and before ABOUT, and is a column of the site's
             // own fields -- TITLE, WHAT HAPPENED, CONTACT (OPTIONAL), the log checkbox, SEND REPORT.
-            t.Equals(ui::kPageCount, 9, "nine pages");
+            t.Equals(ui::pagesFor(launcher::ClientMode::Native).size(), static_cast<size_t>(9), "nine native pages");
             t.Equals(std::string(ui::pageName(ui::Page::Report)), std::string("REPORT A BUG"), "the rail's label");
             t.Equals(ui::pageSlug(ui::Page::Report), std::string("report"), "the page's short name: screenshots and ids");
             t.Equals(ui::pageSlug(ui::Page::Play), std::string("play"), "as every other page's already was");
@@ -903,9 +907,8 @@ void register_launcher_tests()
             }
 
             // Nothing is stranded: from its rail entry, every control on every page is reachable by moving.
-            for (int i = 0; i < ui::kPageCount; ++i)
+            for (const ui::Page page : ui::pagesFor(launcher::ClientMode::Native))
             {
-                const ui::Page page = ui::pageAt(i);
                 std::vector<std::string> seen = {ui::railId(page)};
                 for (size_t head = 0; head < seen.size(); ++head)
                 {
@@ -948,6 +951,415 @@ void register_launcher_tests()
                         t.IsTrue(n.r.inside(f.content) || n.r.inside(f.bar),
                                  std::string("inside the content pane or the bottom bar: ") + n.id);
             }
+        });
+
+        // Sprint 18 T5 (R339 = R-A): the client toggle in the top bar and a rail per client. The native rail is the nine
+        // pages it always was; the PCSX2 rail is six, PCSX2 third (VIDEO, AUDIO, CONTROLLER and MICROPHONE are PCSX2's
+        // own pages, R344 = R-F).
+        tc.Run("S18: the native rail is the nine pages as before; the PCSX2 rail is six, PCSX2 third", [](TestCase &t)
+        {
+            using ui::Page;
+            const auto native = ui::pagesFor(launcher::ClientMode::Native);
+            t.Equals(native.size(), static_cast<size_t>(9), "nine native pages");
+            t.IsTrue(native.size() == 9 && native[0] == Page::Play && native[8] == Page::About, "PLAY first, ABOUT last");
+            for (Page p : native)
+                t.IsTrue(p != Page::Pcsx2, "no PCSX2 page in the native rail");
+            const auto pcsx2 = ui::pagesFor(launcher::ClientMode::Pcsx2);
+            t.IsTrue(pcsx2 == std::vector<Page>{Page::Play, Page::Disc, Page::Pcsx2, Page::Online, Page::Report, Page::About},
+                     "the PCSX2 rail: PLAY, DISC, PCSX2, ONLINE, REPORT A BUG, ABOUT");
+            t.Equals(ui::kPageCount, 10, "ten pages in all; the existing indices unchanged");
+            t.Equals(ui::pageIndex(Page::About), 8, "ABOUT keeps its index");
+            t.Equals(ui::railId(Page::Pcsx2), std::string("rail.pcsx2"), "the PCSX2 page's rail id");
+        });
+
+        tc.Run("S18: the rail layout carries the toggle's two cells in the header, and only that mode's pages", [](TestCase &t)
+        {
+            const ui::Rect window{0.0f, 0.0f, 1100.0f, 700.0f};
+            const auto nodes = ui::railLayout(window, launcher::ClientMode::Pcsx2);
+            int rails = 0;
+            bool nat = false, pc = false;
+            const ui::Frame f = ui::frameFor(window);
+            const ui::ChromeLayout chrome = ui::chromeLayout(window.w);
+            for (const ui::Node &n : nodes)
+            {
+                if (n.id == "bar.client.native" || n.id == "bar.client.pcsx2")
+                {
+                    (n.id == "bar.client.native" ? nat : pc) = true;
+                    t.IsTrue(n.r.y >= f.header.y && n.r.bottom() <= f.header.bottom(), "the toggle is in the header band: " + n.id);
+                    t.IsTrue(n.r.right() <= chrome.pill.x && n.r.right() <= chrome.status.x,
+                             "clear of the UNSAVED pill and the state lamp: " + n.id);
+                    t.IsTrue(n.r.x >= chrome.mark.right(), "right of the mark: " + n.id);
+                    t.IsTrue(n.rail, "a toggle cell is chrome, never a page's control: " + n.id);
+                }
+                else
+                {
+                    ++rails;
+                    t.IsTrue(n.id != ui::railId(ui::Page::Video), "no VIDEO entry in the PCSX2 rail");
+                }
+            }
+            t.IsTrue(nat && pc, "both toggle cells");
+            t.Equals(rails, 6, "six rail entries");
+            // The system's hit test must not take the toggle for the drag region: a click on it is the launcher's.
+            for (const ui::Node &n : nodes)
+                if (n.id.rfind("bar.client.", 0) == 0)
+                    t.IsTrue(ui::chromeHitTest(static_cast<int>(n.r.cx()), static_cast<int>(n.r.cy()), 1100, 700, 1.0f, false) ==
+                                 ui::ChromeHit::Client,
+                             "the toggle is client area, not the caption: " + n.id);
+        });
+
+        tc.Run("S18: the PCSX2 page's controls sit inside the body and every one has a tooltip", [](TestCase &t)
+        {
+            const ui::Rect window{0.0f, 0.0f, 1100.0f, 700.0f};
+            ui::LayoutInputs in;
+            in.mode = launcher::ClientMode::Pcsx2;
+            in.advancedOpen = true;
+            const auto nodes = ui::layoutFor(ui::Page::Pcsx2, window, in);
+            const ui::Frame f = ui::frameFor(window);
+            bool select = false, install = false, bios = false, adapter = false, advanced = false;
+            for (const ui::Node &n : nodes)
+            {
+                if (n.id != ui::barLaunchId(ui::Page::Pcsx2))
+                    t.IsTrue(n.r.y >= f.body.y && n.r.bottom() <= f.body.bottom() + 0.5f, "inside the body: " + n.id);
+                t.IsTrue(!ui::tipFor(ui::Page::Pcsx2, n.id, ui::TipState{}).empty(), "a tooltip for " + n.id);
+                select |= n.id == "pcsx2.select";
+                install |= n.id == "pcsx2.install";
+                bios |= n.id == "pcsx2.bios.open";
+                adapter |= n.id == "pcsx2.adapter";
+                advanced |= n.id == "pcsx2.advanced";
+            }
+            t.IsTrue(select && install && bios && adapter && advanced, "SELECT, INSTALL, OPEN FOLDER, ADVANCED and the adapter");
+            in.pcsx2Installing = true;
+            for (const ui::Node &n : ui::layoutFor(ui::Page::Pcsx2, window, in))
+                t.IsTrue(n.id != "pcsx2.install", "no INSTALL node while a download runs");
+            in.pcsx2Installing = false;
+            in.advancedOpen = false;
+            t.IsFalse(ui::hasNode(ui::layoutFor(ui::Page::Pcsx2, window, in), "pcsx2.adapter"), "the adapter only with ADVANCED open");
+            t.IsTrue(!ui::tipFor(ui::Page::Play, "bar.client.native", ui::TipState{}).empty() &&
+                         !ui::tipFor(ui::Page::Pcsx2, "bar.client.pcsx2", ui::TipState{}).empty(),
+                     "the toggle's two cells have their lines on every page");
+        });
+
+        tc.Run("S18: the graph for the native mode has no PCSX2 page and the PCSX2 mode no VIDEO page", [](TestCase &t)
+        {
+            const ui::Rect window{0.0f, 0.0f, 1100.0f, 700.0f};
+            ui::LayoutInputs in;
+            t.IsTrue(ui::FocusGraph::build(window, in).find("pcsx2.install") == nullptr, "native: no PCSX2 page");
+            t.IsTrue(ui::FocusGraph::build(window, in).find(ui::railId(ui::Page::Video)) != nullptr, "native: VIDEO");
+            in.mode = launcher::ClientMode::Pcsx2;
+            t.IsTrue(ui::FocusGraph::build(window, in).find("pcsx2.install") != nullptr, "PCSX2: the PCSX2 page");
+            t.IsTrue(ui::FocusGraph::build(window, in).find(ui::railId(ui::Page::Video)) == nullptr, "PCSX2: no VIDEO");
+            // From the first rail entry, Up lands on the toggle; from the toggle, Down returns to the rail.
+            const ui::FocusGraph g = ui::FocusGraph::build(window, in);
+            t.Equals(g.move(ui::railId(ui::Page::Play), ui::Dir::Up), std::string("bar.client.pcsx2"), "Up from PLAY is the current mode's cell");
+            t.Equals(g.move("bar.client.pcsx2", ui::Dir::Down), ui::railId(ui::Page::Play), "Down from the toggle is the first rail entry");
+            t.Equals(g.move("bar.client.pcsx2", ui::Dir::Left), std::string("bar.client.native"), "Left crosses to NATIVE");
+            t.Equals(g.move("bar.client.native", ui::Dir::Right), std::string("bar.client.pcsx2"), "Right crosses back");
+            t.Equals(g.move(ui::railId(ui::Page::Disc), ui::Dir::Down), ui::railId(ui::Page::Pcsx2), "the rail walks the PCSX2 order");
+            t.Equals(g.move(ui::railId(ui::Page::Pcsx2), ui::Dir::Down), ui::railId(ui::Page::Online), "PCSX2, then ONLINE");
+            t.Equals(g.move(ui::railId(ui::Page::About), ui::Dir::Down), ui::railId(ui::Page::About), "the bottom stays put");
+            // A focus on the toggle does not change the page under it.
+            ui::Nav nav;
+            nav.goTo(g, ui::Page::Play);
+            nav.focus = ui::railId(ui::Page::Play);
+            nav.move(g, ui::Dir::Up);
+            t.Equals(nav.focus, std::string("bar.client.pcsx2"), "the Nav reaches the toggle");
+            t.IsTrue(nav.page == ui::Page::Play, "and the page stays PLAY");
+            // The shoulder tabs walk the mode's own order.
+            t.IsTrue(ui::pageBeside(launcher::ClientMode::Pcsx2, ui::Page::Disc, 1) == ui::Page::Pcsx2, "next after DISC is PCSX2");
+            t.IsTrue(ui::pageBeside(launcher::ClientMode::Native, ui::Page::Disc, 1) == ui::Page::Video, "natively, VIDEO");
+            t.IsTrue(ui::pageBeside(launcher::ClientMode::Pcsx2, ui::Page::Play, -1) == ui::Page::Play, "clamped at the ends");
+            // Nothing on the PCSX2 page is stranded.
+            std::vector<std::string> seen = {ui::railId(ui::Page::Pcsx2)};
+            for (size_t head = 0; head < seen.size(); ++head)
+                for (ui::Dir d : {ui::Dir::Up, ui::Dir::Down, ui::Dir::Left, ui::Dir::Right})
+                {
+                    const std::string to = g.move(seen[head], d);
+                    if (std::find(seen.begin(), seen.end(), to) == seen.end())
+                        seen.push_back(to);
+                }
+            for (const std::string &id : g.idsOn(ui::Page::Pcsx2))
+                t.IsTrue(std::find(seen.begin(), seen.end(), id) != seen.end(), "reachable from the rail: " + id);
+        });
+
+        // Sprint 18 T6: the PCSX2 view of PLAY, DISC and ONLINE, and its LAUNCH. The task book's four cases (Step 1), in
+        // MiniTest form, then the T5 review's items (the plan's Log, 2026-10-03): the rail guard on a requested page,
+        // the greyed revision cell's reason on ONLINE in both modes, and the client toggle held during an INSTALL or a run.
+        tc.Run("S18: the PCSX2 launch is refused for the right reason, in order", [](TestCase &t)
+        {
+            using launcher::launchBlockedReasonPcsx2;
+            t.IsTrue(launchBlockedReasonPcsx2(true, true, true, "", true, 1, "").find("running") != std::string::npos, "running first");
+            t.IsTrue(launchBlockedReasonPcsx2(false, false, false, "", true, 1, "").find("DISC") != std::string::npos, "no disc: the DISC page");
+            t.Equals(launchBlockedReasonPcsx2(false, true, false, "not SOCOM II r0001", true, 1, ""), std::string("not SOCOM II r0001"),
+                     "a disc that failed its check: the DISC page's own sentence");
+            t.IsTrue(launchBlockedReasonPcsx2(false, true, true, "", false, 1, "").find("PCSX2") != std::string::npos, "no PCSX2");
+            t.IsTrue(launchBlockedReasonPcsx2(false, true, true, "", true, 0, "").find("BIOS") != std::string::npos, "no BIOS");
+            t.Equals(launchBlockedReasonPcsx2(false, true, true, "", true, 1, "cannot resolve x -- check your connection"),
+                     std::string("cannot resolve x -- check your connection"), "a name that does not resolve: its own sentence");
+            t.IsTrue(launchBlockedReasonPcsx2(false, true, true, "", true, 1, "").empty(), "nothing in the way: \"\"");
+            // The precedence, pinned where two blockers meet: the disc before PCSX2, PCSX2 before the BIOS, the BIOS
+            // before the name.
+            t.IsTrue(launchBlockedReasonPcsx2(false, false, false, "", false, 0, "x").find("DISC") != std::string::npos, "disc before PCSX2");
+            t.IsTrue(launchBlockedReasonPcsx2(false, true, true, "", false, 0, "x").find("PCSX2") != std::string::npos, "PCSX2 before BIOS");
+            t.IsTrue(launchBlockedReasonPcsx2(false, true, true, "", true, 0, "x").find("BIOS") != std::string::npos, "BIOS before the name");
+        });
+
+        tc.Run("S18: PCSX2's exit line and argv", [](TestCase &t)
+        {
+            t.Equals(launcher::pcsx2ExitLine(0, "C:/x/logs/emulog.txt"), std::string("PCSX2 closed"), "a clean exit");
+            t.Equals(launcher::pcsx2ExitLine(3, "C:/x/logs/emulog.txt"),
+                     std::string("PCSX2 exited with code 3 -- its log is C:/x/logs/emulog.txt"), "a failed exit names its log");
+            t.IsTrue(launcher::pcsx2Args("D:/s2.iso") == std::vector<std::string>{"-batch", "D:/s2.iso"}, "-batch, then the ISO");
+        });
+
+        tc.Run("S18: the ONLINE layout in PCSX2 mode has the presets, the version row and ADDRESS, and none of the native-only rows",
+               [](TestCase &t)
+        {
+            const ui::Rect window{0.0f, 0.0f, 1100.0f, 700.0f};
+            ui::LayoutInputs in;
+            in.mode = launcher::ClientMode::Pcsx2;
+            in.customServer = true;
+            in.advancedOpen = true;
+            in.personaRows = 2;
+            in.gameRevisionsInstalled = 3u;   // r0004's exe beside the launcher: still no node in PCSX2 mode (R-E)
+            const auto nodes = ui::layoutFor(ui::Page::Online, window, in);
+            bool preset = false, server = false, revision = false;
+            for (const ui::Node &n : nodes)
+            {
+                t.IsTrue(n.id.rfind("online.persona", 0) != 0, "no persona rows: " + n.id);
+                t.IsTrue(n.id != "online.second" && n.id != "online.advanced", "no second instance, no ADVANCED: " + n.id);
+                preset |= n.id == "online.preset.1";
+                server |= n.id == "online.server";
+                revision |= n.id == "online.revision.0";
+                t.IsTrue(n.id != "online.revision.1", "R-E: r0004 is drawn greyed, no node");
+            }
+            t.IsTrue(preset && server && revision, "our server's preset, ADDRESS and r0001's cell");
+            in.customServer = false;
+            t.IsFalse(ui::hasNode(ui::layoutFor(ui::Page::Online, window, in), "online.server"), "ADDRESS is a node only for Custom");
+            // The native ONLINE page is what it was.
+            in.mode = launcher::ClientMode::Native;
+            const auto native = ui::layoutFor(ui::Page::Online, window, in);
+            t.IsTrue(ui::hasNode(native, "online.persona.0") && ui::hasNode(native, "online.second") &&
+                         ui::hasNode(native, "online.revision.1"),
+                     "native: the personas, the second instance, and r0004 when its exe is there");
+        });
+
+        tc.Run("S18: the PLAY layout in PCSX2 mode has four jump rows, the last to the PCSX2 page", [](TestCase &t)
+        {
+            // The rows have no shared id prefix (play.disc, play.video, ...): playRows is the one table the layout and
+            // the page both read, ids and targets.
+            const ui::Rect window{0.0f, 0.0f, 1100.0f, 700.0f};
+            ui::LayoutInputs in;
+            in.mode = launcher::ClientMode::Pcsx2;
+            const auto nodes = ui::layoutFor(ui::Page::Play, window, in);
+            const auto rows = ui::playRows(launcher::ClientMode::Pcsx2);
+            t.Equals(rows.size(), static_cast<size_t>(4), "four rows");
+            int found = 0;
+            for (const auto &row : rows)
+                found += ui::hasNode(nodes, row.first) ? 1 : 0;
+            t.Equals(found, 4, "each row is a node");
+            t.IsTrue(rows.size() == 4 && rows[0].first == "play.disc" && rows[1].first == "play.server" &&
+                         rows[2].first == "play.version" && rows[3].first == "play.pcsx2",
+                     "DISC, SERVER, GAME VERSION, PCSX2");
+            t.IsTrue(!rows.empty() && rows.back().second == ui::Page::Pcsx2, "the last jumps to the PCSX2 page");
+            t.IsFalse(ui::hasNode(nodes, "play.video") || ui::hasNode(nodes, "play.pad"), "no VIDEO or CONTROLLER row");
+            // Item 1 of the T5 review: every row of either view jumps to a page of that view's rail.
+            for (launcher::ClientMode mode : {launcher::ClientMode::Native, launcher::ClientMode::Pcsx2})
+            {
+                const auto pages = ui::pagesFor(mode);
+                for (const auto &row : ui::playRows(mode))
+                    t.IsTrue(std::find(pages.begin(), pages.end(), row.second) != pages.end(), "a jump inside the rail: " + row.first);
+            }
+            const auto native = ui::playRows(launcher::ClientMode::Native);
+            t.IsTrue(native.size() == 4 && native[1].first == "play.video" && native[1].second == ui::Page::Video,
+                     "the native rows are as they were");
+        });
+
+        tc.Run("S18: a requested page outside the client's rail is ignored, in either mode", [](TestCase &t)
+        {
+            const ui::Rect window{0.0f, 0.0f, 1100.0f, 700.0f};
+            ui::LayoutInputs in;
+            in.mode = launcher::ClientMode::Pcsx2;
+            const ui::FocusGraph pcsx2 = ui::FocusGraph::build(window, in);
+            ui::Nav nav;
+            nav.goTo(pcsx2, ui::Page::Play);
+            nav.request(ui::Page::Video);
+            t.IsFalse(nav.applyRequest(pcsx2), "PCSX2: VIDEO is not applied");
+            t.IsTrue(nav.page == ui::Page::Play && nav.requested == -1, "the page stays PLAY and the request is spent");
+            nav.request(ui::Page::Pcsx2);
+            t.IsTrue(nav.applyRequest(pcsx2) && nav.page == ui::Page::Pcsx2, "PCSX2: its own page is applied");
+            in.mode = launcher::ClientMode::Native;
+            const ui::FocusGraph native = ui::FocusGraph::build(window, in);
+            nav.goTo(native, ui::Page::Play);
+            nav.request(ui::Page::Pcsx2);
+            t.IsFalse(nav.applyRequest(native), "native: the PCSX2 page is not applied");
+            t.IsTrue(nav.page == ui::Page::Play, "the page stays PLAY");
+            nav.request(ui::Page::Video);
+            t.IsTrue(nav.applyRequest(native) && nav.page == ui::Page::Video, "native: VIDEO is applied");
+        });
+
+        tc.Run("S18: the greyed r0004 cell's reason is shown on ONLINE in both modes", [](TestCase &t)
+        {
+            // Item 2 of the T5 review: the preset row says "coming soon" since T2, so nothing else on ONLINE carries the
+            // cell's reason; gameVersionRow draws revisionGreyedNote, with no 'already on the page' exception.
+            using launcher::ClientMode;
+            t.Equals(std::string(ui::revisionGreyedNote(ClientMode::Native, 1u)), std::string(launcher::kRevisionMissingNote),
+                     "native, r0004 not installed: its reason");
+            t.Equals(std::string(ui::revisionGreyedNote(ClientMode::Native, 3u)), std::string(), "native, both installed: none");
+            t.Equals(std::string(ui::revisionGreyedNote(ClientMode::Pcsx2, 3u)), std::string(launcher::kPcsx2RevisionNote),
+                     "PCSX2: r0004 greyed whatever is installed (R-E)");
+            t.Equals(ui::revisionsOffered(ClientMode::Pcsx2, 3u), 1u, "PCSX2 offers r0001 only");
+            t.Equals(ui::revisionsOffered(ClientMode::Native, 3u), 3u, "native offers what is installed");
+            t.IsTrue(std::string(launcher::kRevisionMissingNote) != launcher::kPresetComingSoonNote,
+                     "the preset row's note is not the cell's reason");
+        });
+
+        tc.Run("S18: the client toggle is held while an INSTALL or a game runs, with the reason", [](TestCase &t)
+        {
+            t.IsTrue(ui::clientSwitchRefusal(false, false).empty(), "free to switch");
+            t.IsTrue(ui::clientSwitchRefusal(true, false).find("INSTALL") != std::string::npos, "an INSTALL holds it");
+            t.IsTrue(ui::clientSwitchRefusal(false, true).find("running") != std::string::npos, "a running game holds it");
+            // The T6 review, item 4: the veil, the tip and the refusal ask one question of App -- the INSTALL's page state
+            // or its worker still busy (the worker outlives the last state copy by a frame or more), or a run.
+            ui::App app;
+            t.IsTrue(ui::clientSwitchRefusalFor(app).empty(), "App: free to switch");
+            app.installJobBusy = true;
+            t.IsTrue(ui::clientSwitchRefusalFor(app).find("INSTALL") != std::string::npos, "App: the INSTALL worker holds it");
+            app.installJobBusy = false;
+            app.install.state = ui::Pcsx2InstallUi::State::Downloading;
+            t.IsTrue(ui::clientSwitchRefusalFor(app).find("INSTALL") != std::string::npos, "App: a download holds it");
+            app.install.state = ui::Pcsx2InstallUi::State::Idle;
+            app.running = true;
+            t.IsTrue(ui::clientSwitchRefusalFor(app).find("running") != std::string::npos, "App: a run holds it");
+        });
+
+        // The T6 review, item 3: a switch clears LAST RUN -- a PCSX2 exit line must not read as the native game's, or the
+        // other way round -- and drops the disc verdict, which belongs to the other client's ISO until it is checked again.
+        tc.Run("S18: a client switch clears the LAST RUN line and the disc verdict, and sets the mode", [](TestCase &t)
+        {
+            ui::App app;
+            app.exitLine = "PCSX2 closed";
+            app.discOk = true;
+            app.discMessage = "SOCOM II U.S. Navy SEALs NTSC r0001";
+            app.activeField = "disc.path";
+            ui::switchClientState(app, launcher::ClientMode::Pcsx2);
+            t.IsTrue(app.mode == launcher::ClientMode::Pcsx2, "the mode is PCSX2");
+            t.IsTrue(app.exitLine.empty(), "LAST RUN is cleared");
+            t.IsFalse(app.discOk, "the verdict is dropped until the PCSX2 disc is checked");
+            t.IsTrue(app.discMessage.empty() && app.activeField.empty(), "no stale sentence, no field holding the keyboard");
+            app.exitLine = "the game exited normally";
+            ui::switchClientState(app, launcher::ClientMode::Native);
+            t.IsTrue(app.mode == launcher::ClientMode::Native && app.exitLine.empty(), "and back: cleared again");
+        });
+
+        // The T6 review, item 1: PCSX2's non-portable data root is <Documents>/PCSX2, Documents being the known folder
+        // (OneDrive's Known Folder Move puts it under the profile's OneDrive), %USERPROFILE%/Documents only when the known
+        // folder cannot be read (POSIX: $XDG_DOCUMENTS_DIR, else $HOME/Documents).
+        tc.Run("S18: the Documents folder is the known folder, the profile's Documents only as the fallback", [](TestCase &t)
+        {
+            namespace fs = std::filesystem;
+            using launcher::pcsx2files::documentsDirRule;
+#ifdef _WIN32
+            const fs::path known = "D:/Profiles/J/OneDrive/Documents";   // invented folders, nobody's real profile
+            const std::string profile = "D:/Profiles/J";
+#else
+            const fs::path known = "/srv/profiles/j/Dokumente";
+            const std::string profile = "/srv/profiles/j";
+#endif
+            t.IsTrue(documentsDirRule(known, profile) == known, "the known folder wins (OneDrive's Documents)");
+            t.IsTrue(documentsDirRule(fs::path(), profile) == fs::path(profile) / "Documents", "no known folder: the profile's Documents");
+            t.IsTrue(documentsDirRule(fs::path("Documents"), profile) == fs::path(profile) / "Documents",
+                     "a relative answer is not a folder: the fallback");
+            t.IsTrue(documentsDirRule(fs::path(), std::string()).empty(), "nothing to go on: empty, never the working directory");
+        });
+
+        // The T6 review, item 2: the file dialogs answer UTF-8 (OPENFILENAMEW, narrowed with this helper), and the PCSX2
+        // client's paths are UTF-8 from the dialog to startProcess -- a player named Jérôme launches an ISO under their
+        // profile. utf8Of narrows a wide path; pathFromUtf8 widens it back; the ISO reader opens it by its wide name.
+        tc.Run("S18: a non-ASCII path survives UTF-8 from the dialog to the disc reader", [](TestCase &t)
+        {
+            namespace fs = std::filesystem;
+            const std::string utf8 = "J\xC3\xA9r\xC3\xB4me";   // "Jérôme"
+#ifdef _WIN32
+            t.Equals(launcher::utf8Of(fs::path(L"J\u00E9r\u00F4me")), utf8, "a wide name narrows to UTF-8");
+            t.IsTrue(launcher::pathFromUtf8(utf8).wstring() == std::wstring(L"J\u00E9r\u00F4me"), "and widens back to the same name");
+#endif
+            t.Equals(launcher::utf8Of(launcher::pathFromUtf8(utf8)), utf8, "the round trip is the identity");
+            const fs::path dir = fs::temp_directory_path() / ("ps2x_s18_utf8_" + std::to_string(std::chrono::steady_clock::now().time_since_epoch().count()));
+            std::error_code ec;
+            fs::create_directories(dir, ec);
+            const fs::path iso = dir / launcher::pathFromUtf8(utf8 + ".iso");
+            {
+                const std::vector<uint8_t> img = syntheticImage();
+                std::ofstream out(iso, std::ios::binary);
+                out.write(reinterpret_cast<const char *>(img.data()), static_cast<std::streamsize>(img.size()));
+            }
+            t.IsTrue(fs::exists(iso, ec), "the image is written under its non-ASCII name");
+            const iso9660::Reader read = iso9660::fileReaderAt(launcher::pathFromUtf8(launcher::utf8Of(iso)));
+            iso9660::FileEntry e;
+            t.IsTrue(read && iso9660::findRootFile(read, "SCUS_972.75", e), "the reader opens it from its UTF-8 path");
+            t.IsTrue(!iso9660::fileReaderAt(dir / "no_such_file_here.iso"), "a missing file gives no reader");
+            fs::remove_all(dir, ec);
+        });
+
+        // LATER 79 (the T6 review): a hand-edited config.pcsx2.json can hold bytes that are not UTF-8, and libc++'s
+        // path(u8string) throws on them ("locale not supported") at start-up's checkDisc and in probePcsx2. pathFromUtf8
+        // answers an empty path instead -- the call sites read empty as "no path" (the disc's "no disc set", the probe's
+        // none). activeIsoFile lives in main.cpp's anonymous namespace, so the helper is what is tested here.
+        tc.Run("S18: pathFromUtf8 answers an empty path for bytes that are not UTF-8, and throws nothing", [](TestCase &t)
+        {
+            const std::string bad[] = {
+                std::string("C:/games/SOCOM\xFF.iso"),       // 0xFF is never UTF-8
+                std::string("J\xE9r\xF4me.iso"),             // Latin-1 bytes, the likeliest hand edit
+                std::string("\xC3"),                         // a lead byte with no continuation
+                std::string("a\x80" "b"),                    // a lone continuation byte
+                std::string("\xC0\xAF"),                     // an overlong '/'
+                std::string("\xED\xA0\x80"),                 // a UTF-16 surrogate, U+D800
+                std::string("\xF4\x90\x80\x80"),             // past U+10FFFF
+            };
+            for (const std::string &s : bad)
+            {
+                bool threw = false;
+                std::filesystem::path p;
+                try
+                {
+                    p = launcher::pathFromUtf8(s);
+                }
+                catch (...)
+                {
+                    threw = true;
+                }
+                t.IsFalse(threw, "pathFromUtf8 throws nothing on invalid UTF-8");
+                t.IsTrue(p.empty(), "and answers an empty path, which the call sites read as no path");
+            }
+            t.IsTrue(launcher::pathFromUtf8(std::string()).empty(), "an empty string is an empty path");
+            t.Equals(launcher::utf8Of(launcher::pathFromUtf8("C:/games/SOCOM II.iso")), std::string("C:/games/SOCOM II.iso"),
+                     "plain ASCII is unchanged");
+            t.Equals(launcher::utf8Of(launcher::pathFromUtf8("\xF0\x9F\x8E\xAE.iso")), std::string("\xF0\x9F\x8E\xAE.iso"),
+                     "a four-byte sequence (U+1F3AE) is valid and kept");
+        });
+
+        // LATER 80 (the T6 review): the content band's line is per client. The PCSX2 view's ONLINE has no personas list
+        // and no second instance, so its line does not promise them; every other page reads the same in both clients.
+        tc.Run("S18: the page title is per client -- ONLINE differs, every other page is the same", [](TestCase &t)
+        {
+            using launcher::ClientMode;
+            for (int i = 0; i < ui::kPageCount; ++i)
+            {
+                const ui::Page page = ui::pageAt(i);
+                const std::string native = ui::pageTitle(page, ClientMode::Native);
+                const std::string pcsx2 = ui::pageTitle(page, ClientMode::Pcsx2);
+                t.IsFalse(native.empty(), "no native title is empty");
+                t.IsFalse(pcsx2.empty(), "no PCSX2 title is empty");
+                t.IsTrue(pcsx2.rfind(std::string(ui::pageName(page)) + " -- ", 0) == 0, "the PCSX2 title opens with the page's name");
+                if (page == ui::Page::Online)
+                    t.IsTrue(native != pcsx2, "ONLINE's title differs between the clients");
+                else
+                    t.Equals(pcsx2, native, "every other page's title is the same in both clients");
+            }
+            const std::string online = ui::pageTitle(ui::Page::Online, ClientMode::Pcsx2);
+            t.IsTrue(online.find("second instance") == std::string::npos, "the PCSX2 ONLINE title promises no second instance");
+            t.Equals(std::string(ui::pageTitle(ui::Page::Online, ClientMode::Native)),
+                     std::string("ONLINE -- the server, your personas, a second instance"), "the native title is unchanged");
         });
 
         // Sprint 8, owner feedback: "the yellow circle ... takes too long to adjust and awkwardly flys with a

@@ -115,8 +115,9 @@ As of 2026-10-12 the game boots from your own disc to the title, through the men
 the lobby and full rounds work on the project's test server, so far only between copies of the game driven by the test
 harness on one machine (no round has been played between two different networks); a build of the community's r0004
 revision passes the same checks and plays a round there too. The launcher lists the personas on your memory cards,
-read from the game's own persona file, and a persona it writes to a card is one the game reads (#73). Version 0.17.0
-is the latest tag. Still ahead: a program-only download that builds the game's image from your disc on first run, the
+read from the game's own persona file, and a persona it writes to a card is one the game reads (#73). The launcher
+can also play your disc through PCSX2: it installs PCSX2's official release, sets its network section, and that
+client has reached our lobby (`docs/PCSX2_PLAY.md`). Version 0.18.0 is the latest tag. Still ahead: a program-only download that builds the game's image from your disc on first run, the
 launcher installing the community's r0004 update itself, and a frame-rate bar. Not yet: playing on a community
 server (the launcher's community preset stays greyed until the update installs), the game's full frame rate in
 missions, a finished Linux client (it boots in a virtual machine, never yet on a real GPU), and any disc other than

@@ -2,24 +2,23 @@
 
 > **Generated -- do not edit.** Written by `python -m tools_py.sitting` from `docs/HUMAN_TASKS.md` (the O rows and the stamp of the sittings), the rulings `docs/RULINGS.md` shows (`tools_py.rulings.rows()`), `docs/BACKLOG.md` (the `Carried` column) and `docs/PLAYTEST.md` (its build block). Change a source and regenerate; `python -m tools_py.sitting --check` exits 1 when this file is stale.
 
-The page as of 2026-10-12, for the sitting after the one of 2026-10-11: 4 open O rows (0 answered or struck); 17 active rulings since 2026-10-11 (16 dated, 1 placed by number or home, 201 undated and unplaceable, not listed); 10 issues carried twice; the build: built.
+The page as of 2026-10-12, for the sitting after the one of 2026-10-11: 3 open O rows (1 answered or struck); 17 active rulings since 2026-10-11 (16 dated, 1 placed by number or home, 201 undated and unplaceable, not listed); 10 issues carried twice; the build: built.
 
 **How to answer.** One line per item, by number -- "O5: acceptable for v1", "R271: overturn", "#25: close" -- in the next session's prompt or as a line in the open plan's Log.
 
 ## 1. The O rows
 
-4 open, 0 answered or struck. Each stands on its default until you answer; days waited are to 2026-10-12.
+3 open, 1 answered or struck. Each stands on its default until you answer; days waited are to 2026-10-12.
 
 | O | the hand needed | the default the loop is on | first asked | days waited |
 |---|---|---|---|---|
-| O33 | The PCSX2 door, your hands | T0/T7 run in R352's window; if they cannot, carried as issues (R359) | 2026-10-02 | 10 |
 | O34 | Publish the draft GitHub releases `v0.17.0` and `v0.18.0` | the drafts wait, unpublished | 2026-10-11 | 1 |
 | O35 | Two Sprint 17 items named as yours | (a) the knob stays on by default and #104 stays open; (b) both stay merged in the tree, the box keeps its current build | 2026-10-11 | 1 |
 | O36 | Keep or close four issues carried twice | they stay open in the backlog, unmilestoned; no sprint takes them until you say | 2026-10-12 | 0 |
 
 Answered or struck since the last sitting (struck rows live in the archive, `docs/archive/HUMAN_TASKS-to-2026-09-25.md`, its "Struck rows moved from the live table" section; reopenable by number):
 
-- none
+- O33: The PCSX2 door, your hands -- done 2026-10-12: (a) opened 2026-10-11 ~21:51Z after your `aws login`; (b) granted 23:09Z (R366), run 08:18Z; (c) R352's window: T0 (research/90) and T7, which…
 
 ## 2. The rulings since the last sitting
 
@@ -63,8 +62,8 @@ Answered or struck since the last sitting (struck rows live in the archive, `doc
 The build `docs/PLAYTEST.md` names, to play and to check against:
 
 ```
-build:    2026-10-12T07:04:19Z   commit ed519ae5ae05 (sprint-17)
+build:    2026-10-12T09:38:33Z   commit 7d12f7eddc06 (sprint-18)
 archive:  socom2-portable.zip   [player]   (dist-release/portable/socom2-portable.zip)
-sha256: d9922495b2552b3fb4930d67b0490cabbcec805dee45a45db92575d3beced452
-exe:      socom2.exe sha256: da8d62a88d3201b111476ea48cefc5fda88833e7785b6e665d4e76065c9a62f0
+sha256: 13545ede4f2d60ec119972169a07b07e9a2445fa78a4724f82e9a202500e7ddf
+exe:      socom2.exe sha256: 4f5f2a3bd7989c5aff6798ba80b3539299950543b48f91c6df5133ff19ea30a9
 ```

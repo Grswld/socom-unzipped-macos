@@ -4,7 +4,7 @@
 
 ## 1. Open issues
 
-39 open issues. *Carried* counts the sprint closes an issue has survived (its `Carried ...` comments, or one for the `carried` label alone); at 2 the next close asks the owner.
+30 open issues. *Carried* counts the sprint closes an issue has survived (its `Carried ...` comments, or one for the `carried` label alone); at 2 the next close asks the owner.
 
 | Issue | Title | Area | Milestone | Carried | Closing bar (first sentence) |
 |---|---|---|---|---|---|
@@ -37,15 +37,6 @@
 | #114 | The main thread's GL replay stalls for good after a present ('stall bound engaged', never released): the title froze on the intro card (was: F1 attempt 3) | render | backlog | 0 | 1. |
 | #117 | replay_bench: a relative --exe path fails with WinError 2 under the Store Python; the default form does not run | harness | backlog | 0 | 1. |
 | #118 | drive.py captures the wrong window: any visible window titled '-- SOCOM Unzipped' (a browser tab on the site) matches before the game | harness | backlog | 0 | 1. |
-| #121 | S18 T0: The spike: five PCSX2 questions on a fresh v2.8.2 (bsdtar, -batch, the pnach, the card, the adapter) | -- | Sprint 18 | 0 | -- |
-| #122 | S18 T1: The box's name service: socom-dns on 53/udp answering SOCOM II's six host names (R342) | -- | Sprint 18 | 0 | -- |
-| #123 | S18 T2: The client mode and config.pcsx2.json: two clients, two files; the community row says "coming soon" (R339, R340) | -- | Sprint 18 | 0 | -- |
-| #124 | S18 T3: What the launcher writes for PCSX2: the DEV9 merge, the embedded guarded pnach, the data root, the DNS pick (R344) | -- | Sprint 18 | 0 | -- |
-| #125 | S18 T4: INSTALL: the official release parsed and verified, the redirect-following download, tar.exe extraction (R341) | -- | Sprint 18 | 0 | -- |
-| #126 | S18 T5: The UI, part one: the NATIVE/PCSX2 toggle, a rail per client, the PCSX2 page with SELECT and INSTALL | -- | Sprint 18 | 0 | -- |
-| #127 | S18 T6: The UI, part two: PLAY, DISC and ONLINE in the PCSX2 view; LAUNCH starts PCSX2; LAST RUN (R343) | -- | Sprint 18 | 0 | -- |
-| #128 | S18 T7: The proof: INSTALL, BIOS, LAUNCH, the wizard, our lobby from this host against the public box | -- | Sprint 18 | 0 | -- |
-| #129 | S18 T8: The documents: DEVELOPING, server/README, docs/PCSX2_PLAY.md, LATER and owner rows | -- | Sprint 18 | 0 | -- |
 | #132 | The launcher's --screenshot walk segfaults intermittently on the first frame after a resize (fonts reload) | launcher | backlog | 0 | Twenty consecutive `--screenshot` runs exit 0 with every shot written, after a fix whose commit names the cause (a stack from a debug build or a crash dump under the walk; the font reload against the frame in flight is the first suspect). |
 
 ## 2. Ruled not an issue

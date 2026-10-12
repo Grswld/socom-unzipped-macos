@@ -81,6 +81,15 @@ class WindowsFolderTest(unittest.TestCase):
         self.assertNotIn("winhttp.dll", [n.lower() for n in result["needed"]],
                          "and it is not something the portable folder has to carry")
 
+    def test_iphlpapi_is_windows_and_does_not_have_to_be_shipped(self):
+        """Sprint 18 T4: the launcher lists the network adapters PCSX2 can bind with GetAdaptersAddresses
+        (win32_glue.cpp), so it imports IPHLPAPI.DLL; the first release packaging after T4 (the S18 close chain,
+        2026-10-12) called it missing. It is a Windows system library (C:/Windows/System32/iphlpapi.dll)."""
+        put(self.dir, "socom_unzipped_launcher.exe", tiny_pe(["KERNEL32.dll", "IPHLPAPI.DLL"]))
+        result = portable_audit.audit(self.dir, "Windows")
+        self.assertEqual(result["missing"], {})
+        self.assertNotIn("iphlpapi.dll", [n.lower() for n in result["needed"]])
+
     def test_a_dll_nothing_imports_is_an_orphan(self):
         put(self.dir, "OpenEXR-3_3.dll", tiny_pe(["KERNEL32.dll"]))
         put(self.dir, "avformat-61.dll", tiny_pe(["avcodec-61.dll"]))   # imports, but is imported by nothing

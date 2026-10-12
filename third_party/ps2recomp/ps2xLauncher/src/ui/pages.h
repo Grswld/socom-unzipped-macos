@@ -6,11 +6,15 @@
 #include "bind_flow.h"
 #include "focus.h"
 #include "launcher/bug_report.h"
+#include "launcher/client_mode.h"     // Sprint 18 T5: which client the launcher drives
 #include "launcher/launcher_config.h"
+#include "launcher/pcsx2_config.h"    // Sprint 18 T5: config.pcsx2.json
+#include "launcher/pcsx2_install.h"   // Sprint 18 T5: the adapters the PCSX2 page cycles
 #include "launcher/personas.h"   // Sprint 16 L1b (#73): the ONLINE page's PERSONAS list
 #include "pad_render.h"
 #include "widgets.h"
 
+#include <cstdint>
 #include <string>
 #include <utility>
 #include <vector>
@@ -41,10 +45,54 @@ namespace ui
         bool requestSend = false;
     };
 
+    // Sprint 18 T5: what the PCSX2 page says about the PCSX2 the launcher drives. main.cpp's probePcsx2 fills it (at
+    // start, after SELECT and after INSTALL); a page never touches the disk.
+    struct Pcsx2Status
+    {
+        bool exeFound = false;
+        std::string versionLine;   // pcsx2install::versionLine: "PCSX2 v2.8.2 (installed by the launcher)"
+        std::string dataRoot;      // pcsx2files::dataRoot: beside a portable exe, else <Documents>/PCSX2
+        std::string biosDir;       // <dataRoot>/bios
+        int biosFiles = 0;         // regular files of 1 MiB or more there
+        std::string adapterName;   // the friendly name of the adapter PCSX2 will bind (pickAdapter)
+        std::vector<launcher::pcsx2install::Adapter> adapters;   // what the adapter button cycles through
+    };
+
+    // Sprint 18 T5: INSTALL's progress. The worker thread (main.cpp) writes it under its mutex; the loop copies it
+    // here once a frame, and the page only reads it.
+    struct Pcsx2InstallUi
+    {
+        enum class State
+        {
+            Idle,
+            Fetching,      // the release list
+            Downloading,   // `bytes` of `total` (-1: unknown)
+            Extracting,
+            Done,
+            Failed         // `message` is the refusal's sentence
+        };
+        State state = State::Idle;
+        std::string message;   // the state's sentence, as the page shows it
+        uint64_t bytes = 0;
+        int64_t total = -1;
+        bool running() const { return state == State::Fetching || state == State::Downloading || state == State::Extracting; }
+    };
+
     struct App
     {
         launcher::Config config;
         bool dirty = false;   // the unsaved-changes hint (saved on Launch and on close)
+
+        // Sprint 18 T5 (R339 = R-A): the client the launcher drives, saved in launcher.json; the PCSX2 client's own
+        // settings (config.pcsx2.json), never a key of config.json's; and what the PCSX2 page shows.
+        launcher::ClientMode mode = launcher::ClientMode::Native;
+        launcher::Pcsx2Config pcsx2;
+        bool pcsx2Dirty = false;   // config.pcsx2.json has unsaved changes (the UNSAVED pill lights for either file)
+        Pcsx2Status pcsx2Status;
+        Pcsx2InstallUi install;
+        // Sprint 18 T6 review: INSTALL's worker thread is still busy (main.cpp sets it each frame). It can outlive the
+        // last state copied into `install` by a frame or more, so the client toggle asks both (clientSwitchRefusalFor).
+        bool installJobBusy = false;
 
         // the disc check
         bool discChecked = false;
@@ -101,6 +149,12 @@ namespace ui
         // it is the loop's word on where the cues stand ("from your disc", "no disc set: silent", "off").
         bool requestMenuSounds = false;
         std::string menuSoundsStatus;
+        // Sprint 18 T5: the top bar's toggle asked for a client; the PCSX2 page's SELECT, INSTALL and OPEN FOLDER.
+        launcher::ClientMode requestClientMode = launcher::ClientMode::Native;
+        bool requestClientModeSet = false;
+        bool requestInstallPcsx2 = false;
+        bool requestBrowsePcsx2 = false;
+        bool requestOpenBios = false;
 
         // Sprint 16 L1b (#73, R295): the personas every card's ledger holds (read by main.cpp at start and after each
         // run -- a page never touches the disk), the list's scroll, and the clock the rows' ages are measured by.
@@ -142,6 +196,56 @@ namespace ui
         int holdHost = 0;
         float holdProgress = 0.0f;
     };
+
+    // Sprint 18 T6 (R339 = R-A): the ISO the active client plays -- config.json's natively, config.pcsx2.json's in PCSX2
+    // mode. One accessor for DISC, PLAY, the disc check and LAUNCH, so no page reads the other client's disc.
+    inline std::string &activeIsoPath(App &app)
+    {
+        return app.mode == launcher::ClientMode::Pcsx2 ? app.pcsx2.isoPath : app.config.isoPath;
+    }
+    inline const std::string &activeIsoPath(const App &app)
+    {
+        return app.mode == launcher::ClientMode::Pcsx2 ? app.pcsx2.isoPath : app.config.isoPath;
+    }
+    // The active client's file has unsaved changes (the other file is never marked by this client's edits, R-A).
+    inline void markActiveDirty(App &app)
+    {
+        if (app.mode == launcher::ClientMode::Pcsx2)
+            app.pcsx2Dirty = true;
+        else
+            app.dirty = true;
+    }
+
+    // Sprint 18 T6 review, item 4: the one question the toggle's veil, its tip and the loop's refusal all ask -- an INSTALL
+    // (its page state or its worker) or a run holds the client toggle.
+    inline std::string clientSwitchRefusalFor(const App &app)
+    {
+        return clientSwitchRefusal(app.install.running() || app.installJobBusy, app.running);
+    }
+
+    // Sprint 18 T6 review, item 3: the App half of a client switch (main.cpp saves the dirty file first and writes
+    // launcher.json). LAST RUN is cleared -- one client's exit line must not read as the other's -- and the disc verdict
+    // is dropped: it belongs to the other client's ISO until the loop checks the new one.
+    inline void switchClientState(App &app, launcher::ClientMode to)
+    {
+        app.mode = to;
+        app.activeField.clear();
+        app.exitLine.clear();
+        app.discChecked = false;
+        app.discOk = false;
+        app.discMessage.clear();
+        app.layout.mode = to;
+    }
+
+    // Sprint 18 T6: why LAUNCH is greyed for the active client, as PLAY and the bottom bar draw it. In PCSX2 mode the
+    // name is not resolved here (a frame never touches the network): LAUNCH resolves it and refuses with its sentence.
+    inline std::string launchBlockedNow(const App &app)
+    {
+        if (app.mode == launcher::ClientMode::Pcsx2)
+            return launcher::launchBlockedReasonPcsx2(app.running, !app.pcsx2.isoPath.empty(), app.discOk, app.discMessage,
+                                                      app.pcsx2Status.exeFound, app.pcsx2Status.biosFiles, std::string());
+        return launchBlockedReason(app.discOk, app.running, app.config.isoPath.empty(), app.discMessage);
+    }
 
     // ---- the shared furniture of a settings page ----------------------------------------------------------
     // Every settings row has the same label column, one metrics::labelW to the left of its control: that is
@@ -200,10 +304,16 @@ namespace ui
     // is how they come to disagree. The cell for a version whose executable is missing is DRAWN -- greyed,
     // with the note beside it -- rather than hidden: a player has to learn the version exists and why it is
     // not there, which is the rule the unplayable server preset already follows (page_online.cpp).
+    //
+    // Sprint 18 T6 (R343 = R-E): by the client. In PCSX2 mode the chosen version is config.pcsx2.json's, r0001 is the
+    // one on offer (revisionsOffered), r0004 is drawn greyed with kPcsx2RevisionNote, and a click writes the PCSX2
+    // config, never config.json.
     inline void gameVersionRow(const Ctx &ctx, App &app, const std::vector<Node> &nodes, Page page)
     {
+        const bool pcsx2 = app.mode == launcher::ClientMode::Pcsx2;
         const std::string slug = pageSlug(page);
-        const std::string chosen = launcher::normalizeGameRevision(app.config.gameRevision);
+        const std::string chosen = launcher::normalizeGameRevision(pcsx2 ? app.pcsx2.gameRevision : app.config.gameRevision);
+        const uint32_t offered = revisionsOffered(app.mode, app.gameRevisionsInstalled);
         const Rect first = revisionCell(app.frame.window, page, 0);
         if (!drawable(first))
             return;
@@ -220,7 +330,7 @@ namespace ui
         for (size_t i = 0; i < launcher::kGameRevisionCount; ++i)
         {
             const launcher::GameRevision &rev = launcher::kGameRevisions[i];
-            const bool available = launcher::gameRevisionAvailable(i, app.gameRevisionsInstalled);
+            const bool available = launcher::gameRevisionAvailable(i, offered);
             const std::string id = slug + ".revision." + std::to_string(i);
             const Rect r = revisionCell(app.frame.window, page, static_cast<int>(i));
             if (!drawable(r))
@@ -238,8 +348,16 @@ namespace ui
             }
             if (radioCell(ctx, r, rev.label, id, chosen == rev.id) && chosen != rev.id)
             {
-                app.config.gameRevision = rev.id;
-                app.dirty = true;
+                if (pcsx2)
+                {
+                    app.pcsx2.gameRevision = rev.id;
+                    app.pcsx2Dirty = true;
+                }
+                else
+                {
+                    app.config.gameRevision = rev.id;
+                    app.dirty = true;
+                }
             }
         }
 
@@ -247,18 +365,15 @@ namespace ui
         // whole sentence, and on ONLINE this strip is 254 units wide -- so each page places it where it
         // has room (PLAY under the row, ONLINE on the SERVER strip, which is the widest line it has).
         //
-        // ONLINE already prints this very sentence on the row of every server that cannot be played,
-        // right-aligned to nearly the same column two rows above, so a copy here was the same words twice
-        // in one picture (Sprint 11 review, Minor 4).
-        bool alreadyOnPage = false;
-        if (page == Page::Online)
-            for (const launcher::ServerPreset &p : launcher::kServerPresets)
-                alreadyOnPage = alreadyOnPage || !launcher::presetAvailable(p);
+        // Sprint 18 T6: drawn on ONLINE too. Sprint 11 (review, Minor 4) left it off there because the unplayable
+        // preset row carried the same sentence; since T2 that row says "coming soon" (R-B), so the cell's reason was
+        // said nowhere on the page.
+        const char *note = revisionGreyedNote(app.mode, app.gameRevisionsInstalled);
         const Rect strip{right + 12.0f, first.y, app.frame.body.right() - right - 12.0f, first.h};
-        if (anyGreyed && !alreadyOnPage && drawable(strip))
+        if (anyGreyed && note[0] != '\0' && drawable(strip))
         {
             const float size = metrics::captionSize - 1.0f;
-            textRightIn(ctx, ellipsizeEnd(ctx, launcher::kRevisionMissingNote, strip.w, size).c_str(), strip, size,
+            textRightIn(ctx, ellipsizeEnd(ctx, note, strip.w, size).c_str(), strip, size,
                         theme::mix(theme::dim, theme::ground, 0.45f));
         }
     }
@@ -267,6 +382,8 @@ namespace ui
     // they agree. Both pages ask this, each drawing it where its own layout has room for a full line.
     inline std::string revisionMismatchLine(const App &app)
     {
+        if (app.mode == launcher::ClientMode::Pcsx2)   // Sprint 18 T6: the PCSX2 client's own pair
+            return launcher::revisionWarning(app.pcsx2.serverPreset, launcher::normalizeGameRevision(app.pcsx2.gameRevision));
         return launcher::revisionWarning(app.config.serverPreset, launcher::normalizeGameRevision(app.config.gameRevision));
     }
 
@@ -280,4 +397,5 @@ namespace ui
     void drawOnlinePage(const Ctx &ctx, App &app, const std::vector<Node> &nodes);
     void drawReportPage(const Ctx &ctx, App &app, const std::vector<Node> &nodes);
     void drawAboutPage(const Ctx &ctx, App &app, const std::vector<Node> &nodes);
+    void drawPcsx2Page(const Ctx &ctx, App &app, const std::vector<Node> &nodes);   // Sprint 18 T5
 }

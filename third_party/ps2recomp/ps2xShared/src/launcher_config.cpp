@@ -5,9 +5,11 @@
 #include "json_reader.h"
 
 #include <cctype>
+#include <cstdint>
 #include <cstdio>
 #include <cstdlib>
 #include <filesystem>
+#include <exception>
 #include <map>
 
 // config.json is a flat object of strings, numbers and booleans; a hand-rolled reader/writer covers it (no
@@ -184,6 +186,21 @@ namespace launcher
         }
     }
 
+    std::string normalizeServerPreset(const std::string &value)
+    {
+        // An unknown id means an older or hand-edited file: keep the typed address. A KNOWN but unplayable one
+        // heals to the server that exists, so the picker opens on it. A retired id (a preset a shipped build
+        // wrote and this one no longer offers) is read as the preset it meant, so a player keeps their server
+        // across the change.
+        std::string v = value;
+        for (const RetiredPreset &r : kRetiredPresets)
+            if (v == r.id)
+                v = r.now;
+        const ServerPreset *saved = findServerPreset(v);
+        return saved == nullptr ? std::string("custom")
+                                : (presetAvailable(*saved) ? v : std::string(playableFallback().id));
+    }
+
     std::string effectiveServer(const Config &c)
     {
         const ServerPreset *preset = findServerPreset(c.serverPreset);
@@ -314,16 +331,7 @@ namespace launcher
                     // a preset we do not know (an older or newer build's) falls back to the typed address
                     else if (key == "serverPreset")
                     {
-                        // An unknown id means an older or hand-edited file: keep the typed address. A KNOWN
-                        // but unplayable one heals to the server that exists, so the picker opens on it.
-                        // A retired id (a preset a shipped build wrote and this one no longer offers) is
-                        // read as the preset it meant, so a player keeps their server across the change.
-                        for (const RetiredPreset &r : kRetiredPresets)
-                            if (v == r.id)
-                                v = r.now;
-                        const ServerPreset *saved = findServerPreset(v);
-                        c.serverPreset = saved == nullptr ? std::string("custom")
-                                                          : (presetAvailable(*saved) ? v : std::string(playableFallback().id));
+                        c.serverPreset = normalizeServerPreset(v);   // Sprint 18 T2: shared with config.pcsx2.json
                         sawPreset = true;
                     }
                     else if (key == "micDevice") c.micDevice = v;
@@ -426,6 +434,114 @@ namespace launcher
             lines.push_back(std::string(head) + e.sentence);
         }
         return lines;
+    }
+
+    // Sprint 18 T6: the PCSX2 client's LAUNCH, refused with one sentence. The running game first (the blocker the player
+    // just made), then the disc (the DISC page's sentences), then PCSX2 and its BIOS (the PCSX2 page), then the name.
+    std::string launchBlockedReasonPcsx2(bool running, bool isoSet, bool discOk, const std::string &discMessage,
+                                         bool exeFound, int biosFiles, const std::string &dnsError)
+    {
+        if (running)
+            return "the game is running";
+        if (!isoSet)
+            return "no disc set yet: pick your SOCOM II image on the DISC page";
+        if (!discOk)
+            return discMessage.empty() ? std::string("not checked yet") : discMessage;
+        if (!exeFound)
+            return "no PCSX2 yet: SELECT or INSTALL one on the PCSX2 page";
+        if (biosFiles <= 0)
+            return "no BIOS yet: put your PS2 BIOS dump in PCSX2's bios folder (the PCSX2 page)";
+        return dnsError;
+    }
+
+    std::string pcsx2ExitLine(int exitCode, const std::string &emulogPath)
+    {
+        if (exitCode == 0)
+            return "PCSX2 closed";
+        return "PCSX2 exited with code " + std::to_string(exitCode) + " -- its log is " + emulogPath;
+    }
+
+    std::vector<std::string> pcsx2Args(const std::string &isoPath)
+    {
+        return {"-batch", isoPath};
+    }
+
+    std::string utf8Of(const std::filesystem::path &p)
+    {
+        const std::u8string u = p.u8string();
+        return std::string(reinterpret_cast<const char *>(u.data()), u.size());
+    }
+
+    namespace
+    {
+        // LATER 79: well-formed UTF-8 (RFC 3629) -- no stray continuation byte, no truncated sequence, no overlong
+        // form, no UTF-16 surrogate, nothing past U+10FFFF.
+        bool isValidUtf8(const std::string &s)
+        {
+            const size_t n = s.size();
+            size_t i = 0;
+            while (i < n)
+            {
+                const unsigned char c = static_cast<unsigned char>(s[i]);
+                size_t len = 0;
+                uint32_t cp = 0;
+                uint32_t least = 0;
+                if (c < 0x80)
+                {
+                    ++i;
+                    continue;
+                }
+                if ((c & 0xE0) == 0xC0)
+                {
+                    len = 2;
+                    cp = c & 0x1F;
+                    least = 0x80;
+                }
+                else if ((c & 0xF0) == 0xE0)
+                {
+                    len = 3;
+                    cp = c & 0x0F;
+                    least = 0x800;
+                }
+                else if ((c & 0xF8) == 0xF0)
+                {
+                    len = 4;
+                    cp = c & 0x07;
+                    least = 0x10000;
+                }
+                else
+                    return false;
+                if (i + len > n)
+                    return false;
+                for (size_t k = 1; k < len; ++k)
+                {
+                    const unsigned char cc = static_cast<unsigned char>(s[i + k]);
+                    if ((cc & 0xC0) != 0x80)
+                        return false;
+                    cp = (cp << 6) | (cc & 0x3F);
+                }
+                if (cp < least || cp > 0x10FFFF || (cp >= 0xD800 && cp <= 0xDFFF))
+                    return false;
+                i += len;
+            }
+            return true;
+        }
+    }
+
+    std::filesystem::path pathFromUtf8(const std::string &utf8)
+    {
+        // LATER 79: libc++'s path(u8string) throws "locale not supported" on bytes that are not UTF-8 (a hand-edited
+        // config.pcsx2.json); an empty path instead, which checkDisc reads as "no disc set" and probePcsx2 as none.
+        if (!isValidUtf8(utf8))
+            return std::filesystem::path();
+        try
+        {
+            return std::filesystem::path(std::u8string(reinterpret_cast<const char8_t *>(utf8.data()), utf8.size()));
+        }
+        catch (const std::exception &)
+        {
+            return std::filesystem::path();
+        }
     }
 
 

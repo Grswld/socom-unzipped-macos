@@ -4,6 +4,7 @@
 
 #include <cstddef>
 #include <cstdint>
+#include <filesystem>
 #include <string>
 #include <vector>
 
@@ -55,9 +56,12 @@ namespace launcher
     };
     constexpr size_t kGameRevisionCount = sizeof(kGameRevisions) / sizeof(kGameRevisions[0]);
     static_assert(kGameRevisionCount <= 32, "the installed-revision mask is a uint32_t: one bit per table row");
-    // What the greyed cell says when the build it names is not installed. The ONLINE page already drew this
-    // sentence on the community preset's row; it is one string now, so the two places cannot drift apart.
+    // What the greyed cell says when the build it names is not installed. The ONLINE page drew this sentence on
+    // the community preset's row too until Sprint 18 T2 gave that row its own note (kPresetComingSoonNote, below).
     constexpr const char *kRevisionMissingNote = "needs the r0004 game update -- planned";
+    // Sprint 18 T2 (R340 = R-B): what the greyed community preset row says, in both clients' views. Its own string,
+    // not the revision cell's: the server is "coming soon" whatever game version is installed.
+    constexpr const char *kPresetComingSoonNote = "coming soon";
 
     const GameRevision *findGameRevision(const std::string &id);
     // The ROW `id` names, or kGameRevisionCount when it is not one of ours.
@@ -290,6 +294,11 @@ namespace launcher
     // r0004 and this client cannot play that yet. Custom is always available: the player types the address.
     bool presetAvailable(const ServerPreset &preset);
 
+    // Sprint 18 T2: a stored serverPreset as both configs read it (config.json and config.pcsx2.json -- one rule,
+    // two callers). A retired id is read as the preset it meant (kRetiredPresets); an unknown id is "custom", so the
+    // typed address is kept; a known but unplayable one heals to the server that exists.
+    std::string normalizeServerPreset(const std::string &value);
+
     // The preset with that id, or nullptr when the id is not one of ours.
     const ServerPreset *findServerPreset(const std::string &id);
     // Sprint 16 L1b (#73): the preset whose address this is (a persona record holds effectiveServer's address), or
@@ -319,6 +328,26 @@ namespace launcher
 
     // What --selftest prints: "exit <code> <slug>: <sentence>" for every row of ExitCodes::kTable.
     std::vector<std::string> selftestExitLines();
+
+    // Sprint 18 T6: the PCSX2 client's LAUNCH. "" when LAUNCH may start PCSX2; else the one sentence the bar shows, in
+    // this order of precedence: the game is running; no disc set; the disc failed its check (`discMessage`, the DISC
+    // page's own sentence); no PCSX2; no BIOS; the server's name does not resolve (`dnsError`, pcsx2files::dnsServerFor's
+    // sentence -- Review Focus 3: never a PCSX2 started with DNS1 empty).
+    std::string launchBlockedReasonPcsx2(bool running, bool isoSet, bool discOk, const std::string &discMessage,
+                                         bool exeFound, int biosFiles, const std::string &dnsError);
+    // PCSX2's exit for the PLAY page's LAST RUN: 0 -> "PCSX2 closed"; else "PCSX2 exited with code N -- its log is <emulog>".
+    std::string pcsx2ExitLine(int exitCode, const std::string &emulogPath);
+    // The argv after pcsx2-qt.exe: {"-batch", iso} -- boot the disc, exit when the game stops. One place, so T0's answer
+    // on the command line (the spec's question 2) changes one line.
+    std::vector<std::string> pcsx2Args(const std::string &isoPath);
+
+    // Sprint 18 T6 review: the UTF-8 form of a path and back. The file dialogs answer UTF-8 (OPENFILENAMEW narrowed with
+    // utf8Of), the PCSX2 client keeps its paths in UTF-8 (config.pcsx2.json, startProcess's argv), and a UTF-8 path
+    // becomes a file through pathFromUtf8 -- never path(std::string), which reads the bytes in the ANSI code page.
+    std::string utf8Of(const std::filesystem::path &p);
+    // LATER 79: bytes that are not well-formed UTF-8 (a hand-edited config.pcsx2.json) give an empty path, never a
+    // throw; the callers read empty as no path.
+    std::filesystem::path pathFromUtf8(const std::string &utf8);
 
 
     // The environment socom2.exe is started with, as KEY=VALUE strings (PS2X_SOCOM2_PAD=1 always;
