@@ -2,23 +2,61 @@
 
 > **Generated -- do not edit.** Written by `python -m tools_py.changelog` from `git log` (R272): every merge commit on the first-parent line of the history it was rendered from, and on the first-parent line of each branch those merges brought in, grouped by the oldest `v*` tag that contains it. `python -m tools_py.changelog --check` exits 1 when this file is stale; regenerate at every merge to a sprint branch (in the merge's follow-up commit) and at the close. The rules are the module's docstring. The reasoning behind a merge is its commit message and the sprint plan's Log; the hand-written log this page replaced is `docs/archive/STATUS-log-to-2026-09-26.md`.
 
-444 merges (69 on the first-parent line, 375 from the branches they merged) in 13 sections: 12 tags and the merges since the newest. Each line: the date, the merge commit, the head of its subject, [the branch it merged]. An indented line came in on the branch the line above it merged.
+465 merges (70 on the first-parent line, 395 from the branches they merged) in 14 sections: 13 tags and the merges since the newest. Each line: the date, the merge commit, the head of its subject, [the branch it merged]. An indented line came in on the branch the line above it merged.
 
-## Since v0.16.0
+## Since v0.17.0
 
-219 merges.
+15 merges.
 
+- 2026-10-12 `46d17f06` merge main (v0.17.0, the Sprint 17 close) into sprint-18: docs conflicts resolved, LATER 73-81 kept [branch not named]
 - 2026-10-03 `7f1dd777` T10 the wizard skip, [UI] keys beside [DEV9/Eth] (Sprint 18 T10, R347) [agent/s18-wizard]
 - 2026-10-03 `ce2fe007` pathFromUtf8 guard, per-client ONLINE title, knob checker L-literal (LATER 79/80) [agent/s18-later79]
 - 2026-10-03 `c34777cc` Sprint 18's documents [agent/s18-t8]
 - 2026-10-03 `29785ca6` merge sprint-17 into sprint-18: the live documents forward before T8 [sprint-17]
-  - 2026-10-02 `3ff16398` research/83 §7 the entry-0 split reading [agent/s17-entry0-record]
-  - 2026-10-02 `7ebf6044` merge origin/main into sprint-17 after slice 2 (PR #131) [origin/main, main merged in]
+- 2026-10-03 `e39f640b` PLAY, DISC and ONLINE in the PCSX2 view; LAUNCH writes DEV9 + the pnach and starts PCSX2 (S18 T6) [agent/s18-ui2]
+- 2026-10-02 `fcedc692` the project icon as the exe's resource, a reproducible .ico from our own crest (S18 T9, R346) [agent/s18-icon]
+- 2026-10-02 `a0cce785` the client toggle, the rail per mode and the PCSX2 page (Sprint 18 T5) [agent/s18-ui1]
+- 2026-10-02 `483fcf52` the extract-argv UTF-8 test joins with the platform separator (Linux CI green) [agent/s18-posix-fix]
+- 2026-10-02 `641b61de` PCSX2 INSTALL [agent/s18-install]
+- 2026-10-02 `74eac5ca` the PCSX2 files [agent/s18-files]
+- 2026-10-02 `9ee48ba4` the client mode and the PCSX2 config [agent/s18-config]
+- 2026-10-02 `39b4abba` server/README documents socom-dns beside the four Horizon units (Sprint 18 T8, server) [agent/s18-readme-dns]
+- 2026-10-02 `b08937c0` socom-dns reads the box's muis.json shape (a dict of app-id lists) and exits with a message (T1) [agent/s18-dns-muis]
+- 2026-10-02 `866faad1` socom-dns, the box's name service on 53/udp beside the Horizon units (Sprint 18 T1, code) [agent/s18-dns]
+
+## v0.17.0
+
+Tagged 2026-10-12 on `b4eaa61c`.
+
+225 merges.
+
+- 2026-10-12 `b4eaa61c` Merge pull request #137 from Scotho/sprint-17 [sprint-17] (via `46d17f06`)
+  - 2026-10-11 `b16feba2` docs/research/h62, Harry62's work digested and mapped onto ours (R364), reviewed [agent/h62-digest]
+  - 2026-10-11 `d3ee58a9` research/89 and the Sprint 19 RE spec (PROPOSED) and plan, Fable-reviewed [agent/s19-spec]
+  - 2026-10-11 `1461ee49` the Sprint 17 close doc review's fixes (24 findings), reviewed PASS [agent/s17-close-docs]
+  - 2026-10-11 `16116fdc` PR #134, the macOS CI job (R358), into sprint-17; LATER 104 kept beside main's 105 [origin/main, main merged in]
+  - 2026-10-11 `d9064100` README remodelled after the god-of-war-recomp layout, status from KNOWN [agent/readme-remodel]
+  - 2026-10-09 `26939fab` PR #133, the macOS work on main (R349, R350) back into sprint-17 [origin/main, main merged in]
+  - 2026-10-08 `7e3167e8` the story to 2026-10-08 (eleven entries) and the October status note on the landing page [agent/story-oct]
+  - 2026-10-08 `fe1a7fc7` Grswld's macOS arm64 port by cherry-pick -x (19 commits, his authorship kept), docs/MACOS.md [agent/macos-port]
+  - 2026-10-04 `67ff370e` a PowerShell here-string commit message is one word to the guard (LATER 101) [agent/s17-hook-herestring]
+  - 2026-10-04 `df6ad05a` Sprint 17 task 98 drafted [agent/s17-lessons]
+  - 2026-10-04 `279fd33c` the invocation-stack pool stops above the main stack; reset clears its cache (LATER 82) [agent/s17-sched-stacks]
+  - 2026-10-03 `05365bf6` Horizon upstream #38 [agent/s17-horizon-38]
+  - 2026-10-03 `ff270d65` the VPK reader's three layout fixes (LATER 97) and the #91 voice-scale knob [agent/s17-audio-scale]
+  - 2026-10-03 `bbf2a702` #72 the five r0004 requests answered [agent/s17-mls-models]
+  - 2026-10-03 `bfba8a98` #104 fragment Z floor + ZBUF format clamp from PCSX2 (LATER 84, knob PS2X_GS_ZFLOOR) [agent/s17-zfloor]
+  - 2026-10-03 `4a63e7dd` upstream #265 pad bytes, #257 D_ENABLER mirror, #268 VCALLMSR (LATER 83) [agent/s17-upstream-ports]
+  - 2026-10-03 `99d66e06` research/85 the PS2 recomp projects audit, LATER 82-95, the licence rule (Sprint 17) [agent/s17-research85]
+- 2026-10-11 `70c62146` Merge pull request #134 from Scotho/feat/macos-ci [feat/macos-ci] (via `46d17f06`)
+- 2026-10-09 `4ca3f4f4` Merge pull request #133 from Scotho/feat/macos-experimental [feat/macos-experimental] (via `46d17f06`)
+- 2026-10-02 `3ff16398` research/83 §7 the entry-0 split reading [agent/s17-entry0-record] (via `29785ca6`)
+- 2026-10-02 `7ebf6044` merge origin/main into sprint-17 after slice 2 (PR #131) [origin/main, main merged in] (via `29785ca6`)
   - 2026-10-02 `a519c9bf` Merge pull request #131 from Scotho/slice2-s17-to-main [slice2-s17-to-main]
-  - 2026-10-02 `c6f7ce2e` a stale-mutex breaker retries the mkdir at once (the smoke flake); slow suite green [agent/s17-lock-smoke-flake]
-  - 2026-10-02 `60a2f175` run_gate clears a stage's old captures, a reused stamp mixes no runs (S17) [agent/s17-gate-stale-stamp]
-  - 2026-10-01 `d2693750` the CI changes step prints a long file list without a pipe that can close (PR #130's 679) [agent/s17-ci-head-pipe]
-  - 2026-10-01 `a6b68564` merge origin/main into sprint-17: the web teaser as a local demo replaces web/ (#130, the owner's word) [origin/main, main merged in]
+- 2026-10-02 `c6f7ce2e` a stale-mutex breaker retries the mkdir at once (the smoke flake); slow suite green [agent/s17-lock-smoke-flake] (via `29785ca6`)
+- 2026-10-02 `60a2f175` run_gate clears a stage's old captures, a reused stamp mixes no runs (S17) [agent/s17-gate-stale-stamp] (via `29785ca6`)
+- 2026-10-01 `d2693750` the CI changes step prints a long file list without a pipe that can close (PR #130's 679) [agent/s17-ci-head-pipe] (via `29785ca6`)
+- 2026-10-01 `a6b68564` merge origin/main into sprint-17: the web teaser as a local demo replaces web/ (#130, the owner's word) [origin/main, main merged in] (via `29785ca6`)
   - 2026-10-01 `be557831` Merge pull request #130: the web teaser as a local demo replaces web/ on main (the owner's word) [branch not named]
   - 2026-10-01 `05480b90` merge main into the redotcom teaser (local demo) [branch not named]
   - 2026-09-30 `dc3df54c` Merge branch 'agent/web-hotfix-look' into claude/web-viewer-playtest-fixes [agent/web-hotfix-look]
@@ -131,20 +169,10 @@
   - 2026-09-28 `edf101cf` Merge branch 'claude/web-look' into claude/web-viewer-playtest-fixes [claude/web-look]
   - 2026-09-28 `79e7d4ed` Merge branch 'claude/web-ui' into claude/web-viewer-playtest-fixes [claude/web-ui]
   - 2026-09-28 `105b408f` merge origin/main into the cloud sprint 2: one player [origin/main, main merged in]
-  - 2026-10-01 `8a5b8b87` no warning clock on a matched image, the native lookup cached, entry-0 split by path [agent/s17-vu1-dispatch]
-  - 2026-10-01 `9083afd0` research/83 the entry-0 swarm and 0x3e; the entry-0 shape scorer (Sprint 17 F) [agent/s17-entry0-swarm]
-  - 2026-10-01 `4912bcff` build.sh, the chain and run_detached refuse while the launcher runs (three reds) [agent/s17-launcher-busy]
-  - 2026-10-01 `65a1cda0` PS2X_VU1_NATIVE_33C8 defaults to 1, N1c adopted (Sprint 17 F, R345) [agent/s17-n1c-default]
-- 2026-10-03 `e39f640b` PLAY, DISC and ONLINE in the PCSX2 view; LAUNCH writes DEV9 + the pnach and starts PCSX2 (S18 T6) [agent/s18-ui2]
-- 2026-10-02 `fcedc692` the project icon as the exe's resource, a reproducible .ico from our own crest (S18 T9, R346) [agent/s18-icon]
-- 2026-10-02 `a0cce785` the client toggle, the rail per mode and the PCSX2 page (Sprint 18 T5) [agent/s18-ui1]
-- 2026-10-02 `483fcf52` the extract-argv UTF-8 test joins with the platform separator (Linux CI green) [agent/s18-posix-fix]
-- 2026-10-02 `641b61de` PCSX2 INSTALL [agent/s18-install]
-- 2026-10-02 `74eac5ca` the PCSX2 files [agent/s18-files]
-- 2026-10-02 `9ee48ba4` the client mode and the PCSX2 config [agent/s18-config]
-- 2026-10-02 `39b4abba` server/README documents socom-dns beside the four Horizon units (Sprint 18 T8, server) [agent/s18-readme-dns]
-- 2026-10-02 `b08937c0` socom-dns reads the box's muis.json shape (a dict of app-id lists) and exits with a message (T1) [agent/s18-dns-muis]
-- 2026-10-02 `866faad1` socom-dns, the box's name service on 53/udp beside the Horizon units (Sprint 18 T1, code) [agent/s18-dns]
+- 2026-10-01 `8a5b8b87` no warning clock on a matched image, the native lookup cached, entry-0 split by path [agent/s17-vu1-dispatch] (via `29785ca6`)
+- 2026-10-01 `9083afd0` research/83 the entry-0 swarm and 0x3e; the entry-0 shape scorer (Sprint 17 F) [agent/s17-entry0-swarm] (via `29785ca6`)
+- 2026-10-01 `4912bcff` build.sh, the chain and run_detached refuse while the launcher runs (three reds) [agent/s17-launcher-busy] (via `29785ca6`)
+- 2026-10-01 `65a1cda0` PS2X_VU1_NATIVE_33C8 defaults to 1, N1c adopted (Sprint 17 F, R345) [agent/s17-n1c-default] (via `29785ca6`)
 - 2026-09-30 `88b5f818` N2, the native 0x52 skinning pass behind PS2X_VU1_NATIVE_SKIN (Sprint 17 F) [agent/s17-n2-skin]
 - 2026-09-30 `07a2f64a` the 0x33c8 entry admits the walk's two last-bone shapes, A and the 0x02 loop (S17 F) [agent/s17-n1c-shapes]
 - 2026-09-30 `f630d5f1` the 0x33c8 entry admits 0x54 and 0x10 with their stores proven (Sprint 17 F, N1c) [agent/s17-n1c-linear]
