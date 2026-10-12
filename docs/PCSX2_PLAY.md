@@ -5,8 +5,8 @@ The launcher has two clients, NATIVE and PCSX2, switched in its top bar. NATIVE 
 SOCOM II a PlayStation 2 runs, set up from one window. Each client keeps its own settings; changing one never touches
 the other. The files and the switches for developers: `docs/DEVELOPING.md` "The launcher".
 
-**Status:** built and tested in parts; the run from a clean folder to our lobby is still owed (Sprint 18 T7).
-`docs/KNOWN.md` records it when it lands.
+**Status:** proven 2026-10-12 (Sprint 18 T7): from a clean folder, INSTALL, LAUNCH and the game's wizard reached our
+lobby (`docs/KNOWN.md` §1; `logs/s18_proof/`).
 
 ## 1. What you need
 
