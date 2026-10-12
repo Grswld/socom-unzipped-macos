@@ -6,6 +6,7 @@
 //
 // Pure: no raylib, no OS call, no environment read. socom2_kbm.cpp is the glue.
 #include "launcher/mapping.h"
+#include "ps2x/knobs.h"
 #include "runtime/host_crouch_shortcut.h"
 
 #include <algorithm>
@@ -198,7 +199,10 @@ namespace socom2_kbm
             {'Z', kPs2Square}, {'C', kPs2Circle},
             {'M', kPs2Select},
         };
-        s.steps = {0.40f, 0.55f, 0.70f, 0.85f, 1.00f};
+        // Standing speeds measured on r0001 (2026-10-12, PS2X_KBM_TRACE): push 0.36 ~7, 0.45 ~15, 0.50 ~19, 0.55 ~32,
+        // 0.60 ~39, 0.65 ~45, 0.70 ~53, 0.78 and up ~64 units/s. These steps give ~13 / 26 / 39 / 52 / 64: even.
+        // Crouched, every push under 0.838 is the one crouch walk; the top step stands the SEAL up and runs.
+        s.steps = {0.43f, 0.53f, 0.60f, 0.69f, 1.00f};
         s.start = static_cast<int>(s.steps.size()) - 1;
         return s;
     }
@@ -493,13 +497,12 @@ namespace socom2_kbm
     }
 
     // ---- On or off ----------------------------------------------------------------------------------------------
-    // PS2X_KBM's value (nullptr: unset). A scripted or replayed run gets the layer only when the knob says 1, the
-    // same rule as the mouse's (a hand on the desk must not move a parity run).
+    // PS2X_KBM's value (nullptr: unset) under the one flag rule (ps2x::knobs::flagValue). A scripted or replayed
+    // run gets the layer only when the knob turns it on, the same rule as the mouse's (a hand on the desk must not
+    // move a parity run).
     inline bool enabledFor(const char *knobValue, bool scripted)
     {
-        if (knobValue == nullptr || *knobValue == '\0')
-            return !scripted;
-        return std::string(knobValue) != "0";
+        return ps2x::knobs::flagValue(knobValue, !scripted);
     }
 
     // ---- Wheel speed --------------------------------------------------------------------------------------------
@@ -723,6 +726,76 @@ namespace socom2_kbm
         if (ry != 0.0f)
             out.axis[1] = axisByte(ry);
         return out;
+    }
+
+    // ---- PS2X_KBM_SCRIPT: timed inputs for a self-run (macOS will not let a script post keys without a permission) --
+    // "t:input[:hold],..." -- at t seconds after the first pad read, hold `input` (a controls.ini input name) for
+    // `hold` seconds (default 0.25); a wheel input is one notch at t.
+    struct ScriptEvent
+    {
+        double t = 0.0;
+        int input = 0;
+        double hold = 0.25;
+    };
+
+    inline std::vector<ScriptEvent> parseScript(const std::string &text, std::vector<std::string> *errors = nullptr)
+    {
+        std::vector<ScriptEvent> out;
+        std::stringstream list(text);
+        std::string item;
+        while (std::getline(list, item, ','))
+        {
+            item = detail::trim(item);
+            if (item.empty())
+                continue;
+            std::vector<std::string> f;
+            std::stringstream parts(item);
+            std::string part;
+            while (std::getline(parts, part, ':'))
+                f.push_back(part);
+            ScriptEvent e;
+            char *end = nullptr;
+            bool ok = f.size() >= 2 && f.size() <= 3;
+            if (ok)
+            {
+                e.t = std::strtod(f[0].c_str(), &end);
+                ok = end != f[0].c_str() && *end == '\0' && e.t >= 0.0;
+            }
+            if (ok)
+            {
+                e.input = inputFromName(f[1]);
+                ok = e.input != kUnknownInput;
+            }
+            if (ok && f.size() == 3)
+            {
+                e.hold = std::strtod(f[2].c_str(), &end);
+                ok = end != f[2].c_str() && *end == '\0' && e.hold > 0.0;
+            }
+            if (ok)
+                out.push_back(e);
+            else if (errors != nullptr)
+                errors->push_back("unreadable script event '" + item + "'");
+        }
+        return out;
+    }
+
+    // Is `input` held by the script at time `t`? Wheel notches are counted once by scriptWheel.
+    inline bool scriptHolds(const std::vector<ScriptEvent> &events, int input, double t)
+    {
+        for (const ScriptEvent &e : events)
+            if (e.input == input && !isWheel(input) && t >= e.t && t < e.t + e.hold)
+                return true;
+        return false;
+    }
+
+    // Wheel notches the script gives in (from, to].
+    inline int scriptWheel(const std::vector<ScriptEvent> &events, int wheel, double from, double to)
+    {
+        int n = 0;
+        for (const ScriptEvent &e : events)
+            if (e.input == wheel && e.t > from && e.t <= to)
+                ++n;
+        return n;
     }
 
     // The indicator's text ("SPEED 3/5  70%"), or "" when it is not shown at this moment.

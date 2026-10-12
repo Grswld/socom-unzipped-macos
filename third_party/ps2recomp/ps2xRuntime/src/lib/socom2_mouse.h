@@ -10,7 +10,14 @@
 namespace ps2_stubs
 {
     socom2_mouse::Config socom2MouseConfigFrom(const char *(*knob)(const char *));
-    void socom2MouseApply(uint8_t *rdram, KeyboardScope scope, Socom2PadState &next);   // writes look (spec revision 2026-10-04)
+    // The keyboard-and-mouse layer's part (socom2_kbm.h), when it is on: it presses R1 from its own bindings, and
+    // its aim-hold binding replaces the right button.
+    struct KbmMouse
+    {
+        bool aimHold = false;
+    };
+    void socom2MouseApply(uint8_t *rdram, KeyboardScope scope, Socom2PadState &next,
+                          const KbmMouse *kbm = nullptr);   // writes look (spec revision 2026-10-04)
     void socom2MouseFrame();
     void socom2MouseAddRaw(double dx, double dy);
     // socom2_mouse_gc.mm on Apple, socom2_mouse_gc_stub.cpp elsewhere. mainQueue: deliver on the main queue (the

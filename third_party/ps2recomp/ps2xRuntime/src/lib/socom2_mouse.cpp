@@ -1,5 +1,6 @@
 // Mouse look and right-click aim-hold -- the macOS fork's glue. See socom2_mouse.h.
 #include "socom2_mouse.h"
+#include "socom2_kbm.h"
 
 #include "ps2x/knobs.h"
 #include "runtime/socom2_addresses.h"
@@ -32,7 +33,21 @@ namespace ps2_stubs
 
         const Config &config()
         {
-            static const Config cfg = socom2MouseConfigFrom(ps2x::knob);
+            static const Config cfg = [] {
+                Config c = socom2MouseConfigFrom(ps2x::knob);
+                // macOS fork: controls.ini's [mouse] settings, where the knob does not say otherwise.
+                if (socom2KbmEnabled())
+                {
+                    const socom2_kbm::Settings &s = socom2KbmSettings();
+                    if (s.hasSens && ps2x::knob("PS2X_MOUSE_SENS") == nullptr)
+                        c.sens = s.sens;
+                    if (s.hasAimSens && ps2x::knob("PS2X_MOUSE_AIM_SENS") == nullptr)
+                        c.aimSens = s.aimSens;
+                    if (s.hasInvertY)
+                        c.invertY = ps2x::knobOn("PS2X_MOUSE_INVERT_Y", s.invertY);   // the knob wins when set
+                }
+                return c;
+            }();
             return cfg;
         }
 
@@ -46,10 +61,12 @@ namespace ps2_stubs
     socom2_mouse::Config socom2MouseConfigFrom(const char *(*knob)(const char *))
     {
         Config c;
-        // Off unless PS2X_MOUSE=1 (R349, 2026-10-09: upstream keeps mouse look experimental and off by default). A
-        // scripted or replayed run (the harness's input script or pad file) therefore never gets the mouse unless
-        // PS2X_MOUSE says so: a developer's hand on the desk must not move a parity run (final review, 2026-10-04).
-        c.enabled = ps2x::knobs::flagValue(knob("PS2X_MOUSE"), false);
+        // macOS fork (2026-10-12, the owner): on with the keyboard-and-mouse layer (PS2X_KBM, default on), where
+        // upstream keeps mouse look off (R349). A scripted or replayed run (the harness's input script or pad file)
+        // gets neither unless a knob says so: a developer's hand on the desk must not move a parity run (final
+        // review, 2026-10-04). PS2X_MOUSE wins either way.
+        const bool scripted = knob("PS2X_SOCOM2_INPUT_SCRIPT") != nullptr || knob("PS2X_SOCOM2_INPUT_FILE") != nullptr;
+        c.enabled = ps2x::knobs::flagValue(knob("PS2X_MOUSE"), socom2_kbm::enabledFor(knob("PS2X_KBM"), scripted));
         c.invertY = ps2x::knobs::flagValue(knob("PS2X_MOUSE_INVERT_Y"), false);
         if (const char *v = knob("PS2X_MOUSE_SENS"))
         {
@@ -84,7 +101,7 @@ namespace ps2_stubs
             g_acc.add(dx, dy);
     }
 
-    void socom2MouseApply(uint8_t *rdram, KeyboardScope scope, Socom2PadState &next)
+    void socom2MouseApply(uint8_t *rdram, KeyboardScope scope, Socom2PadState &next, const KbmMouse *kbm)
     {
         const Config &cfg = config();
         const bool active = cfg.enabled && scope == KeyboardScope::Full;
@@ -113,13 +130,15 @@ namespace ps2_stubs
             next.axis[0] = look.rx;
             next.axis[1] = look.ry;
         }
-        if (g_left.load(std::memory_order_relaxed) && !menuOpen)
+        // Left click is R1 -- unless the keyboard-and-mouse layer is on, whose bindings already pressed it.
+        if (kbm == nullptr && g_left.load(std::memory_order_relaxed) && !menuOpen)
             next.button[kPadR1] = 1u;
+        const bool aimDown = kbm != nullptr ? kbm->aimHold : g_right.load(std::memory_order_relaxed);
 
         // Right click: aim-hold (spec 4.3, research/87). START, and the keyboard's own zoom, are read from `next` as the
         // keyboard left it -- this runs before the pad is OR-ed in and before the probe's pulses.
         const bool kbZoom = next.button[kPadUp] != 0 || next.button[kPadDown] != 0;
-        const Pulse aim = g_aim.tick(AimInputs{g_right.load(std::memory_order_relaxed) && !menuOpen, mode,
+        const Pulse aim = g_aim.tick(AimInputs{aimDown && !menuOpen, mode,
                                                next.button[kPadStart] != 0 || menuOpen, kbZoom});
         if (aim == Pulse::Up)
             next.button[kPadUp] = 1u;
@@ -239,6 +258,8 @@ namespace ps2_stubs
             break;
         }
         g_captured.store(capture.captured(), std::memory_order_relaxed);
+        if (socom2KbmEnabled())
+            socom2KbmFrame(capture.buttonsLive(), in.focused);   // the layer's mouse buttons and wheel
         g_left.store(capture.buttonsLive() && left, std::memory_order_relaxed);
         g_right.store(capture.buttonsLive() && right, std::memory_order_relaxed);
         if (config().trace)

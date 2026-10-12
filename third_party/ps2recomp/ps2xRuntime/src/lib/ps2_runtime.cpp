@@ -7,6 +7,7 @@
 #include <optional>                       // Sprint 17 Q2: the shot queue re-made across an in-process restart
 #include "socom2_host_input.h"
 #include "socom2_mouse.h"               // macOS fork: the mouse
+#include "socom2_kbm.h"                 // macOS fork: keyboard-and-mouse play (the speed indicator)
 #include "runtime/host_thread_qos.h"   // macOS fork: the game thread on the performance cores
 #include "runtime/ps2_window_size.h"
 #include "ps2_log.h"
@@ -3278,6 +3279,7 @@ void PS2Runtime::run()
                 DrawText(line.c_str(), 4, 2, 10, RAYWHITE);
             }
         }
+        ps2_stubs::socom2KbmOverlay();   // macOS fork: the wheel-speed indicator, after the exported frame like the FPS line
         if (m_debugUiInitialized && m_debugUiDrawCallback)
         {
             m_debugUiDrawCallback(*this, m_debugUiUserData);

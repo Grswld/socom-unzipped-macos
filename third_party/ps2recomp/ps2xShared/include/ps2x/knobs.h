@@ -135,6 +135,10 @@
     X("PS2X_HOST_SCREENSHOT_LATEST", Dev, Path, "", "Rewrite this PNG with the current frame twice a second; every harness capture reads it.") \
     X("PS2X_INPUT_MAPPING", Shipping, Spec, "", "The profile pad and key tables (launcher/mapping.h toEnv); unset or unreadable = the default mapping (R174).") /* read: ps2xRuntime/src/lib/socom2_host_input.cpp:resolveMapping */ \
     X("PS2X_JALR_TRACE", Dev, Spec, "", "0xSRC[,...]: log the resolved target of indirect calls issued from these pcs.") \
+    X("PS2X_KBM", Dev, Flag, "1", "macOS fork: keyboard-and-mouse play (controls.ini); on unless scripted; 0 = upstream's keyboard.") \
+    X("PS2X_KBM_FILE", Dev, Path, "", "macOS fork: the controls file; unset = controls.ini beside the game (written with defaults if absent).") \
+    X("PS2X_KBM_SCRIPT", Dev, Spec, "", "macOS fork: t:input[:hold],... -- timed keys, mouse buttons and wheel notches into the layer.") \
+    X("PS2X_KBM_TRACE", Dev, Presence, "", "macOS fork: [kbm] lines -- wheel step, push, left-stick axes, the actor's ground speed a second.") \
     X("PS2X_LAUNCHER_API_BASE", Dev, Text, "https://socomunzipped.com", "Launcher tests only: a loopback base URL for the bug-report and stats calls.") \
     X("PS2X_LAUNCHER_PATCH_BASE", Dev, Text, "http://patch.psrewired.com", "Launcher tests only: a loopback base URL for the r0004 package download (#71).") \
     X("PS2X_LAUNCHER_PCSX2_API", Dev, Text, "https://api.github.com/repos/PCSX2/pcsx2/releases/latest", "Launcher tests only: a loopback URL for the PCSX2 release JSON that INSTALL reads (S18 T4).") \
@@ -149,7 +153,7 @@
     X("PS2X_MIC_DUMP_PLAYBACK", Dev, Path, "", "WAV of what lgaud 0x09 asked the headset to play ({title} expands to the window tag).") \
     X("PS2X_MIC_FAKE", Dev, Path, "", "Feed this WAV as the microphone; beats MIC_DEVICE (R115).") \
     X("PS2X_MIC_GAMEREAD_DUMP", Dev, Path, "", "WAV of what lgaud 0x08 served the game.") \
-    X("PS2X_MOUSE", Dev, Flag, "0", "Experimental (R349): 1 = mouse look, left click R1, right click aim-hold; 0 (default) = off.") \
+    X("PS2X_MOUSE", Dev, Flag, "1", "macOS fork: mouse look, left click R1, right click aim-hold; default follows PS2X_KBM (R349: off).") \
     X("PS2X_MOUSE_AIM_SENS", Dev, Float, "0.6", "macOS fork: mouse-look sensitivity multiplier while zoomed in (first person and the scope).") \
     X("PS2X_MOUSE_DEADZONE", Dev, Int, "24", "macOS fork: stick units (0-126) added to any non-zero mouse output, past the game's dead zone.") \
     X("PS2X_MOUSE_GC_MAINQ", Dev, Flag, "0", "macOS fork: 1 delivers GCMouse events on the main queue (batched per frame) instead of the mouse's own queue.") \

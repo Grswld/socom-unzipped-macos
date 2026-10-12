@@ -34,8 +34,9 @@ Scripted holds (`PS2X_SOCOM2_INPUT_SCRIPT`), position peeks at 5 Hz (`*0x408c58+
 - No movement at push 0.297 and 0.3125 (LY 90, 88); movement at 0.344 (LY 84). **Dead zone ~0.33**, consistent
   with the right stick's ~50/127 (mouse-look research).
 - Crouched (the spawn): ~10 units/s at every push from 0.34 to 0.47 -- the fixed crouch walk below 0.838.
-- Standing: ~12 units/s near 0.6-0.7, 60-80 at 0.75 and above. Tutorial pop-ups and terrain made the runs noisy,
-  so the law between is not fitted; the play-test trace (below) records it.
+- Standing, through the layer itself (`PS2X_KBM_SCRIPT` + `PS2X_KBM_TRACE`, steady seconds): push 0.36 ~7, 0.45
+  ~15, 0.50 ~19, 0.55 ~32, 0.60 ~39, 0.65 ~45, 0.70 ~53 units/s; full push ~64 (the run). Roughly linear above the
+  dead zone, saturating near 0.78. Crouched (the spawn): ~10.5 at every push under 0.838, then it stands and runs.
 - `actor+0x240` (the axis copy named in research/79) reads 0 on r0001: not the field there.
 
 ## Design
@@ -59,11 +60,12 @@ untouched; the layer replaces the keyboard step when it is on.
   (D-pad Down); M TacMap (SELECT); Esc pause (START); arrows the d-pad; IJKL the right stick.
   (menu): arrows and WASD the d-pad; wheel up/down the d-pad; Enter, Space, F and left click select (Cross);
   Backspace and right click back (Triangle); Esc START; Q / E L1 / R1 (text scrolling); Z Square; C Circle.
-- **Wheel speed.** Steps of left-stick push (default 0.40, 0.55, 0.70, 0.85, 1.00; start at the last). WASD
+- **Wheel speed.** Steps of left-stick push (default 0.43, 0.53, 0.60, 0.69, 1.00 -- ~13/26/39/52/64 units/s
+  standing, evenly spaced from the measurement; start at the last). WASD
   writes `128 -/+ round(push x 127)` on the held axes; a diagonal scales both so its length is the step's push.
   A wheel notch is one step, clamped (no wrap). The lowest step is refused below 0.36 (the dead zone plus a
   margin) when the file is read.
-- **Indicator.** A line drawn by the present loop (beside the FPS overlay): "SPEED 3/5 (70%)", for 2.5 s after a
+- **Indicator.** A line drawn by the present loop (beside the FPS overlay): "SPEED 3/5  60%", for 2.5 s after a
   change (`indicator = change`), always (`always`) or never (`off`).
 - **Menu mouse.** Wheel and buttons in the menu context are edge pulses (two pad reads down, two up, the mouse
   module's `PulseQueue` timing), so one notch is one menu step. No pointing at items: the game's menus have no

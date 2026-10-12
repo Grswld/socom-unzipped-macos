@@ -1,5 +1,6 @@
 #include "socom2_host_input.h"
 #include "socom2_mouse.h"
+#include "socom2_kbm.h"
 
 #include "raylib.h"
 #include "runtime/host_crouch_shortcut.h"
@@ -249,6 +250,9 @@ namespace ps2_stubs
             // R210: the one read of developer mode this file makes. The harness's launches all have it (R203);
             // a player's game gets the menu-and-typing half of the keyboard and plays on the pad.
             g_config.keyboardScope = socom2KeyboardScopeFor(ps2x::knobs::devMode());
+            // macOS fork: the keyboard-and-mouse layer plays the whole game from the keyboard (socom2_kbm.h).
+            if (socom2KbmEnabled())
+                g_config.keyboardScope = KeyboardScope::Full;
             if (const char *script = ps2x::knob("PS2X_SOCOM2_INPUT_SCRIPT"))
                 parseScript(script);
             resolveMapping();
@@ -257,7 +261,8 @@ namespace ps2_stubs
                                 ? hostGamepadSelect(hostGamepadIndexKnob(), kHostGamepadSlots, IsGamepadAvailable)
                                 : -1;
             std::cout << "[socom2-input] keyboard "
-                      << (g_config.keyboardScope == KeyboardScope::Full
+                      << (socom2KbmEnabled() ? "and mouse (macOS fork; controls.ini, docs/CONTROLS_MACOS.md)"
+                          : g_config.keyboardScope == KeyboardScope::Full
                               ? (g_config.mappingDefault ? "full, developer mode (arrows/WASD/IJKL, Enter=START, Backspace=SELECT, ZXCV=Square/Cross/Circle/Triangle, QE=L1/R1, 13=L2/R2, 24=L3/R3)"
                                                          : "full, developer mode (PS2X_INPUT_MAPPING's key table; WASD/IJKL sticks)")
                               : "menus and typing only (d-pad, Enter=START, Backspace=SELECT, ZXCV=Square/Cross/Circle/Triangle; R210)")
@@ -388,11 +393,17 @@ namespace ps2_stubs
                       KEY_I == 'I' && KEY_K == 'K', "socom2ApplyKeyboard's stick keys are raylib's key codes");
         // R210: the key table and the WASD/IJKL sticks, under the scope decided once in initialise() -- the whole
         // table in developer mode (the harness's path), the menu-and-typing buttons alone for a player.
-        socom2ApplyKeyboard(g_config.mapping, g_config.keyboardScope, IsKeyDown, next);
-        socom2MouseApply(rdram, g_config.keyboardScope, next);   // macOS fork: the mouse (socom2_mouse.h)
+        // macOS fork: the keyboard-and-mouse layer, when on, replaces the key table (socom2_kbm.h).
+        bool kbmTriangleLight = false;
+        KbmMouse kbmMouse;
+        if (socom2KbmEnabled())
+            socom2KbmApply(rdram, next, kbmMouse.aimHold, kbmTriangleLight);
+        else
+            socom2ApplyKeyboard(g_config.mapping, g_config.keyboardScope, IsKeyDown, next);
+        socom2MouseApply(rdram, g_config.keyboardScope, next, socom2KbmEnabled() ? &kbmMouse : nullptr);   // macOS fork: the mouse (socom2_mouse.h)
         // R139: a full Triangle from any source outranks the crouch shortcut's light one (tracked stage by stage).
-        bool fullTriangle = next.button[kPadTriangle] != 0;
-        bool lightTriangle = false;
+        bool fullTriangle = next.button[kPadTriangle] != 0 && !kbmTriangleLight;
+        bool lightTriangle = kbmTriangleLight;
 
         // Gamepad 0 (raylib: XInput / DirectInput), OR-ed with the keyboard like the pad file is. The
         // generic pad path (ps2_pad.cpp) read it already, but SOCOM's pad is served by this poll once

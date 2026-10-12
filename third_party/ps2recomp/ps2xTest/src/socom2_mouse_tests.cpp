@@ -280,7 +280,7 @@ void register_socom2_mouse_tests()
         tc.Run("unset knobs give the defaults", [](TestCase &t)
         {
             const Config c = ps2_stubs::socom2MouseConfigFrom([](const char *) -> const char * { return nullptr; });
-            t.IsFalse(c.enabled, "off by default (R349: experimental, PS2X_MOUSE=1 turns it on)");
+            t.IsTrue(c.enabled, "on by default in the macOS fork, with the keyboard-and-mouse layer (upstream R349 keeps it off)");
             t.Equals(c.sens, 1.0f, "sens 1");
             t.IsFalse(c.invertY, "not inverted");
             t.Equals(c.deadzone, 0x18, "dead zone 0x18");
@@ -309,6 +309,15 @@ void register_socom2_mouse_tests()
             t.Equals(bad.sens, 1.0f, "unparseable sens ignored");
         });
 
+        tc.Run("the fork's default follows the keyboard-and-mouse layer; PS2X_MOUSE wins either way", [](TestCase &t)
+        {
+            t.IsFalse(ps2_stubs::socom2MouseConfigFrom([](const char *n) -> const char * {
+                          return std::strcmp(n, "PS2X_KBM") == 0 ? "0" : nullptr; }).enabled, "PS2X_KBM=0: the mouse is off too");
+            t.IsTrue(ps2_stubs::socom2MouseConfigFrom([](const char *n) -> const char * {
+                         if (std::strcmp(n, "PS2X_KBM") == 0) return "0";
+                         return std::strcmp(n, "PS2X_MOUSE") == 0 ? "1" : nullptr; }).enabled, "PS2X_KBM=0 + PS2X_MOUSE=1: on");
+        });
+
         tc.Run("Menus scope or PS2X_MOUSE=0: the pad state is left byte for byte", [](TestCase &t)
         {
             ps2_stubs::Socom2PadState before;
@@ -317,11 +326,11 @@ void register_socom2_mouse_tests()
             ps2_stubs::socom2MouseAddRaw(500.0, 500.0);
             ps2_stubs::socom2MouseApply(nullptr, ps2_stubs::KeyboardScope::Menus, after);
             t.IsTrue(std::memcmp(&before, &after, sizeof(before)) == 0, "Menus scope: untouched");
-            // R349: with PS2X_MOUSE unset the mouse is off, so Full scope leaves the pad alone too.
+            // Full scope with no RAM and no capture: nothing to read, nothing captured, the pad alone.
             ps2_stubs::Socom2PadState full = before;
             ps2_stubs::socom2MouseAddRaw(500.0, 500.0);
             ps2_stubs::socom2MouseApply(nullptr, ps2_stubs::KeyboardScope::Full, full);
-            t.IsTrue(std::memcmp(&before, &full, sizeof(before)) == 0, "Full scope, PS2X_MOUSE unset: untouched");
+            t.IsTrue(std::memcmp(&before, &full, sizeof(before)) == 0, "Full scope, no RAM, not captured: untouched");
         });
     });
 

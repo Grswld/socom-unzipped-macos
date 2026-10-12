@@ -196,6 +196,8 @@ void register_socom2_kbm_tests()
             t.IsFalse(enabledFor(nullptr, true), "scripted: off");
             t.IsTrue(enabledFor("1", true), "scripted with PS2X_KBM=1: on");
             t.IsFalse(enabledFor("0", false), "PS2X_KBM=0: off");
+            t.IsFalse(enabledFor("off", false), "the one flag rule: off is off");
+            t.IsTrue(enabledFor("", false), "empty is unset");
         });
     });
 
@@ -210,14 +212,14 @@ void register_socom2_kbm_tests()
             o = apply(s, Context::Game, keys({'W'}, 0, 0, 2), st);
             t.IsTrue(o.stepChanged, "two notches down change the step");
             t.Equals(st.speed.step(), 2, "step 3 of 5");
-            t.Equals(o.axis[3], axisByte(-0.70f), "W at 0.70");
+            t.Equals(o.axis[3], axisByte(-s.steps[2]), "W at the third step");
             o = apply(s, Context::Game, keys({'W'}, 0, 0, 9), st);
             t.Equals(st.speed.step(), 0, "clamped at the bottom");
-            t.Equals(o.axis[3], axisByte(-0.40f), "W at the lowest step");
+            t.Equals(o.axis[3], axisByte(-s.steps[0]), "W at the lowest step");
             o = apply(s, Context::Game, keys({'W'}, 0, 0, 1), st);
             t.IsFalse(o.stepChanged, "no change below the bottom");
             o = apply(s, Context::Game, keys({'S'}, 0, 1, 0), st);
-            t.Equals(o.axis[3], axisByte(0.55f), "one notch up: S at 0.55");
+            t.Equals(o.axis[3], axisByte(s.steps[1]), "one notch up: S at the second step");
         });
 
         tc.Run("the lowest step still moves: its push clears the measured dead zone (0.33)", [](TestCase &t)
@@ -233,11 +235,11 @@ void register_socom2_kbm_tests()
         {
             const Settings s = defaults();
             State st = freshState(s);
-            apply(s, Context::Game, keys({}, 0, 0, 2), st);   // 0.70
+            apply(s, Context::Game, keys({}, 0, 0, 2), st);   // the third step
             PadOut o = apply(s, Context::Game, keys({'W', 340}), st);
             t.Equals(o.axis[3], static_cast<uint8_t>(0x00), "shift: full");
             o = apply(s, Context::Game, keys({'W', 'D'}), st);
-            const float d = 0.70f / std::sqrt(2.0f);
+            const float d = s.steps[2] / std::sqrt(2.0f);
             t.Equals(o.axis[3], axisByte(-d), "diagonal forward component");
             t.Equals(o.axis[2], axisByte(d), "diagonal right component");
             o = apply(s, Context::Game, keys({'A', 'D'}), st);
@@ -269,12 +271,30 @@ void register_socom2_kbm_tests()
         tc.Run("the indicator shows the step for 2.5 s after a change, always, or never", [](TestCase &t)
         {
             Settings s = defaults();
-            t.Equals(indicatorLine(s, 2, 1.0), std::string("SPEED 3/5  70%"), "shown after a change");
+            t.Equals(indicatorLine(s, 2, 1.0), std::string("SPEED 3/5  60%"), "shown after a change");
             t.Equals(indicatorLine(s, 2, 3.0), std::string(), "hidden later");
             s.indicator = Indicator::Always;
             t.Equals(indicatorLine(s, 4, 99.0), std::string("SPEED 5/5  100%"), "always");
             s.indicator = Indicator::Off;
             t.Equals(indicatorLine(s, 4, 0.0), std::string(), "off");
+        });
+    });
+
+    MiniTest::Case("Socom2KbmScript", [](TestCase &tc)
+    {
+        tc.Run("timed holds and wheel notches; a bad event is reported and skipped", [](TestCase &t)
+        {
+            std::vector<std::string> errors;
+            const std::vector<ScriptEvent> ev = parseScript("10:w:4, 15:wheel_down, 15.5:wheel_down, 20:mouse_left, 21:nope, x:w", &errors);
+            t.Equals(ev.size(), static_cast<size_t>(4), "four events");
+            t.Equals(errors.size(), static_cast<size_t>(2), "two refused");
+            t.IsFalse(scriptHolds(ev, 'W', 9.9), "before");
+            t.IsTrue(scriptHolds(ev, 'W', 12.0), "during");
+            t.IsFalse(scriptHolds(ev, 'W', 14.0), "after the hold");
+            t.IsTrue(scriptHolds(ev, kMouseLeft, 20.1), "default hold 0.25 s");
+            t.IsFalse(scriptHolds(ev, kWheelDown, 15.0), "a wheel is never held");
+            t.Equals(scriptWheel(ev, kWheelDown, 14.0, 16.0), 2, "two notches in the window");
+            t.Equals(scriptWheel(ev, kWheelDown, 15.0, 16.0), 1, "the window is (from, to]");
         });
     });
 
