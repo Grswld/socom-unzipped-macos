@@ -84,6 +84,33 @@ default `scope`): the aim-hold sends UP until the view mode reaches a zoom level
 rifle goes 0 -> 1 -> 5), at most three presses, a dropped UP re-sent once, and a weapon with no zoom stays in first
 person. The release restores the stored mode as before. `first_person` keeps the one-step behaviour (upstream's).
 
+## Play-test 2 feedback (2026-10-13, owner, relayed; on hold: diagnosis only)
+
+1. **Wheel speed misses notches / changes slowly.** Read-only causes, most likely first:
+   - raylib 5.5's GLFW scroll callback *assigns* `currentWheelMove` (rcore_desktop_glfw.c `MouseScrollCallback`),
+     so every scroll event but the last in a frame is lost. macOS sends several per notch from smooth-scrolling
+     mice and the trackpad, and GLFW scales precise deltas by 0.1 (cocoa_window.m `scrollWheel`): a notch can
+     arrive as fractions that mostly vanish before `socom2KbmFrame` sums them to 1.0.
+   - `socom2KbmFrame`'s fraction carry never resets: residue in one direction eats the first notch back.
+   - Notches count only in the game context and with focus; in a popup they are menu d-pad pulses.
+   - Crouched, steps 1-4 are one speed (play-test 1), so a registered step can look like a missed one.
+   Fix: chain our own GLFW scroll callback (`GetWindowHandle()`, `glfwSetScrollCallback` keeping raylib's) that
+   adds every event into an atomic; one step per non-precise event (sign only, no acceleration overshoot);
+   precise deltas accumulate to a threshold, the carry cleared on a direction change or 250 ms idle. Trace raw
+   events per frame under `PS2X_KBM_TRACE`. Then the stance item (stand on a wheel step while crouched, or show it).
+2. **Some clicks do not fire.** Read-only causes:
+   - The left button is a *level* sampled twice: `IsMouseButtonDown` once per presented frame (~54/s) into an
+     atomic, then the game thread reads it once per pad read (~28/s). A click whose down time falls between two
+     pad reads (short taps, ~30-50 ms) never reaches R1; two quick clicks with no read in the gap merge into one
+     press (a semi-auto weapon fires once).
+   - Recapture swallows: after focus loss or Esc, the click that recaptures is eaten, and `m_swallow` holds until
+     *both* buttons are up, so left clicks while right is held after a recapture are dropped.
+   - Not the zoom: aim-hold pulses only the D-pad. The game may refuse fire during the zoom-in transition
+     (unmeasured).
+   Fix: the main thread counts press edges (`IsMouseButtonPressed`) per button into atomics; the game thread
+   turns each counted press into at least 2 reads held + 1 released (a per-button stretcher), on top of the live
+   level for held fire. Swallow only the recapture click's own button. Trace presses vs R1 reads.
+
 ## Tests (failing first, `ps2x_tests`, no window)
 
 The pure core (`runtime/socom2_kbm_core.h`): the ini parser (defaults, every section, bad lines kept out, unknown

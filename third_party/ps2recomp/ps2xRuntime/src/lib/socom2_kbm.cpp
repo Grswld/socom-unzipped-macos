@@ -170,6 +170,8 @@ namespace ps2_stubs
                 line << std::fixed << std::setprecision(2) << "[kbm] ctx=" << (game ? "game" : "menu") << " step="
                      << st.speed.step() + 1 << "/" << st.speed.count() << " push=" << std::lround(out.push * 100.0f) << "% lx=" << int(out.axis[2])
                      << " ly=" << int(out.axis[3]);
+                if (game)
+                    line << " stance=" << int(rdram[mode.actor + 0x374u]);   // the wished stance byte (research/79)
                 if (game && s_allGame && s_actor == mode.actor && windowDone)
                     line << " speed=" << std::hypot(x - s_x, z - s_z) * 1000.0 / double(t - s_windowMs) << "/s";
                 std::cout << line.str() << std::endl;

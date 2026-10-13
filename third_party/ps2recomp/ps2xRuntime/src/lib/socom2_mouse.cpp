@@ -7,6 +7,7 @@
 #include "raylib.h"
 
 #include <atomic>
+#include <cstdio>
 #include <chrono>
 #include <cstdlib>
 #include <cstring>
@@ -139,6 +140,16 @@ namespace ps2_stubs
         // Right click: aim-hold (spec 4.3, research/87). START, and the keyboard's own zoom, are read from `next` as the
         // keyboard left it -- this runs before the pad is OR-ed in and before the probe's pulses.
         const bool kbZoom = next.button[kPadUp] != 0 || next.button[kPadDown] != 0;
+        static const bool s_pulseSet = [] {
+            int held = 0, gap = 0;
+            if (const char *v = ps2x::knob("PS2X_MOUSE_AIM_PULSE"); v != nullptr && std::sscanf(v, "%d,%d", &held, &gap) == 2)
+            {
+                g_aim.setPulseTiming(held, gap);
+                std::cout << "[mouse] aim-hold pulse " << held << " held, " << gap << " released reads" << std::endl;
+            }
+            return true;
+        }();
+        (void)s_pulseSet;
         const Pulse aim = g_aim.tick(AimInputs{aimDown && !menuOpen, mode,
                                                next.button[kPadStart] != 0 || menuOpen, kbZoom, cfg.aimScope});
         if (aim == Pulse::Up)
@@ -210,7 +221,7 @@ namespace ps2_stubs
             }
             // While probe pulses are queued, every read is logged (the probe counts answered pulses read by read).
             const bool probing = !g_probeQueue.idle();
-            if (probing || aim != Pulse::None || dx != 0.0 || dy != 0.0 || pitched || look.moved || stick || turning || m != g_lastMode || probe != Pulse::None || next.button[kPadUp] ||
+            if (probing || aim != Pulse::None || g_aim.state() != AimState::Idle || dx != 0.0 || dy != 0.0 || pitched || look.moved || stick || turning || m != g_lastMode || probe != Pulse::None || next.button[kPadUp] ||
                 next.button[kPadDown])
                 std::cout << "[mouse] dx=" << dx << " dy=" << dy << " carry=" << g_look.carryX << "," << g_look.carryY
                           << " rx=" << int(next.axis[0]) << " ry=" << int(next.axis[1])
@@ -218,7 +229,11 @@ namespace ps2_stubs
                           << " mode=" << (mode.ok ? int(mode.mode) : -1) << " actor=0x" << std::hex << mode.actor
                           << std::dec << " angvel=" << av[0] << "," << av[1] << "," << av[2] << " direct=" << direct
                           << " aim=" << int(g_aim.state()) << " ev=" << g_aim.lastEvent()
-                          << " pitch=" << pitch << std::endl;
+                          << " pitch=" << pitch;
+            if (mode.ok && g_aim.state() != AimState::Idle)
+                std::cout << " quat=" << f32(mode.actor + kQuatNow) << "," << f32(mode.actor + kQuatNow + 4) << ","
+                          << f32(mode.actor + kQuatNow + 8) << "," << f32(mode.actor + kQuatNow + 12);
+            std::cout << std::endl;
             g_lastMode = m;
         }
     }
@@ -239,7 +254,9 @@ namespace ps2_stubs
         const bool left = IsMouseButtonDown(MOUSE_BUTTON_LEFT);
         const bool right = IsMouseButtonDown(MOUSE_BUTTON_RIGHT);
         CaptureInputs in;
-        in.enabled = g_active.load(std::memory_order_relaxed);
+        // PS2X_MOUSE_NO_CAPTURE: a self-run never takes the cursor from the person at the desk.
+        static const bool s_noCapture = ps2x::knob("PS2X_MOUSE_NO_CAPTURE") != nullptr;
+        in.enabled = g_active.load(std::memory_order_relaxed) && !s_noCapture;
         in.focused = IsWindowFocused();
         in.inMission = g_inMission.load(std::memory_order_relaxed);
         in.clickPressed = IsMouseButtonPressed(MOUSE_BUTTON_LEFT) || IsMouseButtonPressed(MOUSE_BUTTON_RIGHT);

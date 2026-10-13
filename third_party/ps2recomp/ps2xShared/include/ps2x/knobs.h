@@ -154,10 +154,12 @@
     X("PS2X_MIC_FAKE", Dev, Path, "", "Feed this WAV as the microphone; beats MIC_DEVICE (R115).") \
     X("PS2X_MIC_GAMEREAD_DUMP", Dev, Path, "", "WAV of what lgaud 0x08 served the game.") \
     X("PS2X_MOUSE", Dev, Flag, "1", "macOS fork: mouse look, left click R1, right click aim-hold; default follows PS2X_KBM (R349: off).") \
+    X("PS2X_MOUSE_AIM_PULSE", Dev, Spec, "", "macOS fork: `held,gap` reads per aim-hold D-pad press (default 2,2); a zoom-speed experiment.") \
     X("PS2X_MOUSE_AIM_SENS", Dev, Float, "0.6", "macOS fork: mouse-look sensitivity multiplier while zoomed in (first person and the scope).") \
     X("PS2X_MOUSE_DEADZONE", Dev, Int, "24", "macOS fork: stick units (0-126) added to any non-zero mouse output, past the game's dead zone.") \
     X("PS2X_MOUSE_GC_MAINQ", Dev, Flag, "0", "macOS fork: 1 delivers GCMouse events on the main queue (batched per frame) instead of the mouse's own queue.") \
     X("PS2X_MOUSE_INVERT_Y", Dev, Flag, "0", "macOS fork: 1 inverts the mouse's vertical look.") \
+    X("PS2X_MOUSE_NO_CAPTURE", Dev, Presence, "", "macOS fork: never capture the cursor (self-runs: the desk keeps its mouse); look takes no mouse input.") \
     X("PS2X_MOUSE_PROBE", Dev, Presence, "", "macOS fork: the O key queues 50 D-pad UP/DOWN pairs at the aim-hold timing (the ratchet probe).") \
     X("PS2X_MOUSE_SENS", Dev, Float, "1.0", "macOS fork: right-stick units per raw mouse count.") \
     X("PS2X_MOUSE_TRACE", Dev, Presence, "", "macOS fork: [mouse] lines -- deltas, carry, axes, aim-hold state, the view mode -- when any changes.") \

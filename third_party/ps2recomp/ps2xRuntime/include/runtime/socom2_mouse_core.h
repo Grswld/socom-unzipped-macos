@@ -182,13 +182,19 @@ namespace socom2_mouse
                     return Pulse::None;
                 m_current = m_queue.front();
                 m_queue.pop_front();
-                m_phase = kPulseHeldReads + kPulseGapReads;
+                m_phase = m_held + m_gap;
             }
-            const Pulse out = m_phase > kPulseGapReads ? m_current : Pulse::None;
+            const Pulse out = m_phase > m_gap ? m_current : Pulse::None;
             --m_phase;
             return out;
         }
         bool idle() const { return m_phase == 0 && m_queue.empty(); }
+        // Reads held and released per pulse (at least 1 each); the next pulse starts with the next read.
+        void setTiming(int held, int gap)
+        {
+            m_held = held < 1 ? 1 : held;
+            m_gap = gap < 1 ? 1 : gap;
+        }
         void clear()
         {
             m_queue.clear();
@@ -199,6 +205,7 @@ namespace socom2_mouse
         std::deque<Pulse> m_queue;
         Pulse m_current = Pulse::None;
         int m_phase = 0;   // reads left in the pulse in flight (held reads, then gap reads)
+        int m_held = kPulseHeldReads, m_gap = kPulseGapReads;
     };
 
     // ---- Cursor capture (spec section 3.2, step 3) ----------------------------------------------------------
@@ -448,6 +455,7 @@ namespace socom2_mouse
             return m_queue.tick();
         }
         AimState state() const { return m_state; }
+        void setPulseTiming(int held, int gap) { m_queue.setTiming(held, gap); }
         const char *lastEvent() const { return m_event; }
 
     private:
