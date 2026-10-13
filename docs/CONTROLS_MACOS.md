@@ -43,7 +43,8 @@ screen). Another preset moves the functions between the PS2 buttons; rebind in `
 | Scroll text | Q / E | L1 / R1 |
 | Other prompts | Z (Square), C (Circle), M (SELECT) | |
 
-The mouse in a menu is one step per wheel notch and one press per click; it does not point at items.
+The mouse in a menu is one step per wheel notch and one press per click; it does not point at items. Every click
+reaches the game, however short: a tap between two of the game's pad reads (about 28 a second) is held for two reads.
 
 ## Walk speed on the wheel
 
@@ -63,8 +64,12 @@ Measured standing on r0001 (2026-10-12, `PS2X_KBM_TRACE`):
 
 - **Dead zone:** the game ignores a push under about 0.33. A step below 0.36 is raised to 0.36 when the file is
   read, so the lowest step always moves.
-- **Crouched:** the game has a single crouch-walk speed (about 10 units/s), so steps 1-4 all crouch-walk. The top
-  step, like a full stick on the console, stands the SEAL up and runs.
+- **Crouched:** the game has a single crouch-walk speed (about 10-14 units/s), and the top step, like a full stick
+  on the console, stands the SEAL up and runs. So a wheel step below the top stands a crouched SEAL up first
+  (`crouched = stand` in `[speed]`, the default); `crouched = keep` leaves the stance alone.
+- **Every notch counts:** the game reads each scroll event (macOS), one step per notch of a wheel however fast it
+  turns; a trackpad or Magic Mouse steps once per 30 points of scrolling, and its glide after the finger lifts is
+  ignored.
 
 ## controls.ini
 
@@ -80,8 +85,8 @@ names. When the file is absent, the game writes it with the defaults above and c
   - the PS2 buttons: `up down left right cross circle square triangle l1 l2 l3 r1 r2 r3 start select`;
   - movement and look: `move_forward move_back move_left move_right look_up look_down look_left look_right`;
   - the layer's own: `crouch prone aim_hold speed_up speed_down run`.
-- **`[speed]`:** `steps` is 1 to 10 pushes in (0, 1], `start` is the step a session begins on (1-based), and
-  `indicator` is `change`, `always` or `off`.
+- **`[speed]`:** `steps` is 1 to 10 pushes in (0, 1], `start` is the step a session begins on (1-based),
+  `indicator` is `change`, `always` or `off`, and `crouched` is `stand` or `keep`.
 - **`[mouse]`:** `sensitivity`, `aim_sensitivity` and `invert_y`; the `PS2X_MOUSE_*` knobs win when they are set.
   `aim_zoom = scope` (the default) makes the held right button zoom into the weapon's first scope level;
   `first_person` steps in only to first person. A weapon with no scope stops at first person.

@@ -262,6 +262,9 @@ namespace ps2_stubs
         in.clickPressed = IsMouseButtonPressed(MOUSE_BUTTON_LEFT) || IsMouseButtonPressed(MOUSE_BUTTON_RIGHT);
         in.escPressed = IsKeyPressed(KEY_ESCAPE);
         in.buttonsDown = left || right;
+        in.pressedMask = static_cast<uint8_t>((IsMouseButtonPressed(MOUSE_BUTTON_LEFT) ? kCaptureLeft : 0u) |
+                                              (IsMouseButtonPressed(MOUSE_BUTTON_RIGHT) ? kCaptureRight : 0u));
+        in.downMask = static_cast<uint8_t>((left ? kCaptureLeft : 0u) | (right ? kCaptureRight : 0u));
         switch (capture.step(in))
         {
         case CaptureAction::Capture:
@@ -277,9 +280,15 @@ namespace ps2_stubs
         }
         g_captured.store(capture.captured(), std::memory_order_relaxed);
         if (socom2KbmEnabled())
-            socom2KbmFrame(capture.buttonsLive(), in.focused);   // the layer's mouse buttons and wheel
-        g_left.store(capture.buttonsLive() && left, std::memory_order_relaxed);
-        g_right.store(capture.buttonsLive() && right, std::memory_order_relaxed);
+        {
+            // The layer's mouse buttons and wheel; only the recapturing button is swallowed (play-test 2).
+            const uint8_t live = !capture.captured() ? 0u
+                                 : static_cast<uint8_t>(0x1Cu | (capture.buttonLive(kCaptureLeft) ? 1u : 0u) |
+                                                        (capture.buttonLive(kCaptureRight) ? 2u : 0u));
+            socom2KbmFrame(live, in.focused);
+        }
+        g_left.store(capture.buttonLive(kCaptureLeft) && left, std::memory_order_relaxed);
+        g_right.store(capture.buttonLive(kCaptureRight) && right, std::memory_order_relaxed);
         if (config().trace)
             socom2MouseGcReport();
         if (config().probe && IsKeyPressed(KEY_O))

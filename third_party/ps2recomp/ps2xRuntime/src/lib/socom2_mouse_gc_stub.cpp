@@ -5,4 +5,5 @@ namespace ps2_stubs
 {
     bool socom2MouseGcStart(bool) { return false; }
     void socom2MouseGcReport() {}
+    bool socom2ScrollMonitorStart(void (*)(double, bool, bool, double)) { return false; }
 }

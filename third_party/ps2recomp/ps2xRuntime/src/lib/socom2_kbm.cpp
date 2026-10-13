@@ -1,5 +1,6 @@
 // Keyboard-and-mouse play -- the macOS fork's glue. See socom2_kbm.h.
 #include "socom2_kbm.h"
+#include "socom2_mouse.h"
 
 #include "ps2x/exe_dir.h"
 #include "ps2x/knobs.h"
@@ -26,6 +27,15 @@ namespace ps2_stubs
         std::atomic<uint8_t> g_buttonsMenu{0};   // the same, ungated but for focus (no capture in a menu)
         std::atomic<int> g_wheelUp{0};
         std::atomic<int> g_wheelDown{0};
+        // Press edges counted between pad reads, per button, per context (a tap can fall between two reads).
+        std::atomic<int> g_pressGame[5] = {};
+        std::atomic<int> g_pressMenu[5] = {};
+        bool g_focused = false;   // main thread only: the scroll monitor runs there
+        bool traceOn()
+        {
+            static const bool on = ps2x::knob("PS2X_KBM_TRACE") != nullptr;
+            return on;
+        }
         // Game thread -> main thread.
         std::atomic<int> g_step{0};
         std::atomic<int64_t> g_changedAtMs{-1000000};   // steady clock, ms
@@ -130,6 +140,33 @@ namespace ps2_stubs
             in.wheelUp += socom2_kbm::scriptWheel(g_script, kWheelUp, lastT, g_scriptT);
             in.wheelDown += socom2_kbm::scriptWheel(g_script, kWheelDown, lastT, g_scriptT);
         }
+        // The mouse buttons, stretched: every counted press reaches the game as an edge (play-test 2).
+        {
+            static ClickStretch s_stretch[5];
+            const uint8_t level = in.mouseButtons;
+            uint8_t stretched = 0;
+            for (int b = 0; b < 5; ++b)
+            {
+                const int game_ = g_pressGame[b].exchange(0, std::memory_order_relaxed);
+                const int menu_ = g_pressMenu[b].exchange(0, std::memory_order_relaxed);
+                const int presses = game ? game_ : menu_;
+                const bool down = s_stretch[b].tick(((level >> b) & 1u) != 0, presses);
+                if (down)
+                    stretched |= static_cast<uint8_t>(1u << b);
+                if (traceOn() && b == 0)
+                {
+                    static bool s_was = false;
+                    if (presses > 0 || down != s_was)
+                        std::cout << "[kbm] click left presses=" << presses << " level=" << ((level & 1u) != 0)
+                                  << " sent=" << down << " ctx=" << (game ? "game" : "menu") << std::endl;
+                    s_was = down;
+                }
+            }
+            in.mouseButtons = stretched;
+        }
+        // The wished stance (r0001 actor+0x374, research/79): a wheel step stands a crouched SEAL up.
+        static const bool s_r0001 = std::strcmp(socom2_addresses::current().revision, "r0001") == 0;
+        in.stance = game && s_r0001 ? int(rdram[mode.actor + 0x374u]) : -1;
         const PadOut out = apply(s, ctx, in, st);
 
         for (int i = 0; i < 16; ++i)
@@ -187,29 +224,48 @@ namespace ps2_stubs
         }
     }
 
-    void socom2KbmFrame(bool buttonsLive, bool focused)
+    void socom2KbmFrame(uint8_t liveMask, bool focused)
     {
+        g_focused = focused;
         static const int kButtons[5] = {MOUSE_BUTTON_LEFT, MOUSE_BUTTON_RIGHT, MOUSE_BUTTON_MIDDLE, MOUSE_BUTTON_SIDE,
                                         MOUSE_BUTTON_EXTRA};
         uint8_t down = 0;
         for (int i = 0; i < 5; ++i)
             if (IsMouseButtonDown(kButtons[i]))
                 down |= static_cast<uint8_t>(1u << i);
-        g_buttonsGame.store(buttonsLive ? down : 0, std::memory_order_relaxed);
+        g_buttonsGame.store(down & liveMask, std::memory_order_relaxed);
         g_buttonsMenu.store(focused ? down : 0, std::memory_order_relaxed);
+        for (int i = 0; i < 5; ++i)
+            if (IsMouseButtonPressed(kButtons[i]))
+            {
+                if ((liveMask >> i) & 1u)
+                    g_pressGame[i].fetch_add(1, std::memory_order_relaxed);
+                if (focused)
+                    g_pressMenu[i].fetch_add(1, std::memory_order_relaxed);
+            }
 
-        // The wheel: whole notches; a trackpad's fractions add up to one.
-        static float s_wheel = 0.0f;
-        s_wheel += focused ? GetMouseWheelMove() : 0.0f;
-        while (s_wheel >= 1.0f)
+        // The wheel: every scroll event (the monitor), else raylib's last event of the frame.
+        static socom2_kbm::WheelCounter s_counter;
+        static const bool s_monitor = socom2ScrollMonitorStart([](double dy, bool precise, bool momentum, double t) {
+            if (!g_focused)
+                return;
+            const int n = s_counter.add({dy, precise, momentum, t});
+            if (n > 0)
+                g_wheelUp.fetch_add(n, std::memory_order_relaxed);
+            else if (n < 0)
+                g_wheelDown.fetch_add(-n, std::memory_order_relaxed);
+            if (traceOn())
+                std::cout << "[kbm] scroll dy=" << dy << " precise=" << precise << " momentum=" << momentum << " steps=" << n
+                          << std::endl;
+        });
+        if (!s_monitor && focused)
         {
-            g_wheelUp.fetch_add(1, std::memory_order_relaxed);
-            s_wheel -= 1.0f;
-        }
-        while (s_wheel <= -1.0f)
-        {
-            g_wheelDown.fetch_add(1, std::memory_order_relaxed);
-            s_wheel += 1.0f;
+            const float v = GetMouseWheelMove();
+            const int n = s_counter.add({v, false, false, GetTime()});
+            if (n > 0)
+                g_wheelUp.fetch_add(n, std::memory_order_relaxed);
+            else if (n < 0)
+                g_wheelDown.fetch_add(-n, std::memory_order_relaxed);
         }
     }
 

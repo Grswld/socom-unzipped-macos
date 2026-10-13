@@ -18,9 +18,9 @@ namespace ps2_stubs
     // moved). `aimHold`: the aim-hold binding is down (the mouse module's right-click behaviour). `triangleLight`:
     // Triangle is pressed by crouch alone, at light pressure.
     void socom2KbmApply(uint8_t *rdram, Socom2PadState &next, bool &aimHold, bool &triangleLight);
-    // Main thread, once a frame: the mouse buttons (`buttonsLive`: the mouse module's capture lets them through
-    // in a mission) and the wheel.
-    void socom2KbmFrame(bool buttonsLive, bool focused);
+    // Main thread, once a frame: the mouse buttons (`liveMask` bit i: the mouse module's capture lets button i
+    // through in a mission), their press edges, and the wheel.
+    void socom2KbmFrame(uint8_t liveMask, bool focused);
     // Main thread, inside the frame's drawing: the speed indicator.
     void socom2KbmOverlay();
 }

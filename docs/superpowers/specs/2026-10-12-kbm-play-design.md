@@ -111,6 +111,12 @@ person. The release restores the stored mode as before. `first_person` keeps the
    turns each counted press into at least 2 reads held + 1 released (a per-button stretcher), on top of the live
    level for held fire. Swallow only the recapture click's own button. Trace presses vs R1 reads.
 
+Built 2026-10-13 (owner's go): `WheelCounter` and `ClickStretch` in the core; an NSEvent scroll monitor
+(`socom2ScrollMonitorStart`, the GCMouse file; raylib's wheel elsewhere); counted presses per button and context;
+`Capture` swallows only the recapturing button (`pressedMask` / `downMask`); `[speed] crouched = stand | keep`
+with the stance byte (1 = crouched, measured: the spawn and every crouch walk read 1, also while the top step runs).
+Traces: `[kbm] scroll ...` per event and `[kbm] click left presses= level= sent=` per change.
+
 ## Tests (failing first, `ps2x_tests`, no window)
 
 The pure core (`runtime/socom2_kbm_core.h`): the ini parser (defaults, every section, bad lines kept out, unknown

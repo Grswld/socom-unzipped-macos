@@ -246,6 +246,30 @@ void register_socom2_mouse_tests()
             t.IsTrue(c.buttonsLive(), "released: live again");
         });
 
+        tc.Run("only the recapturing button is swallowed: right recaptures and aims, left still fires", [=](TestCase &t)
+        {
+            Capture c;
+            c.step(in(true, true));
+            c.step(in(false, true));   // focus lost
+            CaptureInputs right = in(true, true, true, false, true);
+            right.pressedMask = kCaptureRight;
+            right.downMask = kCaptureRight;
+            c.step(right);
+            t.IsTrue(c.captured(), "captured by the right button");
+            t.IsFalse(c.buttonLive(kCaptureRight), "the right click is swallowed");
+            t.IsTrue(c.buttonLive(kCaptureLeft), "the left button is live");
+            CaptureInputs both = in(true, true, true, false, true);
+            both.pressedMask = kCaptureLeft;
+            both.downMask = kCaptureLeft | kCaptureRight;
+            c.step(both);
+            t.IsTrue(c.buttonLive(kCaptureLeft), "a left click while right is held fires");
+            t.IsFalse(c.buttonLive(kCaptureRight), "right still swallowed while held");
+            CaptureInputs leftOnly = in(true, true, false, false, true);
+            leftOnly.downMask = kCaptureLeft;
+            c.step(leftOnly);
+            t.IsTrue(c.buttonLive(kCaptureRight), "right released: live again");
+        });
+
         tc.Run("Esc releases; a click recaptures", [=](TestCase &t)
         {
             Capture c;

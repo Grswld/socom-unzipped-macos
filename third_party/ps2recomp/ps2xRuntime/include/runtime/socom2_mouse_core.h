@@ -217,7 +217,13 @@ namespace socom2_mouse
         bool clickPressed = false;  // a mouse button went down this frame
         bool escPressed = false;    // Esc went down this frame
         bool buttonsDown = false;   // any mouse button is down now
+        // Which buttons (kCaptureLeft / kCaptureRight): only the recapturing button is swallowed. 0 with
+        // clickPressed / buttonsDown set means every button.
+        uint8_t pressedMask = 0;
+        uint8_t downMask = 0;
     };
+    constexpr uint8_t kCaptureLeft = 1u;
+    constexpr uint8_t kCaptureRight = 2u;
 
     enum class CaptureAction : uint8_t { None, Capture, Release };
 
@@ -246,21 +252,22 @@ namespace socom2_mouse
             else if (!m_captured && (in.clickPressed || !m_userReleased))
             {
                 m_captured = true;
-                m_swallow = in.clickPressed;
+                m_swallow = in.clickPressed ? (in.pressedMask != 0 ? in.pressedMask : 0xFFu) : 0u;
                 m_userReleased = false;
                 action = CaptureAction::Capture;
             }
-            if (m_swallow && !in.buttonsDown)
-                m_swallow = false;
+            const uint8_t down = in.downMask != 0 ? in.downMask : (in.buttonsDown ? 0xFFu : 0u);
+            m_swallow &= down;   // a swallowed button is live again once it is up
             return action;
         }
         bool captured() const { return m_captured; }
-        bool buttonsLive() const { return m_captured && !m_swallow; }
+        bool buttonsLive() const { return m_captured && m_swallow == 0; }
+        bool buttonLive(uint8_t button) const { return m_captured && (m_swallow & button) == 0; }
 
     private:
         bool m_captured = false;
         bool m_userReleased = false;
-        bool m_swallow = false;
+        uint8_t m_swallow = 0;   // the buttons whose recapturing press is still held
     };
 
     // ---- Direct look (spec "Revision 2026-10-04") -----------------------------------------------------------

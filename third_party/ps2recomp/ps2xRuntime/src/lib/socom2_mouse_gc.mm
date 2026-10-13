@@ -3,6 +3,7 @@
 // and raylib only hides and locks the cursor.
 #include "socom2_mouse.h"
 
+#import <AppKit/AppKit.h>
 #import <Foundation/Foundation.h>
 #import <GameController/GameController.h>
 
@@ -64,6 +65,19 @@ namespace ps2_stubs
             std::cout << "[mouse] gc events=" << uint64_t(double(n) / secs) << "/s main=" << (100 * main / n)
                       << "% maxgap=" << double(gap) / 1000.0 << "ms queue=" << (g_mainQueue ? "main" : "own")
                       << std::endl;
+    }
+
+    bool socom2ScrollMonitorStart(void (*sink)(double dy, bool precise, bool momentum, double t))
+    {
+        if (sink == nullptr)
+            return false;
+        id monitor = [NSEvent addLocalMonitorForEventsMatchingMask:NSEventMaskScrollWheel
+                                                           handler:^NSEvent *(NSEvent *event) {
+                                                               sink(event.scrollingDeltaY, event.hasPreciseScrollingDeltas,
+                                                                    event.momentumPhase != NSEventPhaseNone, event.timestamp);
+                                                               return event;   // GLFW still gets it
+                                                           }];
+        return monitor != nil;
     }
 
     bool socom2MouseGcStart(bool mainQueue)

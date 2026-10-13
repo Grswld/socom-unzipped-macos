@@ -187,6 +187,16 @@ void register_socom2_kbm_tests()
             t.Equals(r.errors.size(), static_cast<size_t>(1), "a setting before any section");
         });
 
+        tc.Run("[speed] crouched: stand by default, keep on request, written and read back", [](TestCase &t)
+        {
+            t.IsTrue(defaults().crouchStand, "stand");
+            ParseResult r = parse("[speed]\ncrouched = keep\n");
+            t.IsTrue(r.errors.empty() && !r.settings.crouchStand, "keep");
+            t.IsFalse(parse(write(r.settings)).settings.crouchStand, "round trip");
+            r = parse("[speed]\ncrouched = sometimes\n");
+            t.IsTrue(r.errors.size() == 1 && r.settings.crouchStand, "a bad value is reported");
+        });
+
         tc.Run("aim_zoom: scope by default, first_person on request, written and read back", [](TestCase &t)
         {
             t.IsTrue(defaults().aimScope, "the right button zooms into the scope by default");
@@ -231,6 +241,58 @@ void register_socom2_kbm_tests()
             t.IsFalse(o.stepChanged, "no change below the bottom");
             o = apply(s, Context::Game, keys({'S'}, 0, 1, 0), st);
             t.Equals(o.axis[3], axisByte(s.steps[1]), "one notch up: S at the second step");
+        });
+
+        tc.Run("crouched: a wheel step below the top stands the SEAL up (light Triangle, two reads), once a second", [](TestCase &t)
+        {
+            const Settings s = defaults();
+            State st = freshState(s);
+            Inputs in = keys({}, 0, 0, 1);
+            in.stance = kStanceCrouched;
+            PadOut o = apply(s, Context::Game, in, st);
+            t.IsTrue(o.stepChanged, "the step changed");
+            t.IsTrue(o.button[kPs2Triangle] != 0 && o.trianglePressure == kLightPressure, "light Triangle");
+            in = keys({});
+            in.stance = kStanceCrouched;
+            o = apply(s, Context::Game, in, st);
+            t.IsTrue(o.button[kPs2Triangle] != 0, "held a second read");
+            o = apply(s, Context::Game, in, st);
+            t.IsTrue(o.button[kPs2Triangle] == 0, "then released");
+            in = keys({}, 0, 0, 1);
+            in.stance = kStanceCrouched;   // the game has not caught up yet
+            o = apply(s, Context::Game, in, st);
+            t.IsTrue(o.stepChanged && o.button[kPs2Triangle] == 0, "a second notch inside the guard sends nothing");
+            in = keys({});
+            in.stance = kStanceCrouched;
+            for (int i = 0; i < kStandGuardReads; ++i)
+                apply(s, Context::Game, in, st);
+            in = keys({}, 0, 0, 1);
+            in.stance = kStanceCrouched;
+            t.IsTrue(apply(s, Context::Game, in, st).button[kPs2Triangle] != 0, "after the guard it may stand again");
+        });
+
+        tc.Run("crouched: no stand for the top step, for a stance not crouched or unknown, or with crouched = keep", [](TestCase &t)
+        {
+            Settings s = defaults();
+            State st = freshState(s);
+            Inputs in = keys({}, 0, 0, 2);
+            in.stance = kStanceCrouched;
+            apply(s, Context::Game, in, st);   // stands (step 3)
+            for (int i = 0; i < kStandGuardReads + 2; ++i)
+                apply(s, Context::Game, keys({}), st);
+            in = keys({}, 0, 2, 0);
+            in.stance = kStanceCrouched;
+            t.IsTrue(apply(s, Context::Game, in, st).button[kPs2Triangle] == 0, "back to the top step: no stand (it runs)");
+            in = keys({}, 0, 0, 1);
+            in.stance = 0;
+            t.IsTrue(apply(s, Context::Game, in, st).button[kPs2Triangle] == 0, "standing: nothing");
+            in.stance = -1;
+            t.IsTrue(apply(s, Context::Game, in, st).button[kPs2Triangle] == 0, "unknown: nothing");
+            s.crouchStand = false;
+            State st2 = freshState(s);
+            in = keys({}, 0, 0, 1);
+            in.stance = kStanceCrouched;
+            t.IsTrue(apply(s, Context::Game, in, st2).button[kPs2Triangle] == 0, "crouched = keep");
         });
 
         tc.Run("the lowest step still moves: its push clears the measured dead zone (0.33)", [](TestCase &t)
@@ -288,6 +350,99 @@ void register_socom2_kbm_tests()
             t.Equals(indicatorLine(s, 4, 99.0), std::string("SPEED 5/5  100%"), "always");
             s.indicator = Indicator::Off;
             t.Equals(indicatorLine(s, 4, 0.0), std::string(), "off");
+        });
+    });
+
+    MiniTest::Case("Socom2KbmWheel", [](TestCase &tc)
+    {
+        tc.Run("a notched wheel: every event is one step, however large its delta (no acceleration overshoot)", [](TestCase &t)
+        {
+            WheelCounter w;
+            t.Equals(w.add({1.0, false, false, 0.00}), 1, "one notch up");
+            t.Equals(w.add({0.1, false, false, 0.05}), 1, "a slow notch's small delta is still a notch");
+            t.Equals(w.add({4.5, false, false, 0.06}), 1, "an accelerated notch is one step");
+            t.Equals(w.add({-0.1, false, false, 0.07}), -1, "down");
+            t.Equals(w.add({0.0, false, false, 0.08}), 0, "a zero delta is nothing");
+        });
+
+        tc.Run("precise deltas add up to a step; the carry clears on a direction change or when idle", [](TestCase &t)
+        {
+            WheelCounter w;
+            const double s = kPreciseStep;
+            t.Equals(w.add({s * 0.6, true, false, 0.00}), 0, "not yet");
+            t.Equals(w.add({s * 0.6, true, false, 0.02}), 1, "the sum crosses a step");
+            t.Equals(w.add({s * 2.0, true, false, 0.04}), 2, "a large precise delta is several steps");
+            t.Equals(w.add({s * 0.7, true, false, 0.06}), 0, "0.2 left over + 0.7: not yet");
+            t.Equals(w.add({-s * 0.5, true, false, 0.08}), 0, "a change of direction drops the carry");
+            t.Equals(w.add({-s * 0.6, true, false, 0.10}), 1 * -1, "and the way back counts from zero");
+            t.Equals(w.add({s * 0.9, true, false, 0.12}), 0, "carry up");
+            t.Equals(w.add({s * 0.2, true, false, 0.12 + kWheelIdle + 0.01}), 0, "after an idle gap the carry is gone");
+        });
+
+        tc.Run("momentum (after the finger lifts) is ignored", [](TestCase &t)
+        {
+            WheelCounter w;
+            t.Equals(w.add({kPreciseStep * 3.0, true, true, 0.0}), 0, "momentum");
+            t.Equals(w.add({5.0, false, true, 0.1}), 0, "momentum on a non-precise event too");
+        });
+    });
+
+    MiniTest::Case("Socom2KbmClicks", [](TestCase &tc)
+    {
+        // One pad read: the live level and the presses counted since the last read; the output is what the game sees.
+        tc.Run("a tap shorter than a pad read still reaches the game for two reads, then one up", [](TestCase &t)
+        {
+            ClickStretch c;
+            t.IsTrue(c.tick(false, 1), "the counted press: down");
+            t.IsTrue(c.tick(false, 0), "held a second read");
+            t.IsFalse(c.tick(false, 0), "then up");
+            t.IsFalse(c.tick(false, 0), "and stays up");
+        });
+
+        tc.Run("two clicks between two reads are two presses with a release between them", [](TestCase &t)
+        {
+            ClickStretch c;
+            std::string seen;
+            seen += c.tick(false, 2) ? '1' : '0';
+            for (int i = 0; i < 6; ++i)
+                seen += c.tick(false, 0) ? '1' : '0';
+            t.Equals(seen, std::string("1101100"), "down 2, up 1, down 2, up");
+        });
+
+        tc.Run("a held button keeps firing after its press (automatic fire)", [](TestCase &t)
+        {
+            ClickStretch c;
+            t.IsTrue(c.tick(true, 1), "press");
+            for (int i = 0; i < 10; ++i)
+                t.IsTrue(c.tick(true, 0), "held");
+            t.IsFalse(c.tick(false, 0), "released");
+        });
+
+        tc.Run("a new click while held gets its own edge", [](TestCase &t)
+        {
+            ClickStretch c;
+            c.tick(true, 1);
+            c.tick(true, 0);
+            c.tick(true, 0);
+            t.IsFalse(c.tick(true, 1), "a re-press (release and press between reads): one read up first");
+            t.IsTrue(c.tick(true, 0), "then down again");
+        });
+
+        tc.Run("a level with no counted press still reaches the game", [](TestCase &t)
+        {
+            ClickStretch c;
+            t.IsTrue(c.tick(true, 0), "down");
+            t.IsFalse(c.tick(false, 0), "up");
+        });
+
+        tc.Run("presses pile up to a cap", [](TestCase &t)
+        {
+            ClickStretch c;
+            int downs = 0;
+            c.tick(false, 50);
+            for (int i = 0; i < 200; ++i)
+                downs += c.tick(false, 0) ? 1 : 0;
+            t.Equals(downs + 1, 2 * kClickCap, "kClickCap presses of two reads each");
         });
     });
 

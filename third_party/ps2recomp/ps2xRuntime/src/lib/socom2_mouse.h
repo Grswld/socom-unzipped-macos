@@ -23,5 +23,8 @@ namespace ps2_stubs
     // socom2_mouse_gc.mm on Apple, socom2_mouse_gc_stub.cpp elsewhere. mainQueue: deliver on the main queue (the
     // PS2X_MOUSE_GC_MAINQ baseline) instead of the mouse's own.
     bool socom2MouseGcStart(bool mainQueue);
-    void socom2MouseGcReport();  // the trace's delivery line: events/s, share on the main thread, largest gap
+    void socom2MouseGcReport();
+    // macOS: every scroll event with its precise and momentum flags (NSEvent local monitor; GLFW keeps only the
+    // last event of a frame). Main thread. False where there is none: the caller reads raylib's wheel instead.
+    bool socom2ScrollMonitorStart(void (*sink)(double dy, bool precise, bool momentum, double t));  // the trace's delivery line: events/s, share on the main thread, largest gap
 }

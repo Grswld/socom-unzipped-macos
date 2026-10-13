@@ -69,6 +69,7 @@ namespace socom2_kbm
         std::vector<float> steps;   // left-stick push per wheel step, ascending, each in [kMinPush, 1]
         int start = 0;              // the step a session begins at (0-based)
         Indicator indicator = Indicator::Change;
+        bool crouchStand = true;    // [speed] crouched: a wheel step below the top stands a crouched SEAL up
         // [mouse]: set only when the file says so; the PS2X_MOUSE_* knobs win over these.
         bool hasSens = false, hasAimSens = false, hasInvertY = false;
         float sens = 1.0f, aimSens = 0.6f;
@@ -381,6 +382,14 @@ namespace socom2_kbm
                         startOneBased = static_cast<int>(n);
                     }
                 }
+                else if (key == "crouched")
+                {
+                    const std::string v = detail::lower(value);
+                    if (v == "stand" || v == "keep")
+                        s.crouchStand = v == "stand";
+                    else
+                        error("crouched must be stand or keep");
+                }
                 else if (key == "indicator")
                 {
                     const std::string v = detail::lower(value);
@@ -497,6 +506,8 @@ namespace socom2_kbm
             out += (i ? ", " : "") + detail::floatText(s.steps[i]);
         out += "\nstart = " + std::to_string(s.start + 1) + "\nindicator = ";
         out += s.indicator == Indicator::Always ? "always" : s.indicator == Indicator::Off ? "off" : "change";
+        out += "\n# Crouched, the game has one walk speed: stand (a wheel step below the top stands you up) or keep.\ncrouched = ";
+        out += s.crouchStand ? "stand" : "keep";
         out += "\n\n# Mouse look. Uncomment to set; PS2X_MOUSE_SENS, PS2X_MOUSE_AIM_SENS and PS2X_MOUSE_INVERT_Y win when set.\n[mouse]\n";
         out += (s.hasSens ? "" : "# ") + std::string("sensitivity = ") + detail::floatText(s.sens) + "\n";
         out += (s.hasAimSens ? "" : "# ") + std::string("aim_sensitivity = ") + detail::floatText(s.aimSens) + "\n";
@@ -514,6 +525,121 @@ namespace socom2_kbm
     {
         return ps2x::knobs::flagValue(knobValue, !scripted);
     }
+
+    // ---- The wheel's events (play-test 2: notches were lost) -----------------------------------------------------
+    // One scroll event from the host. macOS: NSEvent's scrollingDeltaY (+ is wheel up), hasPreciseScrollingDeltas
+    // (a trackpad, Magic Mouse or smooth-scrolling mouse, in points) and a momentum phase (the glide after the finger
+    // lifts). `t` in seconds.
+    struct ScrollEvent
+    {
+        double dy = 0.0;
+        bool precise = false;
+        bool momentum = false;
+        double t = 0.0;
+    };
+    constexpr double kPreciseStep = 30.0;   // points of precise scrolling per step
+    constexpr double kWheelIdle = 0.25;     // seconds without scrolling that clear a precise carry
+
+    // Events to steps. A notched wheel: every event is one step, its delta only gives the sign (macOS accelerates a
+    // fast notch to several lines, and a slow one can be 0.1). Precise deltas add up to kPreciseStep; the carry
+    // clears on a change of direction or after kWheelIdle. Momentum is ignored.
+    class WheelCounter
+    {
+    public:
+        int add(const ScrollEvent &e)
+        {
+            if (e.momentum || e.dy == 0.0)
+                return 0;
+            if (!e.precise)
+            {
+                m_carry = 0.0;
+                return e.dy > 0.0 ? 1 : -1;
+            }
+            if (m_carry != 0.0 && ((m_carry > 0.0) != (e.dy > 0.0) || e.t - m_last > kWheelIdle))
+                m_carry = 0.0;
+            m_last = e.t;
+            m_carry += e.dy;
+            const int n = static_cast<int>(m_carry / kPreciseStep);
+            m_carry -= n * kPreciseStep;
+            return n;
+        }
+
+    private:
+        double m_carry = 0.0;
+        double m_last = 0.0;
+    };
+
+    // ---- Clicks across pad reads (play-test 2: some shots did not fire) ------------------------------------------
+    // The game reads the pad ~28 times a second; a tap can begin and end between two reads. Each press the host
+    // counted becomes kClickHeldReads reads down and kClickGapReads up before the next press, so every click is an
+    // edge the game sees; a button still held after its press stays down (automatic fire).
+    constexpr int kClickHeldReads = 2;
+    constexpr int kClickGapReads = 1;
+    constexpr int kClickCap = 4;   // presses kept waiting at most
+
+    class ClickStretch
+    {
+    public:
+        // One pad read: `level` is the button now, `presses` the press edges counted since the last read.
+        bool tick(bool level, int presses)
+        {
+            m_pending = std::min(kClickCap, m_pending + std::max(0, presses));
+            for (;;)
+            {
+                switch (m_phase)
+                {
+                case Phase::Idle:
+                    if (m_pending > 0)
+                    {
+                        --m_pending;
+                        m_phase = Phase::Held;
+                        m_left = kClickHeldReads;
+                        continue;
+                    }
+                    if (level)
+                    {
+                        m_phase = Phase::Live;
+                        return true;
+                    }
+                    return false;
+                case Phase::Held:
+                    if (m_left > 0)
+                    {
+                        --m_left;
+                        return true;
+                    }
+                    if (level && m_pending == 0)
+                    {
+                        m_phase = Phase::Live;
+                        return true;
+                    }
+                    m_phase = Phase::Gap;
+                    m_left = kClickGapReads;
+                    continue;
+                case Phase::Live:
+                    if (level && m_pending == 0)
+                        return true;
+                    m_phase = Phase::Gap;
+                    m_left = kClickGapReads;
+                    continue;
+                case Phase::Gap:
+                    if (m_left > 0)
+                    {
+                        --m_left;
+                        return false;
+                    }
+                    m_phase = Phase::Idle;
+                    continue;
+                }
+            }
+        }
+
+    private:
+        enum class Phase : uint8_t { Idle, Held, Live, Gap };
+        Phase m_phase = Phase::Idle;
+        int m_left = 0;
+        int m_pending = 0;
+    };
 
     // ---- Wheel speed --------------------------------------------------------------------------------------------
     class SpeedSelector
@@ -556,7 +682,11 @@ namespace socom2_kbm
         uint8_t mouseButtons = 0;               // bit i: mouse button i (kMouseLeft = bit 0 ... kMouse5 = bit 4)
         int wheelUp = 0;                        // notches since the last read
         int wheelDown = 0;
+        int stance = -1;                        // the wished stance byte (actor+0x374), -1 unknown
     };
+    constexpr int kStanceCrouched = 1;          // measured 2026-10-13: the crouched spawn and every crouch walk read 1
+    constexpr int kStandReads = 2;              // the light Triangle that stands a crouched SEAL up
+    constexpr int kStandGuardReads = 30;        // ~1 s before another: the byte lags the press
 
     struct PadOut
     {
@@ -613,6 +743,8 @@ namespace socom2_kbm
         ButtonPulses pulses;
         std::map<int, bool> wasDown;   // per input: down at the last read (edges for speed keys and menu clicks)
         Context lastContext = Context::Menu;
+        int standLeft = 0;    // reads of the stand-up press still to send
+        int standGuard = 0;   // reads before another stand-up may be sent
     };
 
     inline bool inputDown(const Inputs &in, int input)
@@ -706,6 +838,21 @@ namespace socom2_kbm
 
         if (speedDelta != 0)
             out.stepChanged = st.speed.move(speedDelta);
+
+        // Crouched, steps below the top all crouch-walk (play-test 1): a step there stands the SEAL up first.
+        if (st.standGuard > 0)
+            --st.standGuard;
+        if (out.stepChanged && s.crouchStand && in.stance == kStanceCrouched && st.speed.step() + 1 < st.speed.count() &&
+            st.standGuard == 0)
+        {
+            st.standLeft = kStandReads;
+            st.standGuard = kStandGuardReads;
+        }
+        if (st.standLeft > 0)
+        {
+            --st.standLeft;
+            crouch = true;
+        }
 
         // Stance: prone and a plain Triangle are full; crouch alone is light (R139: full wins).
         if (crouch || prone || fullTriangle)
