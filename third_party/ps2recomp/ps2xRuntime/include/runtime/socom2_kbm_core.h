@@ -73,6 +73,7 @@ namespace socom2_kbm
         bool hasSens = false, hasAimSens = false, hasInvertY = false;
         float sens = 1.0f, aimSens = 0.6f;
         bool invertY = false;
+        bool aimScope = true;   // aim_zoom: right-click aim-hold zooms into the scope (false: first person only)
         bool operator==(const Settings &) const = default;
     };
 
@@ -211,7 +212,7 @@ namespace socom2_kbm
     // [game] / [menu]: `<action> = <input>, <input>, ...` -- a line replaces that action's inputs in its section
     // (an empty value unbinds it); actions the file does not name keep their defaults. [speed]: `steps = 0.4, ...`,
     // `start = <1-based step>`, `indicator = change | always | off`. [mouse]: `sensitivity`, `aim_sensitivity`,
-    // `invert_y = 0 | 1`. `#` and `;` start comments. A line that cannot be read is reported and ignored.
+    // `invert_y = 0 | 1`, `aim_zoom = scope | first_person`. `#` and `;` start comments. A line that cannot be read is reported and ignored.
     struct ParseResult
     {
         Settings settings;
@@ -423,6 +424,13 @@ namespace socom2_kbm
                     else
                         error("invert_y must be 0 or 1");
                 }
+                else if (key == "aim_zoom")
+                {
+                    if (value == "scope" || value == "first_person")
+                        s.aimScope = value == "scope";
+                    else
+                        error("aim_zoom must be scope or first_person");
+                }
                 else
                     error("unknown [mouse] setting '" + key + "'");
             }
@@ -493,6 +501,8 @@ namespace socom2_kbm
         out += (s.hasSens ? "" : "# ") + std::string("sensitivity = ") + detail::floatText(s.sens) + "\n";
         out += (s.hasAimSens ? "" : "# ") + std::string("aim_sensitivity = ") + detail::floatText(s.aimSens) + "\n";
         out += (s.hasInvertY ? "" : "# ") + std::string("invert_y = ") + (s.invertY ? "1" : "0") + "\n";
+        out += "# Right button held: scope (zoom into the weapon's scope) or first_person (one step in).\n";
+        out += std::string("aim_zoom = ") + (s.aimScope ? "scope" : "first_person") + "\n";
         return out;
     }
 

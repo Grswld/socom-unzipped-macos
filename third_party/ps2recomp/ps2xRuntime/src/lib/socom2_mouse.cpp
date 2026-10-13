@@ -45,6 +45,7 @@ namespace ps2_stubs
                         c.aimSens = s.aimSens;
                     if (s.hasInvertY)
                         c.invertY = ps2x::knobOn("PS2X_MOUSE_INVERT_Y", s.invertY);   // the knob wins when set
+                    c.aimScope = s.aimScope;
                 }
                 return c;
             }();
@@ -139,7 +140,7 @@ namespace ps2_stubs
         // keyboard left it -- this runs before the pad is OR-ed in and before the probe's pulses.
         const bool kbZoom = next.button[kPadUp] != 0 || next.button[kPadDown] != 0;
         const Pulse aim = g_aim.tick(AimInputs{aimDown && !menuOpen, mode,
-                                               next.button[kPadStart] != 0 || menuOpen, kbZoom});
+                                               next.button[kPadStart] != 0 || menuOpen, kbZoom, cfg.aimScope});
         if (aim == Pulse::Up)
             next.button[kPadUp] = 1u;
         else if (aim == Pulse::Down)

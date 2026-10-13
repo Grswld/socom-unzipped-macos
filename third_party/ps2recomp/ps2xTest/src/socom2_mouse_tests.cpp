@@ -460,6 +460,7 @@ void register_socom2_mouse_tests()
             uint8_t mode = 0;
             uint8_t top = 6;          // highest mode
             bool wrapTop = false, wrapBottom = false;
+            bool rifle = false;       // research/87's default rifle: modes 0, 1 and 5 only (UP 1 -> 5, DOWN 5 -> 1)
             int dropEvery = 0;        // drop every Nth edge (0 = none)
             bool responsive = true;
             uint32_t actor = 0x00D00000u;
@@ -473,6 +474,12 @@ void register_socom2_mouse_tests()
                 prevUp = up; prevDown = down;
                 if (!responsive || (!upEdge && !downEdge)) return;
                 if (dropEvery && (++edges % dropEvery) == 0) return;
+                if (rifle)
+                {
+                    if (upEdge) mode = mode == 0 ? 1 : 5;
+                    if (downEdge) mode = mode == 5 ? 1 : 0;
+                    return;
+                }
                 if (upEdge) mode = mode < top ? mode + 1 : (wrapTop ? 0 : top);
                 if (downEdge) mode = mode > 0 ? mode - 1 : (wrapBottom ? top : 0);
             }
@@ -484,9 +491,10 @@ void register_socom2_mouse_tests()
             Cycler game;
             AimHold aim;
             int ups = 0, downs = 0;
+            bool scope = false;   // AimInputs::scope: the hold zooms on into the scope
             void read(bool right, bool start = false, bool kbZoom = false)
             {
-                const Pulse p = aim.tick(AimInputs{right, game.read(), start, kbZoom});
+                const Pulse p = aim.tick(AimInputs{right, game.read(), start, kbZoom, scope});
                 if (p == Pulse::Up) ++ups;
                 if (p == Pulse::Down) ++downs;
                 game.see(p == Pulse::Up, p == Pulse::Down);
@@ -615,6 +623,89 @@ void register_socom2_mouse_tests()
             r.reads(100, false);
             t.Equals(int(r.game.mode), 0, "returns to 0 in one DOWN");
             t.IsTrue(r.downs <= 2 * kRestoreCap, "bounded");
+        });
+
+        tc.Run("scope: the rifle's hold goes 0 -> 1 -> 5 and the release comes back to 0", [](TestCase &t)
+        {
+            Rig r;
+            r.scope = true;
+            r.game.rifle = true;
+            r.reads(30, true);
+            t.Equals(int(r.game.mode), 5, "in the scope");
+            t.Equals(r.ups, 4, "two UP pulses");
+            t.Equals(int(r.aim.state()), int(AimState::Holding), "still holding");
+            r.reads(40, false);
+            t.Equals(int(r.game.mode), 0, "back to third person");
+            t.Equals(int(r.aim.state()), int(AimState::Idle), "idle");
+        });
+
+        tc.Run("scope: from first person one UP, and the release returns to first person", [](TestCase &t)
+        {
+            Rig r;
+            r.scope = true;
+            r.game.rifle = true;
+            r.game.mode = 1;
+            r.reads(30, true);
+            t.Equals(int(r.game.mode), 5, "in the scope");
+            t.Equals(r.ups, 2, "one UP pulse");
+            r.reads(40, false);
+            t.Equals(int(r.game.mode), 1, "first person again");
+        });
+
+        tc.Run("scope: stops at the first zoom level of a many-level weapon", [](TestCase &t)
+        {
+            Rig r;
+            r.scope = true;
+            r.game.top = 6;
+            r.reads(40, true);
+            t.Equals(int(r.game.mode), 2, "the first zoom level, not the top");
+            r.reads(40, false);
+            t.Equals(int(r.game.mode), 0, "back to 0");
+        });
+
+        tc.Run("scope: a weapon with no zoom stays in first person after one unanswered UP", [](TestCase &t)
+        {
+            Rig r;
+            r.scope = true;
+            r.game.top = 1;
+            r.reads(60, true);
+            t.Equals(int(r.game.mode), 1, "first person");
+            t.Equals(r.ups, 6, "the answered UP, then the unanswered one and its one re-send: no more");
+            r.reads(40, false);
+            t.Equals(int(r.game.mode), 0, "back to 0");
+        });
+
+        tc.Run("scope: a dropped UP is re-sent once", [](TestCase &t)
+        {
+            Rig r;
+            r.scope = true;
+            r.game.rifle = true;
+            r.game.dropEvery = 2;   // the first UP lands, the second is dropped
+            r.reads(40, true);
+            t.Equals(int(r.game.mode), 5, "in the scope by the re-send");
+            r.reads(60, false);
+            t.Equals(int(r.game.mode), 0, "and back");
+        });
+
+        tc.Run("scope: releasing before the scope arrives still returns to the stored mode", [](TestCase &t)
+        {
+            Rig r;
+            r.scope = true;
+            r.game.rifle = true;
+            r.reads(5, true);   // the first UP has landed, the second not yet sent
+            r.reads(60, false);
+            t.Equals(int(r.game.mode), 0, "back to 0");
+            t.Equals(int(r.aim.state()), int(AimState::Idle), "idle");
+        });
+
+        tc.Run("scope: fifty hold-release cycles with drops end where they started", [](TestCase &t)
+        {
+            Rig r;
+            r.scope = true;
+            r.game.rifle = true;
+            r.game.dropEvery = 20;
+            for (int i = 0; i < 50; ++i) { r.reads(30, true); r.reads(40, false); }
+            t.Equals(int(r.game.mode), 0, "no drift");
         });
 
         tc.Run("fifty hold-release cycles end where they started (the ratchet)", [](TestCase &t)

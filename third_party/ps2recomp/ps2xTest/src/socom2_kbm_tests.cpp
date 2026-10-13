@@ -186,6 +186,17 @@ void register_socom2_kbm_tests()
             r = parse("r1 = mouse_left\n");
             t.Equals(r.errors.size(), static_cast<size_t>(1), "a setting before any section");
         });
+
+        tc.Run("aim_zoom: scope by default, first_person on request, written and read back", [](TestCase &t)
+        {
+            t.IsTrue(defaults().aimScope, "the right button zooms into the scope by default");
+            ParseResult r = parse("[mouse]\naim_zoom = first_person\n");
+            t.IsTrue(r.errors.empty() && !r.settings.aimScope, "first_person");
+            t.IsFalse(parse(write(r.settings)).settings.aimScope, "round trip");
+            t.IsTrue(parse("[mouse]\naim_zoom = scope\n").settings.aimScope, "scope");
+            r = parse("[mouse]\naim_zoom = max\n");
+            t.IsTrue(r.errors.size() == 1 && r.settings.aimScope, "a bad value is reported and keeps the default");
+        });
     });
 
     MiniTest::Case("Socom2KbmEnable", [](TestCase &tc)

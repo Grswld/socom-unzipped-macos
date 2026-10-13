@@ -16,7 +16,7 @@ screen). Another preset moves the functions between the PS2 buttons; rebind in `
 | Walk speed | mouse wheel (5 steps), Left Shift = full speed while held | left stick push |
 | Aim / rotate | mouse (direct look); I J K L also turn | right stick |
 | Fire weapon / throw grenade | left click | R1 |
-| Aim (zoom while held) | right click | D-pad Up / Down |
+| Aim through the scope while held (back on release) | right click | D-pad Up / Down |
 | Jump | Space | Square |
 | Crouch / stand | C | Triangle, light |
 | Prone / stand from prone | Left Ctrl | Triangle, firm |
@@ -82,7 +82,9 @@ names. When the file is absent, the game writes it with the defaults above and c
   - the layer's own: `crouch prone aim_hold speed_up speed_down run`.
 - **`[speed]`:** `steps` is 1 to 10 pushes in (0, 1], `start` is the step a session begins on (1-based), and
   `indicator` is `change`, `always` or `off`.
-- **`[mouse]`:** `sensitivity`, `aim_sensitivity` and `invert_y`. The `PS2X_MOUSE_*` knobs win when they are set.
+- **`[mouse]`:** `sensitivity`, `aim_sensitivity` and `invert_y`; the `PS2X_MOUSE_*` knobs win when they are set.
+  `aim_zoom = scope` (the default) makes the held right button zoom into the weapon's first scope level;
+  `first_person` steps in only to first person. A weapon with no scope stops at first person.
 - **Errors:** a line the game cannot read is logged as `[kbm] controls.ini line <n>: ...` and ignored; the rest
   of the file still loads.
 

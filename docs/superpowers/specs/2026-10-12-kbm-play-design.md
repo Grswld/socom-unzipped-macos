@@ -77,6 +77,13 @@ untouched; the layer replaces the keyboard step when it is on.
 - **Trace.** `PS2X_KBM_TRACE`: `[kbm]` lines on a step change and every second while moving -- the step, the push,
   the axes written, and the actor's measured ground speed (position words +0x1c/+0x24 over the last second).
 
+## Play-test 1 (2026-10-13, owner)
+
+The movement scheme works. Asked for: the right button should zoom into the scope. Added `aim_zoom` (`[mouse]`,
+default `scope`): the aim-hold sends UP until the view mode reaches a zoom level (research/87: 2 and up; the default
+rifle goes 0 -> 1 -> 5), at most three presses, a dropped UP re-sent once, and a weapon with no zoom stays in first
+person. The release restores the stored mode as before. `first_person` keeps the one-step behaviour (upstream's).
+
 ## Tests (failing first, `ps2x_tests`, no window)
 
 The pure core (`runtime/socom2_kbm_core.h`): the ini parser (defaults, every section, bad lines kept out, unknown

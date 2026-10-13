@@ -19,6 +19,7 @@ namespace socom2_mouse
         float sens = 1.0f;       // PS2X_MOUSE_SENS: stick units per raw count (direct look: x kRadPerCount)
         float aimSens = 0.6f;    // PS2X_MOUSE_AIM_SENS: direct look's multiplier while zoomed in (view mode 1 and up)
         bool invertY = false;    // PS2X_MOUSE_INVERT_Y
+        bool aimScope = false;   // right-click aim-hold zooms into the scope (macOS fork: controls.ini aim_zoom)
         int deadzone = 0x18;     // PS2X_MOUSE_DEADZONE: stick units added to any non-zero output (to be measured)
         bool trace = false;      // PS2X_MOUSE_TRACE
         bool probe = false;      // PS2X_MOUSE_PROBE
@@ -379,6 +380,10 @@ namespace socom2_mouse
     // ---- Right-click aim-hold, closed loop (spec section 4.3) -----------------------------------------------
     constexpr int kRestoreCap = 4;    // restore presses at most
     constexpr int kAnswerReads = 6;   // reads after a pulse ends for the mode to move
+    // Scope (macOS fork): the hold zooms on until the view reaches a zoom level -- research/87: modes 2 and up are the
+    // weapon's zoom levels (the default rifle's one is 5), 1 is first person.
+    constexpr uint8_t kFirstZoomMode = 2;
+    constexpr int kZoomCap = 3;       // UP presses at most for one hold (0 -> 1 -> zoom is two)
 
     // The match rule: exact (docs/research/87 -- DOWN from a zoom level lands on the first-person mode a hold starts from).
     inline bool modesMatch(uint8_t now, uint8_t stored) { return now == stored; }
@@ -389,6 +394,7 @@ namespace socom2_mouse
         ModeRead mode;        // this read's view mode
         bool start = false;   // START pressed by the keyboard this read
         bool kbZoom = false;  // the keyboard's D-pad UP or DOWN down this read
+        bool scope = false;   // zoom on into the weapon's first zoom level, not just first person (macOS fork)
     };
 
     enum class AimState : uint8_t { Idle, Holding, Restoring };
@@ -418,21 +424,21 @@ namespace socom2_mouse
                 {
                     m_stored = in.mode.mode;
                     m_actor = in.mode.actor;
-                    m_queue.push(Pulse::Up);
-                    m_state = AimState::Holding;
+                    beginHold(in.mode.mode);
                     m_event = "hold";
                 }
                 break;
             case AimState::Holding:
                 if (!in.right)
                     beginRestore();
+                else if (in.scope)
+                    zoomStep(in.mode.mode);
                 break;
             case AimState::Restoring:
                 if (pressed)
                 {
                     m_queue.clear();
-                    m_queue.push(Pulse::Up);   // the stored mode is kept: the view never got back
-                    m_state = AimState::Holding;
+                    beginHold(in.mode.mode);   // the stored mode is kept: the view never got back
                     m_event = "rehold";
                     break;
                 }
@@ -445,6 +451,46 @@ namespace socom2_mouse
         const char *lastEvent() const { return m_event; }
 
     private:
+        void beginHold(uint8_t mode)
+        {
+            m_queue.push(Pulse::Up);
+            m_state = AimState::Holding;
+            m_zoomSent = 1;
+            m_zoomUnanswered = 0;
+            m_zoomDone = false;
+            m_zoomFrom = mode;
+            m_zoomWait = 0;
+        }
+        // Holding with `scope`: after each UP is answered, another until the view is at a zoom level. An UP the game
+        // does not answer is re-sent once (a dropped edge); a second means the weapon has no zoom: stay.
+        void zoomStep(uint8_t mode)
+        {
+            if (m_zoomDone || !m_queue.idle())
+                return;
+            if (mode >= kFirstZoomMode)
+            {
+                m_zoomDone = true;
+                return;
+            }
+            if (mode != m_zoomFrom)
+                m_zoomUnanswered = 0;
+            else if (++m_zoomWait < kAnswerReads)
+                return;
+            else if (++m_zoomUnanswered >= 2)
+            {
+                m_zoomDone = true;
+                return;
+            }
+            if (m_zoomSent >= kZoomCap)
+            {
+                m_zoomDone = true;
+                return;
+            }
+            ++m_zoomSent;
+            m_zoomFrom = mode;
+            m_zoomWait = 0;
+            m_queue.push(Pulse::Up);
+        }
         void beginRestore()
         {
             m_state = AimState::Restoring;
@@ -522,6 +568,11 @@ namespace socom2_mouse
         int m_waitReads = 0;
         uint8_t m_modeAtSend = 0;
         Pulse m_lastPulse = Pulse::None;
+        int m_zoomSent = 0;
+        int m_zoomUnanswered = 0;
+        bool m_zoomDone = false;
+        uint8_t m_zoomFrom = 0;
+        int m_zoomWait = 0;
         const char *m_event = "idle";
     };
 }
