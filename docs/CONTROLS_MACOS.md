@@ -1,5 +1,10 @@
 # Keyboard and mouse controls (macOS fork)
 
+> **Experimental: work in progress, to be continued over time** (branch `feat-kbm-play`, not for upstream). Known issues: mouse look did not work
+> in play-test 3 (e5daa95a), not yet diagnosed; untested in play: the stand-up on a crouched wheel step, and the
+> scroll monitor on a real wheel mouse. Also pending: faster scope zoom, the scope staying on after a popup, hold
+> breath in the scope.
+
 The macOS fork plays SOCOM II with a keyboard and a mouse, with no gamepad needed. The layer is on by default
 (`PS2X_KBM=1`). It stays off in a scripted or replayed run unless the knob turns it on, so harness runs are
 unchanged. `PS2X_KBM=0` gives upstream's keyboard (`launcher/mapping.h`, developer mode). Design:

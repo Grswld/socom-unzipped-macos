@@ -1,6 +1,6 @@
 # Keyboard-and-mouse play for the macOS fork -- design
 
-Date: 2026-10-12. Status: owner's request (relayed), fork only, never pushed. Branch `feat-kbm-play` off `main`
+Date: 2026-10-12. Status: owner's request (relayed), fork only, never upstream; experimental, work in progress, to be continued over time. Branch `feat-kbm-play` off `main`
 (cf449442 + the changelog). Builds on mouse look (`socom2_mouse.*`, upstream #133, R349: off upstream).
 
 ## What the owner asked
@@ -116,6 +116,8 @@ Built 2026-10-13 (owner's go): `WheelCounter` and `ClickStretch` in the core; an
 `Capture` swallows only the recapturing button (`pressedMask` / `downMask`); `[speed] crouched = stand | keep`
 with the stance byte (1 = crouched, measured: the spawn and every crouch walk read 1, also while the top step runs).
 Traces: `[kbm] scroll ...` per event and `[kbm] click left presses= level= sent=` per change.
+
+Play-test 3 (2026-10-13, e5daa95a): mouse look dead; owner: fix later, on hold (no diagnosis yet).
 
 ## Tests (failing first, `ps2x_tests`, no window)
 
