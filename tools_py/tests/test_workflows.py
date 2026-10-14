@@ -32,6 +32,8 @@ WF = os.path.join(ROOT, ".github", "workflows")
 
 # The workflow whose build is skipped on docs-only changes -> its build job (a required check on `main`).
 BUILD_WORKFLOWS = {"linux.yml": "build", "windows.yml": "build-windows"}
+# Every workflow whose build skips docs-only pushes: the required two, and macOS (not required, R350; no synthetic leg yet).
+DOCS_GATED_WORKFLOWS = {**BUILD_WORKFLOWS, "macos.yml": "build-macos"}
 # Every required check on `main` (docs/GIT_STRATEGY.md section 6, the ruleset as read 2026-09-25) -> its workflow.
 REQUIRED_CHECKS = {"build": "linux.yml", "build-windows": "windows.yml", "leakcheck": "secrets.yml"}
 
@@ -75,7 +77,7 @@ def _jobs(text):
 
 class DocsOnlyPushStartsNoBuildRun(unittest.TestCase):
     def test_push_ignores_docs_and_pull_request_is_unfiltered(self):
-        for name in BUILD_WORKFLOWS:
+        for name in DOCS_GATED_WORKFLOWS:
             text = _text(name)
             _, on = _block(text, "on", 0)
             self.assertIsNotNone(on, name)
@@ -95,7 +97,7 @@ class DocsOnlyPushStartsNoBuildRun(unittest.TestCase):
 
 class PullRequestComparesBaseToHead(unittest.TestCase):
     def test_changes_filter_names_the_pull_request_base(self):
-        for name in BUILD_WORKFLOWS:
+        for name in DOCS_GATED_WORKFLOWS:
             changes = _jobs(_text(name)).get("changes")
             self.assertIsNotNone(changes, f"{name}: no changes job")
             self.assertIn("BASE: ${{ " + PR_BASE + " }}", changes, name)
@@ -132,7 +134,7 @@ class ChangesStepSurvivesALongList(unittest.TestCase):
             self.skipTest("no bash")
         # The runner's shell ignores SIGPIPE (its log read `echo: write error: Broken pipe`); a default shell dies of it
         # (exit 141). Both are the same defect, so both are run.
-        for name, sigpipe in [(n, t) for n in BUILD_WORKFLOWS for t in ("default", "ignored")]:
+        for name, sigpipe in [(n, t) for n in DOCS_GATED_WORKFLOWS for t in ("default", "ignored")]:
             with self.subTest(workflow=name, sigpipe=sigpipe), tempfile.TemporaryDirectory() as tmp:
                 # Everything goes in the script (no env, no absolute path): the same under Git Bash and Linux bash.
                 stub = "\n".join([
@@ -189,7 +191,7 @@ class RequiredChecksKeepTheirNames(unittest.TestCase):
             self.assertNotRegex(jobs[check], r"(?m)^    name:", f"{wf}: `{check}` renamed by a job-level name:")
 
     def test_build_jobs_still_gate_on_changes(self):
-        for name, build in BUILD_WORKFLOWS.items():
+        for name, build in DOCS_GATED_WORKFLOWS.items():
             body = _jobs(_text(name))[build]
             self.assertRegex(body, r"(?m)^    needs: changes\s*$", name)
             self.assertRegex(body, r"(?m)^    if: needs\.changes\.outputs\.code == 'true'\s*$", name)

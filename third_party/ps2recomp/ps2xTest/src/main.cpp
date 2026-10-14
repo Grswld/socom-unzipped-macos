@@ -40,6 +40,9 @@ void register_zip_store_tests();
 void register_diagnostics_tests();
 void register_bug_report_tests();
 void register_patch_fetch_tests();
+void register_pcsx2_config_tests();   // Sprint 18 T2
+void register_pcsx2_files_tests();    // Sprint 18 T3
+void register_pcsx2_install_tests();  // Sprint 18 T4
 void register_mapping_tests();
 void register_socom2_osk_prefill_tests();
 void register_knobs_tests();
@@ -60,6 +63,10 @@ void register_personas_card_tests();         // the persona-card plan Task 2
 void register_runtime_seams_tests();         // Sprint 13 Task C8 (audit F22)
 void register_socom2_net_bounds_tests();     // runtime/socom2_net_bounds.h
 void register_socom2_msg_bounds_tests();     // runtime/socom2_msg_bounds.h
+void register_socom2_mouse_tests();          // macOS fork: mouse look and aim-hold
+void register_socom2_kbm_tests();            // macOS fork: keyboard-and-mouse play
+void register_host_thread_qos_tests();       // macOS fork: runtime/host_thread_qos.h
+void register_vblank_period_tests();        // macOS fork: PS2X_VBLANK_NTSC
 void reset_ps2_test_function_table();
 
 namespace
@@ -138,6 +145,9 @@ int main()
     register_diagnostics_tests();
     register_bug_report_tests();
     register_patch_fetch_tests();
+    register_pcsx2_config_tests();
+    register_pcsx2_files_tests();
+    register_pcsx2_install_tests();
     register_mapping_tests();
     register_socom2_osk_prefill_tests();
     register_knobs_tests();
@@ -158,6 +168,10 @@ int main()
     register_runtime_seams_tests();
     register_socom2_net_bounds_tests();
     register_socom2_msg_bounds_tests();
+    register_socom2_mouse_tests();
+    register_socom2_kbm_tests();
+    register_host_thread_qos_tests();
+    register_vblank_period_tests();
     int res = MiniTest::Run();
     std::cout.flush();
     std::cerr.flush();

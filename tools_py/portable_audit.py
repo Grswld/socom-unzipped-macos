@@ -42,6 +42,9 @@ WINDOWS_SYSTEM = frozenset((
     # Windows-provided libraries -- cfgmgr32.dll (device configuration, present since Windows 2000) and crypt32.dll
     # (the certificate store, present since Windows XP). The first release packaging after C6 called them missing.
     "cfgmgr32.dll", "crypt32.dll",
+    # Sprint 18 T4: the launcher's adapter list for PCSX2 (GetAdaptersAddresses, win32_glue.cpp) imports the IP
+    # helper, present since Windows 2000. The S18 close chain's release step was the first to call it missing.
+    "iphlpapi.dll",
 ))
 WINDOWS_SYSTEM_PREFIXES = ("api-ms-win-",)
 SHIPPED = {"Windows": ("socom2.exe", "socom_unzipped_launcher.exe"), "Linux": ("socom2", "socom_unzipped_launcher")}

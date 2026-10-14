@@ -33,7 +33,9 @@ As of 2026-10-02, on an M2 Pro running macOS 15, with the US retail disc (`SCUS-
   on average; upstream measured about 23 on Windows), so movement can feel heavy in busy scenes.
 - **Brief frame drops about every 2 seconds**, when the game uploads a large batch of textures and the renderer
   reads frames back from the GPU in the same frame.
-- **Controls:** the keyboard works; there is no mouse support yet, and a gamepad has not been tested on macOS.
+- **Controls:** full keyboard and mouse play: mouse look, every SOCOM II control on a key or a button, walk speed on
+  the mouse wheel and mouse menu navigation, remappable in `controls.ini` (`docs/CONTROLS_MACOS.md`). A gamepad has
+  not been tested on macOS.
 
 **Not available on macOS yet**
 - The launcher program (it builds, but it is not ported): the game is started from the command line.
@@ -84,7 +86,6 @@ The full, generated record of every merge, upstream's and this fork's, is `docs/
 - **Fewer OpenGL calls:** skip the state and uniform calls that repeat what is already set.
 - **A Metal renderer**, keeping the OpenGL renderer as a reference so that both can render the same recorded frames
   and any difference is caught automatically.
-- **Mouse look and mouse menu navigation.**
 - **Gamepad support verified on macOS.**
 - **The launcher on macOS**, and a proper `.app` bundle.
 - **Retina (2x) displays verified.**
